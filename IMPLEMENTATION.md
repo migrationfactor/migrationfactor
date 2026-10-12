@@ -1,6 +1,6 @@
 # Migration Factor implementation and verification
 
-Audit date: 10 October 2026. Application: the single Next.js app at the repository root.
+Source audit date: 10 October 2026. Final local verification: 12 October 2026. Application: the single Next.js app at the repository root.
 
 ## Scope and preserved UI
 
@@ -11,7 +11,7 @@ The approved homepage, content, photographs, typography, motion, section orderin
 - Page-specific canonical, Open Graph and Twitter metadata uses the confirmed `https://migrationfactor.com` domain. The home title also carries the business name.
 - Public pages have WebPage/Service/Article and breadcrumb JSON-LD where relevant, plus factual Organization and WebSite nodes. JSON is escaped safely. No invented ratings, people or registration details are included. FAQ rich-result schema was not added to this commercial migration consultancy.
 - The sitemap includes the new public tools and consultation page, consistently uses canonical paths, and no longer asserts a fabricated last-modified date. Robots allows public pages and excludes API crawling. API responses also carry noindex headers; missing pages return 404 with noindex.
-- Hero responsive sizing/fetch priority, shared image sizing and early local-font preload address the measured loading bottleneck without removing visuals or animation. The decorative footer airplane retains its original image bytes.
+- Hero responsive sizing/fetch priority, shared image sizing and early local-font preload address the measured loading bottleneck without removing visuals or animation. Phones up to 430px receive a lossless centre crop of the same airport photo through a responsive picture source. Its decoded pixels were checked against the original crop; the original wide asset stays intact. AVIF is negotiated with WebP fallback. The decorative footer airplane retains its original image bytes.
 - Security headers apply in Next.js as well as Vercel. `X-Powered-By` is disabled. Unversioned static assets use a bounded cache lifetime instead of a year-long immutable declaration.
 - Enquiry JSON reads are byte-bounded before parsing. Malformed origins are rejected, internal errors avoid logging submitted content, and existing type/lint errors were corrected with explicit types.
 - Existing enquiry rate limiting remains per process. A shared limiter/WAF and durable delivery/storage are still required for a multi-instance production deployment. Vercel temporary files are not durable. Configure the existing HTTPS enquiry webhook before relying on enquiry delivery; API responses explicitly distinguish local save and forwarding.
@@ -66,10 +66,75 @@ Some Home Affairs pages blocked direct browser retrieval or returned JavaScript 
 
 Automated tests cover motion lifecycle/reduced motion, PR factors/boundaries/caps, invalid answers, conditional fields, independent fee examples, stream-specific thresholds, rollover, occupation search/caveats, consultation validation and bounded requests. Browser checks cover real contact/wizard POSTs to isolated local storage, failure/retry paths, existing country tabs, dropdowns/drawer, metadata, JSON-LD syntax, status codes, internal links, mobile overflow and new frontend flows. No outbound notification provider was used for QA.
 
-Local machine Lighthouse measurements are recorded below after the final run. They are not production/field Core Web Vitals. INP, Google indexing, Search Console ownership and ranking outcomes require external access or real-user data and have not been claimed.
+Final verification passed: production build (37 generated entries), TypeScript, lint, 22 automated tests, 31 public sitemap pages, and 24 tool flows across 1440px, 390px and 320px. Consultation review passed at those three widths with zero booking POSTs. Browser reports contain no broken links or hydration errors. Hero source selection and horizontal overflow were checked separately at 320, 390, 412, 430, 480, 768 and 1440px; the original and mobile source crop decode to identical pixels.
+
+Local Lighthouse results are lab measurements, not production/field Core Web Vitals. The recorded baseline was taken on 10 October and final measurements on 12 October on this machine. Changes in machine load and image-cache state affect comparisons. INP, Google indexing, Search Console ownership and rankings require external access or real-user data and have not been claimed.
+
+| Mobile lab metric | Recorded baseline | Final mobile-source run | Follow-up with warm image cache |
+| --- | ---: | ---: | ---: |
+| Performance score | 82 | 63 | 86 |
+| Accessibility | 97 | 100 | Not rerun |
+| Best practices | 100 | 100 | Not rerun |
+| SEO | 100 | 100 | Not rerun |
+| FCP | 1.10s | 1.81s | 1.07s |
+| LCP | 4.42s | 4.48s | 4.12s |
+| CLS | 0 | 0 | 0 |
+| Total blocking time | 50.5ms | 674ms | 85.5ms |
+| Transferred page bytes | 666,798 | 575,867 | 575,860 |
+
+The page transfers about 14% fewer bytes. The follow-up improves the recorded performance score and LCP relative to the baseline, but the two final runs show substantial variation and do not establish a reliable field improvement. The LCP target of 2.5 seconds has not been met, and TBT is not a substitute for measured INP. Existing visuals and useful motion were retained. Image encoding/cache state and main-thread work need further production investigation; no claim of passing all Core Web Vitals is made. The final lab artifacts are `docs/seo-final-mobile-crop.json` and `docs/seo-final-mobile-crop-warm.json`.
 
 `npm audit --omit=dev` reports zero production vulnerabilities. The development ESLint dependency chain reports five high advisories involving braces/micromatch/fast-glob. Published braces 3.0.3 remained affected at inspection; the offered audit fix downgrades eslint-config-next to an incompatible major. No unsafe forced downgrade was performed. Recheck upstream releases before installing tooling for untrusted repositories.
 
 Live domain check: HTTPS returns 200 from Hostinger/PHP; HTTP redirects 301 to HTTPS. That is a different site from this local Next.js application. Connect the confirmed domain to the intended Next.js deployment, then verify production headers, canonical redirects (including www), assets, sitemap and Search Console. A Git push alone does not establish that the confirmed domain runs this code.
 
 Local full-resolution screenshots, reference observations and audit JSON remain in ignored `docs/`; they are not included in Git or the production bundle.
+
+## Form control styling — 12 October 2026
+
+Tools and the 2-minute Visa Assessment now share rounded controls, teal focus/hover states, a styled picker panel and a selected-option checkmark. Existing native select elements, values, labels, validation and form events are preserved. No dropdown library or additional client JavaScript was introduced.
+
+The full picker styling uses [customizable native selects](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select) inside a CSS support query. Supporting browsers display the themed options panel; other browsers retain their native popup and receive the styled closed control. Reduced-motion preferences disable the new transitions.
+
+Chrome 155 checks passed at 1440px, 390px and 320px: open picker appearance, arrow-key selection, Enter, Escape, an independently expected 80-point calculator result, assessment validation, conditional fields and back-navigation value preservation. No horizontal overflow or browser page errors were recorded. Local screenshots and results: `docs/verification/dropdown-*.png` and `dropdown-report.json`.
+
+## Content separation and shared service pages
+
+Existing business content now lives in `src/content/`, with one source per domain.
+`src/lib/constants.ts` keeps technical site configuration and compatibility
+re-exports. Consumers import directly from the relevant content module; company
+details, services, media paths and descriptions are not copied into a second store.
+
+`src/components/pages/ServicePage.tsx` is the shared layout for every service.
+`src/app/services/[slug]/page.tsx` handles lookup, metadata and routing. Optional
+`intro`, `heading`, `sections` and SEO fields support longer service-specific copy,
+paragraphs and lists while retaining the existing page layout. Guide page copy
+also uses a shared renderer. No new business or legal copy was invented.
+
+Eight before/after route snapshots retained identical visible content, page titles,
+H1s and canonical URLs. Student/partner service pages passed at 390px and 320px
+without horizontal overflow or page errors. Added tests cover unique slugs, unknown
+lookups, longer structured content, safe text rendering, default shared content and
+SEO overrides. Content editing instructions are tracked at `src/content/README.md`.
+## Service layouts — 12 October 2026
+
+Services listing now follows the requested Visaco Visa Style Three composition: three-column rounded white cards, wave-cut existing business photographs, icons and per-service Know More links. Shared service details follow the Visa Details composition with a left service menu, highlighted current service, teal contact panel, real guide links and a right image/content column. Existing brand palette, content, header and other routes remain intact. No fictitious downloads or demo business copy added. Existing photo fallback can be overridden with the optional `image` key in `src/content/services.ts`.
+
+Desktop/mobile browser checks: 1440, 390 and 320 pixels; 10 listing links, all service photos loaded after scrolling, no horizontal overflow or page errors. Existing 25 tests and TypeScript pass. Production build and lint checked. Changes remain local; no push.
+
+## Supplied Parent Visa article — 12 October 2026
+Mapped Aged Parent Visa Subclass 804.docx to /services/parent-visa. Existing Parent Visa catalogue, header, shared service design and other services preserved. Imported 19 sections, 13 FAQ questions and 10 ordered application steps. Long copy isolated in src/content/service-pages/aged-parent-804.ts with server route resolution; not loaded in client navbar data. Added shared ordered content blocks and real links.
+
+Editorial corrections: fixed the incorrect two-of-four balance-of-family example; removed unverified practitioner fee totals and obsolete 29–33-year waiting estimates in favor of official estimator/queue links; corrected queue-date/lodgement-date distinction; removed unsupported health-waiver implication and ambiguous assurance figures; updated application step to ImmiAccount; replaced consultation placeholders with real contact enquiry links, not a fake live booking. Source file itself unchanged. This is not a comprehensive legal approval of supplied copy.
+
+Verified 1440/390/320 layouts without overflow or browser errors, 19 sections/13 FAQs/10 steps, no placeholder links or stale quoted fee totals. TypeScript, lint, 25 tests and production build passed. No push.
+
+## Shared subclass reference layout — 12 October 2026
+
+Implemented the supplied HTML layout direction as a reusable React server component, `VisaArticlePage.tsx`, with Migration Factor colours, existing local Manrope font, existing image slots and supplied Word-document copy. Includes image/text introduction, subclass tags, section labels, information cards, numbered steps, accessible native FAQ disclosures, section navigation, relevant local tools, official source links, related visa links and the existing illustrated CTA banner. The pasted competitor scripts/JSON-LD/business claims/external tool links are not executed or copied.
+
+Imported 12 unique documents covering 804; 143/173/864/884; 858; 309/100; 820/801; 300; 189; 190; 491; 870; 500; and 600. Four `(1)` copies are text-identical and remain untouched. The existing /services/parent-visa route retains the 804 guide; eleven additional article routes were added. Original category routes remain available and now link to their related subclasses. Long copy stays in server article modules, separated from client navigation data.
+
+Previously reviewed 804 editorial corrections preserved. Removed the explicitly unverified pre-July 858 fee paragraph and superseded contributory-parent waiting estimates in favour of official guidance; consultation placeholders use working contact enquiry links. Other supplied business copy remains intact. This is not a claim that every legal statement in every supplied document has had independent legal review.
+
+Validation: TypeScript and lint clean; 27 tests passed; production build generated 48 entries. All 12 pages returned 200 at 1440, 390 and 320 pixels (36 browser cases), with one H1, matching canonicals, valid JSON-LD syntax, loaded images, no horizontal overflow or page errors and keyboard-operated FAQs. Internal links, unique metadata and sitemap entries separately checked. Changes remain local; no commit or push.

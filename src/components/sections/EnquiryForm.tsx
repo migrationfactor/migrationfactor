@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { services, coaching, company } from '@/lib/constants';
+import { services } from '@/content/services';
+import { coaching } from '@/content/coaching';
+import { company } from '@/content/company';
 import { validateEnquiryFields } from '@/lib/enquiry-validation';
 
 interface EnquiryFormProps {

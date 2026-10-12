@@ -2,7 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 import Button from '@/components/ui/Button';
 import WordReveal from '@/components/shared/WordReveal';
-import { company } from '@/lib/constants';
+import { company } from '@/content/company';
+import { about } from '@/content/about';
 import ServiceCount from '@/components/shared/ServiceCount';
 
 export default function AboutSection() {
@@ -12,23 +13,21 @@ export default function AboutSection() {
       <div className="container about-grid">
         <div>
           <div className="section-heading">
-            <span className="eyebrow">ABOUT MIGRATION FACTOR</span>
+            <span className="eyebrow">{about.summary.label}</span>
             <h2 className="split">
               <WordReveal>
-              Guidance for your <br />
-              next chapter.
+              {about.summary.headingLines[0]} <br />
+              {about.summary.headingLines[1]}
               </WordReveal>
             </h2>
           </div>
           <p className="reveal" style={{ '--delay': '100ms' } as React.CSSProperties}>{company.overview}</p>
           <div className="about-support">
             <ul className="checks">
-              <li>Personalized visa support</li>
-              <li>Professional and transparent guidance</li>
-              <li>Support from planning to submission</li>
+              {about.summary.checks.map(item => <li key={item}>{item}</li>)}
             </ul>
           </div>
-          <Button text="More about Migration Factor" href="/about/" variant="outline" />
+          <Button text={about.summary.button} href="/about/" variant="outline" />
         </div>
         <div className="about-photo reveal" style={{ '--delay': '100ms' } as React.CSSProperties}>
           <Image

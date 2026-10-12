@@ -1,5 +1,5 @@
 import React from 'react';
-import { images } from '@/lib/constants';
+import { images } from '@/content/media';
 
 interface BrandIconProps {
   slot: string;

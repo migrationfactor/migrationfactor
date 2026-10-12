@@ -2,7 +2,9 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
-import { company, navigation, services } from '@/lib/constants';
+import { company } from '@/content/company';
+import { navigation } from '@/content/navigation';
+import { services } from '@/content/services';
 
 export default function Footer() {
   const year = 2026;

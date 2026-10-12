@@ -29,7 +29,8 @@ src/
     tools/             Migration calculators, checklists and occupation search
     ui/                Reusable buttons, headings, images and icons
   features/            Independent consultation validation and migration rules/data
-  lib/                 Business constants, SEO, validation and enquiry/assessment logic
+  content/             Editable company, home, services, countries, coaching and guide copy
+  lib/                 SEO, validation, enquiry/assessment logic and config compatibility
   styles/              Approved site, restoration, motion and assessment CSS
 public/                Media, brand assets, fonts and supplied originals
 tests/                 Animation, rules, fee, occupation and form validation tests
@@ -38,6 +39,17 @@ docs/                  Local audit artifacts (ignored by Git)
 ```
 
 Page files compose the existing reusable components. Update shared components at their source and preserve approved visuals. No nested nextjs-app or legacy static generator is required.
+
+## Editing content and service pages
+
+Edit website copy under `src/content/`. The existing design stays in components.
+See [the content editing guide](src/content/README.md) for the file map and examples.
+
+All service pages share `src/components/pages/ServicePage.tsx`. The dynamic
+`src/app/services/[slug]/page.tsx` route looks up the service from
+`src/content/services.ts`. Add longer `intro`, `sections`, paragraphs and bullet
+lists to a service entry without creating a separate page design. New catalogue
+entries also feed service listings, menus, enquiry options and the sitemap.
 
 ## Enquiries
 

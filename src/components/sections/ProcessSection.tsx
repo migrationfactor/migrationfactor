@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { steps } from '@/lib/constants';
+import { home, steps } from '@/content/home';
 import WordReveal from '@/components/shared/WordReveal';
 
 const processImages = [
@@ -14,11 +14,11 @@ export default function ProcessSection() {
   return (
     <section className="section process-section">
       <div className="section-heading center">
-        <span className="eyebrow">OUR WORKING PROCESS</span>
+        <span className="eyebrow">{home.process.label}</span>
         <h2 className="split">
           <WordReveal>
-          Your journey, one clear <br />
-          step at a time.
+          {home.process.headingLines[0]} <br />
+          {home.process.headingLines[1]}
           </WordReveal>
         </h2>
       </div>

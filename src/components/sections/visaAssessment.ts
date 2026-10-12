@@ -1,4 +1,4 @@
-import { services } from '@/lib/constants';
+import { services } from '@/content/services';
 import { assessmentFields, AssessmentField } from '@/lib/visa-assessment';
 
 const esc = (s = '') =>

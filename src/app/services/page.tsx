@@ -15,9 +15,10 @@ export default function ServicesPage() {
         name="Visa & immigration services"
         desc="Support for studying, working, living and bringing family together."
       />
-      <section className="section">
+      <section className="section visa-listing">
         <div className="container">
           <ServiceGrid />
+          <p className="visa-listing-note">Need help choosing your next step? <a href="/contact/">Discuss your circumstances with our team.</a></p>
         </div>
       </section>
       <ProcessSection />

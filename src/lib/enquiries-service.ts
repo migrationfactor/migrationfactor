@@ -1,7 +1,8 @@
 import { mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { services, coaching } from '@/lib/constants';
+import { services } from '@/content/services';
+import { coaching } from '@/content/coaching';
 import { validateEnquiryFields, EnquiryData } from '@/lib/enquiry-validation';
 
 export type EnquiryRecord = Omit<EnquiryData, 'website'> & {

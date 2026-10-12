@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { company, services } from '@/lib/constants';
+import { company } from '@/content/company';
+import { services } from '@/content/services';
 import { consultation, emptyConsultation, pakistanDate, preferenceTimes, validateConsultation, type ConsultationDetails } from '@/features/consultation-booking/model';
 
 export default function ConsultationForm() {

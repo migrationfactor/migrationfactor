@@ -5,7 +5,7 @@ import SectionHeading from '@/components/ui/SectionHeading';
 import Button from '@/components/ui/Button';
 import SiteImage from '@/components/ui/SiteImage';
 import Flag from '@/components/ui/Flag';
-import { countries } from '@/lib/constants';
+import { countries } from '@/content/countries';
 
 const flags: Record<string, string> = {
   AU: 'flagAustralia',

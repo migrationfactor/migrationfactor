@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Icon from '@/components/ui/Icon';
-import { company, navigation, services, countries } from '@/lib/constants';
+import { company } from '@/content/company';
+import { navigation } from '@/content/navigation';
+import { services } from '@/content/services';
+import { countries } from '@/content/countries';
 import { initSiteHeader } from './header-client';
 
 function HeaderLogo({ drawer = false }: { drawer?: boolean }) {

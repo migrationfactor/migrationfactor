@@ -4,7 +4,7 @@ import Breadcrumb from '@/components/layout/Breadcrumb';
 import SectionHeading from '@/components/ui/SectionHeading';
 import Icon from '@/components/ui/Icon';
 import EnquiryForm from '@/components/sections/EnquiryForm';
-import { company } from '@/lib/constants';
+import { company } from '@/content/company';
 
 export const metadata = pageMetadata("/contact", "Contact Migration Factor", "Contact Migration Factor at +61 426 122 786 or info@migrationfactor.com. Offices listed in Mirrabooka, Perth and Cranbourne, Melbourne.");
 

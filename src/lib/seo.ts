@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { SITE_URL, company } from './constants';
+import { SITE_URL } from '@/lib/constants';
+import { company } from '@/content/company';
 
 export function absoluteUrl(path = '/') {
   const clean = path === '/' ? '/' : path.replace(/\/+$/, '');

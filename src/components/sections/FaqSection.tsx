@@ -1,7 +1,7 @@
 import React from 'react';
 import SectionHeading from '@/components/ui/SectionHeading';
 import Button from '@/components/ui/Button';
-import { faqs } from '@/lib/constants';
+import { faqs } from '@/content/faqs';
 
 export default function FaqSection() {
   return (

@@ -7,7 +7,7 @@ import CoachingSection from '@/components/sections/CoachingSection';
 import Icon from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import SiteImage from '@/components/ui/SiteImage';
-import { coaching } from '@/lib/constants';
+import { coaching } from '@/content/coaching';
 
 interface PageProps {
   params: Promise<{ slug: string }>;

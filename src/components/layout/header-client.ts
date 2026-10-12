@@ -28,6 +28,9 @@ export function initSiteHeader(): () => void {
   scrollState();
 
   const dropdownButtons = Array.from(header.querySelectorAll<HTMLButtonElement>('.nav-dropdown-toggle'));
+  const hover = matchMedia('(hover: hover) and (pointer: fine)');
+  let hoverCloseTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearHoverClose = () => clearTimeout(hoverCloseTimer);
   const closeDropdowns = (except?: HTMLButtonElement) =>
     dropdownButtons.forEach((button) => {
       if (button === except) return;
@@ -41,10 +44,40 @@ export function initSiteHeader(): () => void {
 
   closeDropdowns();
 
+  dropdownButtons.forEach((button) => {
+    const item = button.closest<HTMLElement>('.nav-item');
+    if (!item) return;
+    item.addEventListener('pointerenter', (event) => {
+      if (!hover.matches || event.pointerType === 'touch') return;
+      clearHoverClose();
+      closeDropdowns(button);
+      button.setAttribute('aria-expanded', 'true');
+      const target = document.getElementById(button.getAttribute('aria-controls') ?? '');
+      if (target) target.hidden = false;
+    }, { signal });
+    item.addEventListener('pointerleave', (event) => {
+      if (!hover.matches || event.pointerType === 'touch') return;
+      clearHoverClose();
+      // Allow the pointer to cross the existing visual gap into the submenu.
+      hoverCloseTimer = setTimeout(() => {
+        if (!item.contains(document.activeElement)) closeDropdowns();
+      }, 180);
+    }, { signal });
+    item.addEventListener('focusout', (event) => {
+      if (!item.contains(event.relatedTarget as Node | null) && !item.matches(':hover')) closeDropdowns();
+    }, { signal });
+  });
+  header.querySelectorAll<HTMLElement>('#primary-nav > a').forEach((link) => {
+    link.addEventListener('pointerenter', () => {
+      if (hover.matches) { clearHoverClose(); closeDropdowns(); }
+    }, { signal });
+  });
+
   dropdownButtons.forEach((button) =>
     button.addEventListener(
       'click',
       () => {
+        clearHoverClose();
         const open = button.getAttribute('aria-expanded') !== 'true';
         closeDropdowns(button);
         button.setAttribute('aria-expanded', String(open));
@@ -81,9 +114,7 @@ export function initSiteHeader(): () => void {
   const mobile = matchMedia('(max-width:1199px)');
   mobile.addEventListener('change', () => closeDropdowns(), { signal });
 
-  toggle.addEventListener(
-    'click',
-    () => {
+  const openDrawer = () => {
       if (drawer.open) return;
       closeDropdowns();
       previousOverflow = document.body.style.overflow;
@@ -92,9 +123,11 @@ export function initSiteHeader(): () => void {
       toggle.setAttribute('aria-expanded', 'true');
       const sr = toggle.querySelector('.sr-only');
       if (sr) sr.textContent = 'Close menu and contact details';
-    },
-    { signal }
-  );
+  };
+  toggle.addEventListener('click', openDrawer, { signal });
+  toggle.addEventListener('pointerenter', (event) => {
+    if (hover.matches && event.pointerType !== 'touch') openDrawer();
+  }, { signal });
 
   drawer.addEventListener(
     'close',
@@ -132,6 +165,7 @@ export function initSiteHeader(): () => void {
 
   return () => {
     events.abort();
+    clearHoverClose();
     cancelAnimationFrame(scrollFrame);
     if (drawer.open) {
       drawer.close();

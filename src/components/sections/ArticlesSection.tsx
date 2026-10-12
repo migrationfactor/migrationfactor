@@ -2,20 +2,7 @@ import Link from 'next/link';
 import SectionHeading from '@/components/ui/SectionHeading';
 import SiteImage from '@/components/ui/SiteImage';
 
-const articles = [
-  {
-    slot: 'preparation',
-    title: 'Getting started',
-    desc: 'Clarify your goals and prepare your basic profile.',
-    slug: 'preparing-your-profile',
-  },
-  {
-    slot: 'documents',
-    title: 'Your document checklist',
-    desc: 'Discuss documents, fees and application details with the team.',
-    slug: 'document-checklist',
-  },
-];
+import { guides } from '@/content/guides';
 
 export default function ArticlesSection() {
   return (
@@ -31,20 +18,20 @@ export default function ArticlesSection() {
           }
         />
         <div className="articles-grid">
-          {articles.map((a) => (
+          {guides.map((a) => (
             <article
               key={a.slug}
               className="article reveal"
             >
               <Link href={`/guides/${a.slug}/`}>
-                <SiteImage slot={a.slot} />
+                <SiteImage slot={a.card.imageSlot} />
               </Link>
               <div className="article-body">
                 <span className="eyebrow">PRACTICAL NEXT STEPS</span>
                 <h3>
-                  <Link href={`/guides/${a.slug}/`}>{a.title}</Link>
+                  <Link href={`/guides/${a.slug}/`}>{a.card.title}</Link>
                 </h3>
-                <p>{a.desc}</p>
+                <p>{a.card.description}</p>
                 <Link className="text-link" href={`/guides/${a.slug}/`}>
                   Read the guide
                 </Link>

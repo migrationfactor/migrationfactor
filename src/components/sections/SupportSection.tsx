@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { company } from '@/lib/constants';
+import { company } from '@/content/company';
 
-// Restore the source fade carousel using existing company copy, without demo reviews.
-const slides = [
-  { title: 'Guidance with purpose.', text: company.mission, label: 'OUR MISSION', photo: 'portraitProOne' },
-  { title: 'New beginnings beyond borders.', text: company.vision, label: 'OUR VISION', photo: 'portraitProTwo' },
-];
+import { missionVisionSlides as slides } from '@/content/about';
 
 export default function SupportSection() {
   const [active, setActive] = useState(0);

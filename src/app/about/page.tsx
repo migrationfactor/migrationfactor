@@ -5,36 +5,37 @@ import AboutSection from '@/components/sections/AboutSection';
 import ProcessSection from '@/components/sections/ProcessSection';
 import CtaSection from '@/components/sections/CtaSection';
 import SectionHeading from '@/components/ui/SectionHeading';
-import { company } from '@/lib/constants';
+import { company } from '@/content/company';
+import { about } from '@/content/about';
 
-export const metadata = pageMetadata("/about", "About Migration Factor", "Learn about Migration Factor, a Perth-based migration and visa consultancy supporting students, professionals and families.");
+export const metadata = pageMetadata("/about", about.title, about.seoDescription);
 
 export default function AboutPage() {
   return (
     <>
-      <JsonLd data={pageSchema("/about", "About Migration Factor", "Learn about Migration Factor, a Perth-based migration and visa consultancy supporting students, professionals and families.", 'WebPage')} />
+      <JsonLd data={pageSchema("/about", about.title, about.seoDescription, 'WebPage')} />
       <Breadcrumb
-        name="About Migration Factor"
-        desc="Personalized, professional and transparent visa support."
+        name={about.title}
+        desc={about.breadcrumbDescription}
       />
       <AboutSection />
       <section className="section soft">
         <div className="container values-grid">
           <article>
             <SectionHeading
-              label="OUR MISSION"
-              heading="Guidance with purpose."
+              label={about.mission.label}
+              heading={about.mission.heading}
               center={false}
             />
             <p>{company.mission}</p>
           </article>
           <article>
             <SectionHeading
-              label="OUR VISION"
+              label={about.vision.label}
               heading={
                 <>
-                  New beginnings <br />
-                  beyond borders.
+                  {about.vision.headingLines[0]} <br />
+                  {about.vision.headingLines[1]}
                 </>
               }
               center={false}
@@ -43,7 +44,7 @@ export default function AboutPage() {
           </article>
         </div>
         <div className="container origin-note">
-          Supporting clients from Pakistan, India, Bangladesh, Sri Lanka and Nepal.
+          {about.originNote}
         </div>
       </section>
       <ProcessSection />

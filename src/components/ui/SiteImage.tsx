@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { images } from '@/lib/constants';
+import { images } from '@/content/media';
 
 interface SiteImageProps {
   slot: string;

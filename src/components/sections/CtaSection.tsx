@@ -1,3 +1,4 @@
+import { home } from '@/content/home';
 import React from 'react';
 import Image from 'next/image';
 import SiteImage from '@/components/ui/SiteImage';
@@ -19,14 +20,14 @@ export default function CtaSection() {
           </div>
         </div>
         <div className="cta-copy">
-          <span className="eyebrow light">PLAN YOUR NEXT STEP</span>
+          <span className="eyebrow light">{home.cta.label}</span>
           <h2 className="split">
             <WordReveal>
-            Your future starts with <br />
-            the right destination.
+            {home.cta.headingLines[0]} <br />
+            {home.cta.headingLines[1]}
             </WordReveal>
           </h2>
-          <Button text="Request an eligibility assessment" href="/contact/" className="reveal" />
+          <Button text={home.cta.button} href="/contact/" className="reveal" />
         </div>
       </div>
     </section>
