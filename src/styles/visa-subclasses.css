@@ -1457,3 +1457,7 @@
 .service-subclass-links a { font-size: 13px; padding: 11px 14px; border: 1px solid #0b666a25; border-radius: 8px; background: #f5f9f8; color: #07484b; font-weight: 700; }
 @media(prefers-reduced-motion: reduce) { .pv-wrap *, .pv-wrap *::before, .pv-wrap *::after { transition: none !important; } }
 .pv-hero-row > .pv-img-wrap { margin-bottom: 0; }
+.pv-wrap .service-contents { margin: 0 0 24px; padding: 16px 20px; }
+.pv-wrap .service-contents > summary { font-size: 15px; }
+.pv-wrap .service-contents a:focus-visible { outline: 2px solid #0b666a; outline-offset: 3px; }
+@media(max-width:600px) { .pv-wrap .service-contents { padding: 16px; } }

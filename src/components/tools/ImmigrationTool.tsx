@@ -38,6 +38,6 @@ export default function ImmigrationTool({ slug }: { slug: ToolSlug }) {
       {slug === 'sponsorship-cost-estimator' && <p><Link href="/tools/applicant-cost-calculator">Calculate applicant visa charges separately</Link></p>}
       {slug === 'applicant-cost-calculator' && <p><Link href="/tools/sponsorship-cost-estimator">Calculate employer sponsorship charges separately</Link></p>}
     </div>}
-    <div className="tool-sources"><strong>Official references · checked {verifiedOn}</strong><ul>{toolSources[slug].map(([label, url]) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer">{label} (opens a new tab)</a></li>)}</ul><p>Rules and charges can change. Confirm the requirements at application time. This page does not collect or transmit your answers.</p><Link href="/tools">Explore all migration tools</Link></div>
+    <section className="tool-sources" aria-labelledby="tool-sources-title"><h2 id="tool-sources-title">Official sources for this tool</h2><p>Reference snapshot checked {verifiedOn}.</p><ul>{toolSources[slug].map(([label, url]) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer">{label} (opens a new tab)</a></li>)}</ul><p>Rules and charges can change. Confirm the requirements at application time. This page does not collect or transmit your answers.</p><Link href="/tools">Explore all migration tools</Link></section>
   </div>;
 }

@@ -1,0 +1,11 @@
+/* Visaco's eight-bar wave, using the approved Migration Factor palette. */
+.page-loader{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#fff;opacity:1;visibility:visible;transition:opacity .18s ease,visibility .18s ease}
+.page-loader[data-active="false"]{opacity:0;visibility:hidden;pointer-events:none}
+.page-loader[data-active="true"]{animation:page-loader-fail-open 6s step-end forwards}
+.page-loader-bars{display:flex;align-items:center;gap:8px;height:80px}
+.page-loader-bars>span{display:block;width:6px;height:80px;background:#0b666a;transform-origin:center;animation:page-loader-wave .8s ease infinite alternate-reverse}
+@keyframes page-loader-wave{from{transform:scaleY(.025)}to{transform:scaleY(1)}}
+@keyframes page-loader-fail-open{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media(max-width:767px){.page-loader-bars{transform:scale(.8)}}
+@media(prefers-reduced-motion:reduce){.page-loader-bars>span{animation:none}.page-loader{transition:none}}
+.page-loader[data-active="false"] .page-loader-bars>span{animation-play-state:paused}

@@ -14,6 +14,7 @@ Content lives here; design lives in `src/components/`. Photos stay in `public/me
 | `faqs.ts` | Questions and answers |
 | `media.ts` | Photo paths, alt text and image dimensions |
 | `navigation.ts` | Shared menu entries |
+| `tools.ts` | Tool SEO titles/descriptions, introductions, instructions, result explanations and related links; calculator rules remain in `src/features/immigration-tools/` |
 
 ## One service design, different content
 

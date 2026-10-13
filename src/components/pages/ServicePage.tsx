@@ -5,11 +5,12 @@ import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProcessSection from '@/components/sections/ProcessSection';
 import CtaSection from '@/components/sections/CtaSection';
 import JsonLd from '@/components/shared/JsonLd';
+import PageContents from '@/components/shared/PageContents';
 import Icon from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import { company } from '@/content/company';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
-import { services, servicePageContent, getServiceImage, type Service, type ServiceSection } from '@/content/services';
+import { services, servicePageContent, getServiceImage, getServiceInsetImage, type Service, type ServiceSection } from '@/content/services';
 import { pageSchema } from '@/lib/seo';
 import { visaPath } from '@/lib/visa-path';
 
@@ -41,9 +42,9 @@ export default function ServicePage({ service }: { service: Service }) {
           <h2>{service.heading ?? `${service.name} support`}</h2>
           {visaSubclasses.some(visa => visa.parentSlug === service.slug && visa.slug !== service.slug) && <nav className="service-subclass-links" aria-label={`${service.name} subclass pages`}>{visaSubclasses.filter(visa => visa.parentSlug === service.slug && visa.slug !== service.slug).map(visa => <Link href={visaPath(visa.slug)} key={visa.slug}>{visa.name} ↗</Link>)}</nav>}
           {intro.map((paragraph, i) => <p key={i} className={i === 0 ? 'lead' : undefined}><ServiceText text={paragraph} service={service.name} /></p>)}
-          {longPage && <details className="service-contents"><summary>On this page</summary><nav aria-label="Page sections">{sections.filter(section => section.id).map(section => <a key={section.id} href={`#${section.id}`}>{section.heading}<span aria-hidden="true">↗</span></a>)}</nav></details>}
+          {longPage && <PageContents sections={sections.flatMap(section => section.id ? [{ id: section.id, heading: section.heading }] : [])} />}
           {sections.map((section, i) => <section className={longPage ? 'service-copy-section' : undefined} key={section.id ?? i}>
-            {i === 0 && !longPage && <div className="visa-detail-inset"><Image {...getServiceImage(service)} alt="" sizes="(max-width: 600px) 100vw, 360px" /><div><Icon type={service.icon} /><h3>{service.name}</h3><p>{service.description}</p></div></div>}
+            {i === 0 && !longPage && <div className="visa-detail-inset"><Image {...getServiceInsetImage(service)} alt={getServiceInsetImage(service).alt || service.name} sizes="(max-width: 600px) 100vw, 360px" /><div><Icon type={service.icon} /><h3>{service.name}</h3><p>{service.description}</p></div></div>}
             <h3 id={section.id}>{section.heading}</h3>
             {section.paragraphs?.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
             {!!section.items?.length && <ul className="checks">{section.items.map((item, index) => <li key={index}>{item}</li>)}</ul>}

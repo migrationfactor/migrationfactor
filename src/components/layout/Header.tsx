@@ -15,7 +15,7 @@ function HeaderLogo({ drawer = false }: { drawer?: boolean }) {
   return (
     <Link className="brand" href="/" aria-label="Migration Factor home">
       <Image className="brand-mark" src={drawer ? '/brand/favicon.png' : '/brand/mark.webp'}
-        width={200} height={200} alt="" decoding="async" />
+        width={200} height={200} sizes={drawer ? "80px" : "92px"} loading={drawer ? "lazy" : "eager"} alt="" decoding="async" />
     </Link>
   );
 }

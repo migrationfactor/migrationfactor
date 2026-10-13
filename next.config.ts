@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       ] },
+      // Reuse public assets on repeat visits, while still allowing updated files to refresh.
+      { source: '/:folder(media|brand|fonts|reference)/:path*', headers: [
+        { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+      ] },
       { source: '/api/:path*', headers: [
         { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         { key: 'Cache-Control', value: 'no-store' },

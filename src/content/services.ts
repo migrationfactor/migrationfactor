@@ -9,6 +9,7 @@ export interface Service {
   group: string;
   description: string;
   image?: keyof typeof images;
+  insetImage?: keyof typeof images;
   /** Longer page copy; short description is kept for cards and metadata. */
   intro?: string[];
   heading?: string;
@@ -43,6 +44,8 @@ export const services: Service[] = [
     slug: 'student-visa',
     name: 'Student Visa',
     icon: 'study',
+    image: 'studentVisa',
+    insetImage: 'studentVisaInset',
     group: 'Education & travel',
     description:
       'Support for education in Australia and selected European destinations, including university selection, GTE/SOP, financial documents and visa preparation.',
@@ -51,6 +54,8 @@ export const services: Service[] = [
     slug: 'visitor-visa',
     name: 'Visitor Visa',
     icon: 'globe',
+    image: 'visitorVisa',
+    insetImage: 'visitorVisaInset',
     group: 'Education & travel',
     description: 'Guidance for visiting Australia, family visits and travel planning.',
   },
@@ -58,6 +63,8 @@ export const services: Service[] = [
     slug: 'australian-citizenship',
     name: 'Australian Citizenship',
     icon: 'document',
+    image: 'australianCitizenship',
+    insetImage: 'australianCitizenshipInset',
     group: 'Education & travel',
     description: 'Guidance through the Australian citizenship application journey.',
   },
@@ -65,6 +72,8 @@ export const services: Service[] = [
     slug: 'partner-visa',
     name: 'Partner Visa',
     icon: 'people',
+    image: 'partnerVisa',
+    insetImage: 'partnerVisaInset',
     group: 'Family & relationships',
     description:
       'Support for partner and prospective marriage pathways, including relationship evidence, statements and sponsor documentation.',
@@ -73,6 +82,8 @@ export const services: Service[] = [
     slug: 'parent-visa',
     name: 'Parent Visa',
     icon: 'people',
+    image: 'parentVisa',
+    insetImage: 'parentVisaInset',
     group: 'Family & relationships',
     description:
       'Guidance for aged parent, contributory parent and sponsored parent pathways.',
@@ -81,6 +92,8 @@ export const services: Service[] = [
     slug: 'employer-sponsored-visa',
     name: 'Employer Sponsored Visa',
     icon: 'case',
+    image: 'employerSponsoredVisa',
+    insetImage: 'employerSponsoredVisaInset',
     group: 'Work & business',
     description:
       'Support for employer-sponsored pathways, including employer sponsorship, nomination and documentation.',
@@ -89,6 +102,8 @@ export const services: Service[] = [
     slug: 'skilled-visa',
     name: 'GSM & Skilled Visa',
     icon: 'case',
+    image: 'skilledVisa',
+    insetImage: 'skilledVisaInset',
     group: 'Work & business',
     description:
       'Support with expressions of interest, points strategy and skills assessments for skilled migration pathways.',
@@ -97,6 +112,8 @@ export const services: Service[] = [
     slug: 'business-migration',
     name: 'Business Migration',
     icon: 'case',
+    image: 'businessMigration',
+    insetImage: 'businessMigrationInset',
     group: 'Work & business',
     description:
       'The company report describes business innovation, investment and entrepreneur pathways. Ask the team to confirm current availability.',
@@ -105,6 +122,8 @@ export const services: Service[] = [
     slug: 'humanitarian-protection',
     name: 'Humanitarian & Protection',
     icon: 'shield',
+    image: 'humanitarianProtection',
+    insetImage: 'humanitarianProtectionInset',
     group: 'Protection & reviews',
     description:
       'Support for protection, refugee, special humanitarian and emergency humanitarian cases.',
@@ -113,6 +132,8 @@ export const services: Service[] = [
     slug: 'appeals-reviews',
     name: 'Appeals & Reviews',
     icon: 'document',
+    image: 'appealsReviews',
+    insetImage: 'appealsReviewsInset',
     group: 'Protection & reviews',
     description:
       'Support after a refusal or cancellation, including decision-letter review, evidence and written submissions. Check your deadline immediately.',
@@ -121,8 +142,22 @@ export const services: Service[] = [
 
 export function getService(slug: string) { return services.find(service => service.slug === slug); }
 
-export function getServiceImage(service: Service) {
-  return images[service.image ?? (service.slug === 'student-visa' ? 'preparation' : service.group === 'Work & business' ? 'documents' : 'hero')];
+export function getServiceImage(service: Service & { parentSlug?: string }) {
+  if (service.image && images[service.image]) return images[service.image];
+  if (service.parentSlug) {
+    const parent = services.find(s => s.slug === service.parentSlug);
+    if (parent?.image && images[parent.image]) return images[parent.image];
+  }
+  return images[service.slug === 'student-visa' ? 'studentVisa' : service.group === 'Work & business' ? 'skilledVisa' : 'hero'];
+}
+
+export function getServiceInsetImage(service: Service & { parentSlug?: string }) {
+  if (service.insetImage && images[service.insetImage]) return images[service.insetImage];
+  if (service.parentSlug) {
+    const parent = services.find(s => s.slug === service.parentSlug);
+    if (parent?.insetImage && images[parent.insetImage]) return images[parent.insetImage];
+  }
+  return images['documents'];
 }
 
 export function getServiceSeo(service: Service) {

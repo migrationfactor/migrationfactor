@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import CtaSection from '@/components/sections/CtaSection';
 import JsonLd from '@/components/shared/JsonLd';
+import PageContents from '@/components/shared/PageContents';
 import Icon from '@/components/ui/Icon';
 import { getServiceImage, type ServiceBlock, type ServiceSection } from '@/content/services';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
@@ -80,6 +81,7 @@ export default function VisaArticlePage({ visa }: { visa: VisaArticle }) {
           <div className="pv-cta-group"><Link className="pv-cta-btn" href={contact}>Request a free consultation <span aria-hidden="true">↗</span></Link><a className="pv-cta-btn pv-cta-btn-secondary" href={visa.officialUrl}>Official visa requirements <span aria-hidden="true">↗</span></a></div>
         </div><figure className="pv-img-wrap"><Image {...photo} alt={photo.alt} sizes="(max-width: 720px) 100vw, 600px" /><figcaption className="pv-img-caption">{visa.shortName} guidance from Migration Factor</figcaption></figure></div>
       </section>
+      <PageContents sections={visa.sections.map((section, i) => ({ id: section.id ?? `section-${i}`, heading: section.heading }))} />
       {visa.sections.map((section, i) => <section key={section.id ?? i} className="pv-section" aria-labelledby={section.id ?? `section-${i}`}>
         <span className="pv-label">{section.heading === 'Frequently Asked Questions' ? 'Common questions' : 'Visa guide'}</span>
         <h3 className="pv-h2" id={section.id ?? `section-${i}`}>{section.heading}</h3><div className="pv-underline" aria-hidden="true" />
