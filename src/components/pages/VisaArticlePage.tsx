@@ -4,37 +4,36 @@ import Link from 'next/link';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import CtaSection from '@/components/sections/CtaSection';
 import JsonLd from '@/components/shared/JsonLd';
-import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import { getServiceImage, type ServiceBlock, type ServiceSection } from '@/content/services';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
 import type { VisaArticle } from '@/content/visa-subclasses/types';
 import { pageSchema } from '@/lib/seo';
+import { visaPath } from '@/lib/visa-path';
 
 function Copy({ text, contact }: { text: string; contact: string }) {
-  return text.split('{{consultation}}').map((part, i) => <Fragment key={i}>{i > 0 && <Link href={contact}>request a free consultation</Link>}{part}</Fragment>);
+  return text.split('{{consultation}}').map((part, i) => <Fragment key={i}>{i > 0 && <Link className="pv-link" href={contact}>request a free consultation</Link>}{part}</Fragment>);
 }
 
 function Block({ block, contact }: { block: ServiceBlock; contact: string }) {
-  if (block.type === 'heading') return <h4>{block.text}</h4>;
-  if (block.type === 'paragraph') return <p><Copy text={block.text} contact={contact} /></p>;
+  if (block.type === 'heading') return <h4 className="pv-h3">{block.text}</h4>;
+  if (block.type === 'paragraph') return <p className="pv-p"><Copy text={block.text} contact={contact} /></p>;
   if (block.type !== 'list') return null;
-  const items = block.items.map((text, i) => <li key={i}><Copy text={text} contact={contact} /></li>);
-  return block.ordered ? <ol className="subclass-steps">{items}</ol> : <ul className="subclass-checklist">{items}</ul>;
+  if (block.ordered) return <ol className="pv-steps">{block.items.map((text, i) => <li className="pv-step" key={i}><span className="pv-step-num" aria-hidden="true">{i + 1}</span><div className="pv-step-body"><p className="pv-p"><Copy text={text} contact={contact} /></p></div></li>)}</ol>;
+  return <ul className="pv-list">{block.items.map((text, i) => <li key={i}><span><Copy text={text} contact={contact} /></span></li>)}</ul>;
 }
 
 function Faq({ blocks, contact }: { blocks: ServiceBlock[]; contact: string }) {
-  return <div className="subclass-faq">{blocks.map((block, i) => {
+  return <div className="pv-faq">{blocks.map((block, i) => {
     if (block.type !== 'heading') return null;
     const next = blocks.findIndex((item, j) => j > i && item.type === 'heading');
-    return <details key={i}><summary><span className="subclass-q" aria-hidden="true">Q</span><h4>{block.text}</h4><span className="subclass-faq-toggle" aria-hidden="true">+</span></summary><div>{blocks.slice(i + 1, next < 0 ? blocks.length : next).map((answer, j) => <Block key={j} block={answer} contact={contact} />)}</div></details>;
+    return <div className="pv-faq-item" key={i}><div className="pv-faq-q"><span className="pv-faq-q-icon" aria-hidden="true">Q</span><h4 className="pv-faq-q-text">{block.text}</h4></div><div className="pv-faq-a">{blocks.slice(i + 1, next < 0 ? blocks.length : next).map((answer, j) => <Block key={j} block={answer} contact={contact} />)}</div></div>;
   })}</div>;
 }
 
 function SectionBody({ section, contact }: { section: ServiceSection; contact: string }) {
   const blocks = section.blocks ?? [];
   if (/Frequently Asked Questions/i.test(section.heading)) return <Faq blocks={blocks} contact={contact} />;
-  // Subsections become reusable information cards, while their text stays in document order.
   const groups: { heading?: string; blocks: ServiceBlock[] }[] = [];
   for (const block of blocks) {
     if (block.type === 'heading') groups.push({ heading: block.text, blocks: [] });
@@ -43,11 +42,19 @@ function SectionBody({ section, contact }: { section: ServiceSection; contact: s
       groups[groups.length - 1].blocks.push(block);
     }
   }
+  const streams = /Streams Explained/i.test(section.heading);
+  const renderBlock = (block: ServiceBlock, i: number) => {
+    if (/Four Visas Compared/i.test(section.heading) && block.type === 'list') return <div className="pv-table-wrap" key={i} tabIndex={0} role="region" aria-label="Visa comparison"><table className="pv-table"><thead><tr><th scope="col">Visa subclass</th><th scope="col">Overview</th></tr></thead><tbody>{block.items.map((text, j) => {
+      const split = text.indexOf('. ');
+      return <tr key={j}><th scope="row">{split < 0 ? text : text.slice(0, split)}</th><td>{split < 0 ? '' : text.slice(split + 2)}</td></tr>;
+    })}</tbody></table></div>;
+    return <Block key={i} block={block} contact={contact} />;
+  };
   return <>
-    {section.paragraphs?.map((text, i) => <p key={i}><Copy text={text} contact={contact} /></p>)}
+    {section.paragraphs?.map((text, i) => <p className="pv-p" key={i}><Copy text={text} contact={contact} /></p>)}
     {section.items?.length ? <Block block={{ type: 'list', items: section.items }} contact={contact} /> : null}
-    {groups.filter(group => !group.heading).map((group, i) => <Fragment key={i}>{group.blocks.map((block, j) => <Block key={j} block={block} contact={contact} />)}</Fragment>)}
-    <div className="subclass-info-grid">{groups.filter(group => group.heading).map((group, i) => <div className="subclass-info-card" key={i}><h4>{group.heading}</h4>{group.blocks.map((block, j) => <Block key={j} block={block} contact={contact} />)}</div>)}</div>
+    {groups.filter(group => !group.heading).map((group, i) => <Fragment key={i}>{group.blocks.map(renderBlock)}</Fragment>)}
+    {groups.some(group => group.heading) && <div className={streams ? 'pv-stream-wrap' : 'pv-two-col'}>{groups.filter(group => group.heading).map((group, i) => <div className={streams ? 'pv-stream-card pv-s-blue' : 'pv-glass'} key={i}><h4 className="pv-h3">{group.heading}</h4>{group.blocks.map(renderBlock)}</div>)}</div>}
   </>;
 }
 
@@ -61,31 +68,29 @@ export default function VisaArticlePage({ visa }: { visa: VisaArticle }) {
     ...(visa.group === 'Work & business' ? [{ title: 'Eligibility Checker', description: 'Review preliminary skilled and employer-sponsored requirements.', href: '/tools/eligibility-checker', icon: 'check' as const }] : []),
   ];
   return <>
-    <JsonLd data={pageSchema(`/services/${visa.slug}`, visa.name, visa.description, 'Service')} />
+    <JsonLd data={pageSchema(visaPath(visa.slug), visa.name, visa.description, 'Service')} />
     <Breadcrumb name={visa.name} desc={visa.group} />
-    <section className="section subclass-section"><article className="container subclass-article">
-      <header className="subclass-intro">
-        <span className="subclass-label">{visa.group}</span>
-        <h2>{visa.heading}</h2><div className="subclass-underline" aria-hidden="true" />
-        <div className="subclass-hero-row"><div>
-          <div className="subclass-tags">{visa.subclasses.map(number => <span key={number}>Subclass {number}</span>)}</div>
-          <p className="subclass-lead"><Copy text={visa.intro[0]} contact={contact} /></p>
-          <div className="subclass-actions"><Button href={contact} text="Request a free consultation" /><a className="subclass-outline" href={visa.officialUrl}>Official visa requirements ↗</a></div>
-        </div><figure className="subclass-image"><Image {...photo} alt={photo.alt} sizes="(max-width: 767px) 100vw, 600px" /><figcaption>{visa.shortName} guidance from Migration Factor</figcaption></figure></div>
-        {visa.intro.slice(1).map((text, i) => <p key={i}><Copy text={text} contact={contact} /></p>)}
-      </header>
-      <details className="subclass-contents"><summary>Explore this guide</summary><nav aria-label="Visa guide sections">{visa.sections.map((section, i) => <a key={i} href={`#${section.id ?? `section-${i}`}`}>{section.heading}<span aria-hidden="true">↗</span></a>)}</nav></details>
-      {visa.sections.map((section, i) => <section key={section.id ?? i} className={`subclass-content-section${/Costs|Charges|Processing|Recent|Changes|Deadline/.test(section.heading) ? ' subclass-highlight-section' : ''}`} aria-labelledby={section.id ?? `section-${i}`}>
-        <span className="subclass-label">{String(i + 1).padStart(2, '0')} / {section.heading === 'Frequently Asked Questions' ? 'Common questions' : 'Visa guide'}</span>
-        <h3 id={section.id ?? `section-${i}`}>{section.heading}</h3><div className="subclass-underline" aria-hidden="true" />
+    <section className="section visa-guide-section"><div className="container"><article className="pv-wrap">
+      <section className="pv-section" aria-label="Visa overview">
+        <span className="pv-label">{visa.group}</span>
+        <h2 className="pv-h1">{visa.heading}</h2><div className="pv-underline" aria-hidden="true" />
+        <div className="pv-hero-row"><div>
+          <div>{visa.subclasses.map(number => <span className="pv-tag" key={number}>Subclass {number}</span>)}</div>
+          {visa.intro.map((text, i) => <p className="pv-p" key={i}><Copy text={text} contact={contact} /></p>)}
+          <div className="pv-cta-group"><Link className="pv-cta-btn" href={contact}>Request a free consultation <span aria-hidden="true">↗</span></Link><a className="pv-cta-btn pv-cta-btn-secondary" href={visa.officialUrl}>Official visa requirements <span aria-hidden="true">↗</span></a></div>
+        </div><figure className="pv-img-wrap"><Image {...photo} alt={photo.alt} sizes="(max-width: 720px) 100vw, 600px" /><figcaption className="pv-img-caption">{visa.shortName} guidance from Migration Factor</figcaption></figure></div>
+      </section>
+      {visa.sections.map((section, i) => <section key={section.id ?? i} className="pv-section" aria-labelledby={section.id ?? `section-${i}`}>
+        <span className="pv-label">{section.heading === 'Frequently Asked Questions' ? 'Common questions' : 'Visa guide'}</span>
+        <h3 className="pv-h2" id={section.id ?? `section-${i}`}>{section.heading}</h3><div className="pv-underline" aria-hidden="true" />
         <SectionBody section={section} contact={contact} />
-        {section.links?.map(link => <a className="subclass-source" key={link.href} href={link.href}>{link.label} ↗</a>)}
+        {section.links?.map(link => <p className="pv-p" key={link.href}><a className="pv-link-ext" href={link.href}>{link.label} ↗</a></p>)}
       </section>)}
-      <section className="subclass-tools" aria-labelledby="visa-tools-title"><span className="subclass-label">Helpful tools</span><h3 id="visa-tools-title">Explore your next step</h3><div className="subclass-info-grid">{tools.map(tool => <Link className="subclass-tool-card" href={tool.href} key={tool.href}><Icon type={tool.icon} /><h4>{tool.title}</h4><p>{tool.description}</p><span>Open tool ↗</span></Link>)}</div></section>
-      <section className="subclass-cta"><h3>Discuss your {visa.shortName.toLowerCase()} options</h3><p>Request a free consultation with Migration Factor to discuss your circumstances and the information you need to prepare.</p><Button href={contact} text="Request a consultation" /></section>
-      <nav className="subclass-related" aria-label="Related visa services"><h3>Explore related visa pathways</h3><div>{visa.parentSlug !== visa.slug && <Link href={`/services/${visa.parentSlug}`}>Explore {visa.group.toLowerCase()} services ↗</Link>}{related.map(item => <Link href={`/services/${item.slug}`} key={item.slug}>{item.name} ↗</Link>)}<Link href="/services">All visa and immigration services ↗</Link></div></nav>
-      <p className="subclass-disclaimer">{visa.sourceNote} <a href={visa.officialUrl}>Read the official Home Affairs guidance.</a></p>
-    </article></section>
+      <section className="pv-section" aria-labelledby="visa-tools-title"><span className="pv-label">Helpful tools</span><h3 className="pv-h2" id="visa-tools-title">Explore your next step</h3><div className="pv-underline" aria-hidden="true" /><div className={`pv-study-wrap${tools.length === 2 ? ' pv-two-cols' : ''}`}>{tools.map(tool => <Link className="pv-study-card" href={tool.href} key={tool.href}><div className="pv-sc-icon"><Icon type={tool.icon} /></div><h4 className="pv-h3">{tool.title}</h4><p>{tool.description}</p><span className="pv-link">Open tool ↗</span></Link>)}</div></section>
+      <section className="pv-cta"><h3 className="pv-h2">Discuss your {visa.shortName.toLowerCase()} options</h3><p className="pv-p">Request a free consultation with Migration Factor to discuss your circumstances and the information you need to prepare.</p><Link className="pv-cta-btn" href={contact}>Request a consultation <span aria-hidden="true">↗</span></Link></section>
+      <nav className="pv-related" aria-label="Related visa services"><h3 className="pv-related-title">Explore related visa pathways</h3><div className="pv-related-links">{visa.parentSlug !== visa.slug && <Link className="pv-related-link" href={`/services/${visa.parentSlug}`}>Explore {visa.group.toLowerCase()} services ↗</Link>}{related.map(item => <Link className="pv-related-link" href={visaPath(item.slug)} key={item.slug}>{item.name} ↗</Link>)}<Link className="pv-related-link" href="/services">All visa and immigration services ↗</Link></div></nav>
+      <p className="pv-disclaimer">{visa.sourceNote} <a className="pv-link" href={visa.officialUrl}>Read the official Home Affairs guidance.</a></p>
+    </article></div></section>
     <CtaSection />
   </>;
 }

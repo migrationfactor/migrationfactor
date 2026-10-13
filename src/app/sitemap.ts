@@ -3,6 +3,7 @@ import { services } from '@/content/services';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
 import { coaching } from '@/content/coaching';
 import { SITE_URL } from '@/lib/constants';
+import { visaPath } from '@/lib/visa-path';
 import { allTools as tools } from '@/features/immigration-tools/catalog';
 
 
@@ -13,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/about/` },
     { url: `${SITE_URL}/services/` },
     ...[...new Map([...services, ...visaSubclasses].map(service => [service.slug, service])).values()].map((s) => ({
-      url: `${SITE_URL}/services/${s.slug}/`,
+      url: `${SITE_URL}${visaPath(s.slug)}/`,
     })),
     { url: `${SITE_URL}/countries/` },
     { url: `${SITE_URL}/coaching/` },

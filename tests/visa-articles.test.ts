@@ -19,8 +19,8 @@ test('Every unique supplied visa article has a route, its own copy and unique se
     assert.ok(article.sections.some(section => section.heading === 'Frequently Asked Questions'));
     const html = renderToStaticMarkup(createElement(VisaArticlePage, { visa: article }));
     assert.doesNotMatch(html, /INSERT VERIFIED|migrationrepublic\.com|immigrationagentnearme\.com|font-family:Inter/);
-    assert.match(html, /class="subclass-hero-row"/);
-    assert.match(html, /class="subclass-faq"/);
+    assert.match(html, /class="pv-hero-row"/);
+    assert.match(html, /class="pv-faq"/);
     assert.match(html, /cta-section/);
     assert.ok(html.includes(article.officialUrl));
     assert.ok(html.includes(encodeURIComponent(article.name)));
@@ -34,8 +34,8 @@ test('One shared visa design renders each document’s steps and FAQ answers wit
   const skilledHtml = renderToStaticMarkup(createElement(VisaArticlePage, { visa: skilled }));
   assert.match(studentHtml, /Genuine Student/);
   assert.match(skilledHtml, /Expression of Interest/);
-  assert.match(studentHtml, /class="subclass-steps"/);
-  assert.match(skilledHtml, /class="subclass-steps"/);
+  assert.match(studentHtml, /class="pv-steps"/);
+  assert.match(skilledHtml, /class="pv-steps"/);
   assert.doesNotMatch(studentHtml, /MARA-registered/);
   assert.doesNotMatch(studentHtml, /<script>alert/);
 });

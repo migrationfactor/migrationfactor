@@ -138,3 +138,14 @@ Imported 12 unique documents covering 804; 143/173/864/884; 858; 309/100; 820/80
 Previously reviewed 804 editorial corrections preserved. Removed the explicitly unverified pre-July 858 fee paragraph and superseded contributory-parent waiting estimates in favour of official guidance; consultation placeholders use working contact enquiry links. Other supplied business copy remains intact. This is not a claim that every legal statement in every supplied document has had independent legal review.
 
 Validation: TypeScript and lint clean; 27 tests passed; production build generated 48 entries. All 12 pages returned 200 at 1440, 390 and 320 pixels (36 browser cases), with one H1, matching canonicals, valid JSON-LD syntax, loaded images, no horizontal overflow or page errors and keyboard-operated FAQs. Internal links, unique metadata and sitemap entries separately checked. Changes remain local; no commit or push.
+
+### Supplied subclass design alignment — 13 October 2026
+- Replaced approximate subclass styling with the supplied pv-* CSS measurements and shared React structure; adapted palette to Migration Factor teal and retained the existing brand font, local images and visa-specific content.
+- Restored compact headings/labels, side-by-side introduction, glass panels, vertical numbered steps, open FAQ rows, tool cards, centered CTA and related links. Four-visa comparison uses existing document text in a responsive table.
+- Scope: shared subclass renderer and stylesheet; header, footer and illustrated CTA retained. No push performed.
+- Verified: TypeScript, lint, 27 tests, production build (48 entries), all 12 subclass routes at 1440/390/320px, no horizontal overflow or page errors, loaded images, valid JSON-LD, 30 internal links, 12 unique titles/canonicals and sitemap entries.
+- Browser comparison of supplied CSS against brand-adapted CSS confirms matching typography dimensions, spacing and card geometry at 1440/390px. Page height/content naturally differs by each visa document; this is not a pixel-identity claim against competitor copy.
+- Local QA evidence: docs/reference-geometry-report.json, docs/subclass-browser-report.json and docs/reference-*.png (ignored).
+
+### Pre-push verification — 13 October 2026
+Main service overviews now reuse relevant imported article copy while retaining the separate service design. Subclass paths use the shared visaPath helper; ten old flat URLs permanently redirect to nested URLs. Production checks passed for all twelve article routes, ten category services, redirects, canonical/sitemap consistency and three unknown-route 404s. Twelve desktop/mobile production browser cases passed without overflow or page errors. Lint, twenty-seven tests and production build (48 entries) passed. User explicitly authorized pushing this work.

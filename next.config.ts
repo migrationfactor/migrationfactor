@@ -1,8 +1,13 @@
 import type { NextConfig } from 'next';
+import { visaSubclasses } from './src/content/visa-subclasses/catalog';
+import { splitVisaSlug } from './src/lib/visa-path';
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { formats: ['image/avif', 'image/webp'] },
+  async redirects() {
+    return visaSubclasses.flatMap(({ slug }) => { const parts = splitVisaSlug(slug); return parts ? [{ source: `/services/${slug}`, destination: `/services/${parts.join('/')}`, permanent: true }] : []; });
+  },
   async headers() {
     return [
       { source: '/:path*', headers: [

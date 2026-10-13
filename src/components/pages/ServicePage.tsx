@@ -11,17 +11,18 @@ import { company } from '@/content/company';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
 import { services, servicePageContent, getServiceImage, type Service, type ServiceSection } from '@/content/services';
 import { pageSchema } from '@/lib/seo';
+import { visaPath } from '@/lib/visa-path';
 
-function ServiceText({ text }: { text: string }) {
-  return text.split('{{consultation}}').map((part, index) => <Fragment key={index}>{index > 0 && <Link href="/contact/?service=Parent%20Visa">request a free consultation</Link>}{part}</Fragment>);
+function ServiceText({ text, service }: { text: string; service: string }) {
+  return text.split('{{consultation}}').map((part, index) => <Fragment key={index}>{index > 0 && <Link href={`/contact/?service=${encodeURIComponent(service)}`}>request a free consultation</Link>}{part}</Fragment>);
 }
 
-function ServiceFaq({ section }: { section: ServiceSection }) {
+function ServiceFaq({ section, service }: { section: ServiceSection; service: string }) {
   const blocks = section.blocks ?? [];
   return <div className="service-faqs">{blocks.map((block, index) => {
     if (block.type !== 'heading') return null;
     const answers = blocks.slice(index + 1, blocks.findIndex((next, nextIndex) => nextIndex > index && next.type === 'heading') === -1 ? blocks.length : blocks.findIndex((next, nextIndex) => nextIndex > index && next.type === 'heading'));
-    return <details key={index}><summary><h4>{block.text}</h4><span aria-hidden="true">+</span></summary><div>{answers.map((answer, j) => answer.type === 'paragraph' ? <p key={j}><ServiceText text={answer.text} /></p> : null)}</div></details>;
+    return <details key={index}><summary><h4>{block.text}</h4><span aria-hidden="true">+</span></summary><div>{answers.map((answer, j) => answer.type === 'paragraph' ? <p key={j}><ServiceText text={answer.text} service={service} /></p> : null)}</div></details>;
   })}</div>;
 }
 
@@ -38,17 +39,17 @@ export default function ServicePage({ service }: { service: Service }) {
         <article className="visa-detail-article">
           <Image className="visa-detail-photo" {...getServiceImage(service)} alt={getServiceImage(service).alt} sizes="(max-width: 900px) 100vw, 800px" />
           <h2>{service.heading ?? `${service.name} support`}</h2>
-          {visaSubclasses.some(visa => visa.parentSlug === service.slug && visa.slug !== service.slug) && <nav className="service-subclass-links" aria-label={`${service.name} subclass pages`}>{visaSubclasses.filter(visa => visa.parentSlug === service.slug && visa.slug !== service.slug).map(visa => <Link href={`/services/${visa.slug}`} key={visa.slug}>{visa.name} ↗</Link>)}</nav>}
-          {intro.map((paragraph, i) => <p key={i} className={i === 0 ? 'lead' : undefined}><ServiceText text={paragraph} /></p>)}
+          {visaSubclasses.some(visa => visa.parentSlug === service.slug && visa.slug !== service.slug) && <nav className="service-subclass-links" aria-label={`${service.name} subclass pages`}>{visaSubclasses.filter(visa => visa.parentSlug === service.slug && visa.slug !== service.slug).map(visa => <Link href={visaPath(visa.slug)} key={visa.slug}>{visa.name} ↗</Link>)}</nav>}
+          {intro.map((paragraph, i) => <p key={i} className={i === 0 ? 'lead' : undefined}><ServiceText text={paragraph} service={service.name} /></p>)}
           {longPage && <details className="service-contents"><summary>On this page</summary><nav aria-label="Page sections">{sections.filter(section => section.id).map(section => <a key={section.id} href={`#${section.id}`}>{section.heading}<span aria-hidden="true">↗</span></a>)}</nav></details>}
           {sections.map((section, i) => <section className={longPage ? 'service-copy-section' : undefined} key={section.id ?? i}>
             {i === 0 && !longPage && <div className="visa-detail-inset"><Image {...getServiceImage(service)} alt="" sizes="(max-width: 600px) 100vw, 360px" /><div><Icon type={service.icon} /><h3>{service.name}</h3><p>{service.description}</p></div></div>}
             <h3 id={section.id}>{section.heading}</h3>
             {section.paragraphs?.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
             {!!section.items?.length && <ul className="checks">{section.items.map((item, index) => <li key={index}>{item}</li>)}</ul>}
-            {section.heading === 'Frequently Asked Questions' ? <ServiceFaq section={section} /> : section.blocks?.map((block, index) => block.type === 'list'
-              ? block.ordered ? <ol key={index}>{block.items.map((item, j) => <li key={j}><ServiceText text={item} /></li>)}</ol> : <ul className="checks" key={index}>{block.items.map((item, j) => <li key={j}><ServiceText text={item} /></li>)}</ul>
-              : block.type === 'heading' ? <h4 key={index}>{block.text}</h4> : <p key={index}><ServiceText text={block.text} /></p>)}
+            {section.heading === 'Frequently Asked Questions' ? <ServiceFaq section={section} service={service.name} /> : section.blocks?.map((block, index) => block.type === 'list'
+              ? block.ordered ? <ol key={index}>{block.items.map((item, j) => <li key={j}><ServiceText text={item} service={service.name} /></li>)}</ol> : <ul className="checks" key={index}>{block.items.map((item, j) => <li key={j}><ServiceText text={item} service={service.name} /></li>)}</ul>
+              : block.type === 'heading' ? <h4 key={index}>{block.text}</h4> : <p key={index}><ServiceText text={block.text} service={service.name} /></p>)}
             {section.links?.map(link => <p key={link.href}><a className="text-link" href={link.href}>{link.label} ↗</a></p>)}
           </section>)}
           <p className="source-note">{service.sourceNote ?? servicePageContent.sourceNote}</p>
