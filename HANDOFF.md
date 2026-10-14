@@ -20,10 +20,10 @@ Updated: 13 October 2026. Documentation only; no new implementation requested du
 
 ## Latest user decision / pending work
 - **Supplied `pv-*` CSS applies ONLY to subclass pages. Main service pages must keep their existing service design.** Add matching supplied content there only when required; do not apply the subclass design to every service.
-- All 12 currently identified unique documents are already imported. Six main services now have article-derived content/overviews through `service-pages/overviews.ts`. Citizenship, Employer Sponsored, Humanitarian/Protection and Appeals/Reviews still use existing short copy. Inventory new source files before adding content.
+- All 12 subclass documents are imported. Main Student Visa now has its own supplied study-in-Australia guide in `service-pages/student-visa.ts`. Subclass-derived excerpts were removed from five main categories; the other main services keep their original company summaries until their own long copy is supplied. The obsolete `service-pages/overviews.ts` was removed.
 - Content work centres on `src/content/services.ts`, `src/content/service-pages/index.ts` and `src/content/visa-subclasses/`; rendering is in `ServicePage.tsx` and `VisaArticlePage.tsx`.
 - **Verified routing changes** are present: `src/lib/visa-path.ts`, `src/app/services/[slug]/[sub]/page.tsx`, existing service route, `next.config.ts`, sitemap and renderer links. They split e.g. `student-visa-500` into `/services/student/visa-500` and add permanent redirects. Production HTTP checks passed for all 12 articles, 10 service routes, 10 redirects, canonicals/sitemap and 3 unknown-route 404s.
-- `parent-visa` currently renders the 804 subclass guide at its existing URL. Keep this intentional exception unless the user requests a separate category/subclass URL.
+- `/services/parent-visa` is now the main Parent Visa category. The unchanged 804 article was moved to `visa-subclasses/aged-parent-visa-804.ts` and is served at `/services/aged-parent/visa-804`. All 12 subclass URLs are distinct from the 10 main services; menus and sitemap derive them from the catalogue. Do not restore the old main/subclass collision.
 
 ## Next steps
 1. Read `AGENTS.md`, inspect `git status`/diffs, and review installed Next.js docs before changing framework code. Preserve all uncommitted work.

@@ -31,7 +31,32 @@ export function initSiteHeader(): () => void {
   const hover = matchMedia('(hover: hover) and (pointer: fine)');
   let hoverCloseTimer: ReturnType<typeof setTimeout> | undefined;
   const clearHoverClose = () => clearTimeout(hoverCloseTimer);
-  const closeDropdowns = (except?: HTMLButtonElement) =>
+  const serviceButtons = Array.from(header.querySelectorAll<HTMLButtonElement>('.service-submenu-toggle'));
+  const serviceTimers = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>();
+  const closeServiceMenus = (except?: HTMLButtonElement) => {
+    serviceButtons.forEach(button => {
+      clearTimeout(serviceTimers.get(button));
+      if (button === except) return;
+      button.setAttribute('aria-expanded', 'false');
+      const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
+      if (panel) panel.hidden = true;
+    });
+  };
+  const openServiceMenu = (button: HTMLButtonElement) => {
+    closeServiceMenus(button);
+    const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
+    const row = button.closest<HTMLElement>('.nav-service-item');
+    if (!panel || !row) return;
+    panel.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    const rect = row.getBoundingClientRect();
+    const width = panel.getBoundingClientRect().width;
+    const left = rect.right + width <= innerWidth - 16 ? rect.right : rect.left - width;
+    panel.style.left = `${Math.max(16, left)}px`;
+    panel.style.top = `${Math.max(16, Math.min(rect.top, innerHeight - panel.offsetHeight - 16))}px`;
+  };
+  const closeDropdowns = (except?: HTMLButtonElement) => {
+    if (except?.getAttribute('aria-controls') !== 'nav-services') closeServiceMenus();
     dropdownButtons.forEach((button) => {
       if (button === except) return;
       button.setAttribute('aria-expanded', 'false');
@@ -41,6 +66,7 @@ export function initSiteHeader(): () => void {
         if (target) target.hidden = true;
       }
     });
+  };
 
   closeDropdowns();
 
@@ -80,6 +106,7 @@ export function initSiteHeader(): () => void {
         clearHoverClose();
         const open = button.getAttribute('aria-expanded') !== 'true';
         closeDropdowns(button);
+        if (!open) closeServiceMenus();
         button.setAttribute('aria-expanded', String(open));
         const targetId = button.getAttribute('aria-controls');
         if (targetId) {
@@ -90,6 +117,49 @@ export function initSiteHeader(): () => void {
       { signal }
     )
   );
+
+  serviceButtons.forEach(button => {
+    const item = button.closest<HTMLElement>('.nav-service-item');
+    const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
+    if (!item || !panel) return;
+    item.addEventListener('pointerenter', event => {
+      if (hover.matches && event.pointerType !== 'touch') openServiceMenu(button);
+    }, { signal });
+    item.addEventListener('pointerleave', event => {
+      if (!hover.matches || event.pointerType === 'touch') return;
+      clearTimeout(serviceTimers.get(button));
+      serviceTimers.set(button, setTimeout(() => {
+        if (!item.contains(document.activeElement)) {
+          button.setAttribute('aria-expanded', 'false');
+          panel.hidden = true;
+        }
+      }, 180));
+    }, { signal });
+    item.addEventListener('focusout', event => {
+      if (!item.contains(event.relatedTarget as Node | null) && !item.matches(':hover')) {
+        button.setAttribute('aria-expanded', 'false');
+        panel.hidden = true;
+      }
+    }, { signal });
+    button.addEventListener('click', () => {
+      if (button.getAttribute('aria-expanded') === 'true') closeServiceMenus();
+      else openServiceMenu(button);
+    }, { signal });
+    button.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      openServiceMenu(button);
+      panel.querySelector<HTMLElement>('a')?.focus();
+    }, { signal });
+    panel.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft') return;
+      event.preventDefault();
+      closeServiceMenus();
+      button.focus();
+    }, { signal });
+  });
+  header.querySelector('#nav-services')?.addEventListener('scroll', () => closeServiceMenus(), { signal, passive: true });
+  window.addEventListener('resize', () => closeDropdowns(), { signal });
 
   document.addEventListener(
     'click',
@@ -104,6 +174,13 @@ export function initSiteHeader(): () => void {
     'keydown',
     (event) => {
       if (event.key !== 'Escape') return;
+      const activeService = serviceButtons.find(button => button.getAttribute('aria-expanded') === 'true');
+      if (activeService) {
+        event.preventDefault();
+        closeServiceMenus();
+        activeService.focus();
+        return;
+      }
       const activeButton = dropdownButtons.find((button) => button.getAttribute('aria-expanded') === 'true');
       closeDropdowns();
       activeButton?.focus();
@@ -166,6 +243,7 @@ export function initSiteHeader(): () => void {
   return () => {
     events.abort();
     clearHoverClose();
+    closeServiceMenus();
     cancelAnimationFrame(scrollFrame);
     if (drawer.open) {
       drawer.close();

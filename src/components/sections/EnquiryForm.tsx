@@ -35,7 +35,7 @@ export default function EnquiryForm({ id = 'enquiry', entrance = 'down' }: Enqui
         if (config.deliveryConfigured) {
           form.querySelectorAll('.form-note').forEach((el) => {
             el.textContent =
-              'Your details will be saved and forwarded to the configured enquiry service. Please do not send sensitive documents.';
+              'Your details are stored securely and sent to our team. Please do not send sensitive documents.';
           });
         }
       })
@@ -247,7 +247,7 @@ export default function EnquiryForm({ id = 'enquiry', entrance = 'down' }: Enqui
       </label>
       <span className="field-error" id={`${id}-consent-error`} />
       <p className="form-note">
-        Local preview: enquiries are saved on this server. Email delivery is pending configuration.
+        Your details are used only to respond to your enquiry. Please do not send sensitive documents.
       </p>
       <button className="button" type="submit">
         <span>Submit enquiry</span>

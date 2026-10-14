@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { disclaimer, toolSources, verifiedOn, type ToolSlug } from '@/features/immigration-tools/catalog';
 import { visibleFields, validateAnswers, type Answers } from '@/features/immigration-tools/fields';
 import { calculateTool, type ToolResult } from '@/features/immigration-tools/calculators';
+import ToolLeadForm from './ToolLeadForm';
 
 export default function ImmigrationTool({ slug }: { slug: ToolSlug }) {
   const [answers, setAnswers] = useState<Answers>({});
@@ -34,10 +35,11 @@ export default function ImmigrationTool({ slug }: { slug: ToolSlug }) {
       {result.pathways && <><h3>Potential pathways</h3><ul>{result.pathways.map(path => <li key={path}>{path}</li>)}</ul></>}
       {result.checks && <><h3>What your answers indicate</h3><dl className="feature-summary">{result.checks.map(item => <div key={item.label}><dt>{item.label}<span className="tool-status">{item.status}</span></dt><dd>{item.detail}</dd></div>)}</dl></>}
       <ul>{result.notes.map(note => <li key={note}>{note}</li>)}</ul><p>You can edit any answer above and calculate again. Results are cleared when answers change.</p>
-      <Link href="/consultation">Plan a free consultation</Link>
+      <Link href="/consultation">Book a free consultation</Link>
       {slug === 'sponsorship-cost-estimator' && <p><Link href="/tools/applicant-cost-calculator">Calculate applicant visa charges separately</Link></p>}
       {slug === 'applicant-cost-calculator' && <p><Link href="/tools/sponsorship-cost-estimator">Calculate employer sponsorship charges separately</Link></p>}
+      <ToolLeadForm toolSlug={slug} answers={answers} result={result} />
     </div>}
-    <section className="tool-sources" aria-labelledby="tool-sources-title"><h2 id="tool-sources-title">Official sources for this tool</h2><p>Reference snapshot checked {verifiedOn}.</p><ul>{toolSources[slug].map(([label, url]) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer">{label} (opens a new tab)</a></li>)}</ul><p>Rules and charges can change. Confirm the requirements at application time. This page does not collect or transmit your answers.</p><Link href="/tools">Explore all migration tools</Link></section>
+    <section className="tool-sources" aria-labelledby="tool-sources-title"><h2 id="tool-sources-title">Official sources for this tool</h2><p>Reference snapshot checked {verifiedOn}.</p><ul>{toolSources[slug].map(([label, url]) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer">{label} (opens a new tab)</a></li>)}</ul><p>Rules and charges can change. Confirm the requirements at application time. Your answers are sent only if you choose the optional expert review.</p><Link href="/tools">Explore all migration tools</Link></section>
   </div>;
 }

@@ -4,6 +4,11 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ServicePage from '../src/components/pages/ServicePage';
 import { services, getService, getServiceSeo, type Service } from '../src/content/services';
+import { getServicePage } from '../src/content/service-pages';
+import studentVisa500 from '../src/content/visa-subclasses/student-visa-500';
+import { studentVisa } from '../src/content/service-pages/student-visa';
+import { visaSubclasses } from '../src/content/visa-subclasses/catalog';
+import { getVisaArticle } from '../src/content/visa-subclasses';
 
 test('Service catalogue supports unique routes and unknown routes are not guessed', () => {
   assert.equal(new Set(services.map(service => service.slug)).size, services.length);
@@ -41,4 +46,45 @@ test('Default service copy and optional SEO overrides remain independent of long
   assert.equal(getServiceSeo(original).title, 'Student Visa');
   const overridden = { ...original, intro: ['Long body text.'], seo: { title: 'Specific title', description: 'Specific description' } };
   assert.deepEqual(getServiceSeo(overridden), { title: 'Specific title', description: 'Specific description' });
+});
+
+test('Main Student Visa uses the supplied study guide and keeps subclass 500 content separate', () => {
+  const service = getServicePage('student-visa')!;
+  assert.equal(service.slug, 'student-visa');
+  assert.deepEqual(service.intro, studentVisa.intro);
+  assert.deepEqual(service.sections, studentVisa.sections);
+  assert.notDeepEqual(service.sections, studentVisa500.sections);
+  const html = renderToStaticMarkup(createElement(ServicePage, { service }));
+  for (const section of studentVisa.sections) assert.ok(html.includes(`id="${section.id}"`), section.heading);
+  assert.equal(service.sections?.length, 18);
+  assert.match(html, /How to Choose a Course and Provider/);
+  assert.match(html, /When Do Intakes Start/);
+  assert.match(html, /Scholarships and Funding/);
+  assert.match(html, /\/services\/student\/subclass-visa-500/);
+  assert.match(html, /On this page/);
+  assert.match(html, /class="service-sidebar"/);
+  assert.match(html, /service=Student%20Visa/);
+  assert.doesNotMatch(html, /class="pv-wrap"|\{\{consultation\}\}/);
+  assert.equal(getServiceSeo(service).title, 'Study in Australia for International Students');
+});
+
+test('Main service pages do not resolve subclass guides or copy their long content', () => {
+  for (const summary of services) {
+    assert.equal(getVisaArticle(summary.slug), undefined, summary.slug);
+    const main = getServicePage(summary.slug)!;
+    assert.equal(main.slug, summary.slug);
+    assert.equal(main.name, summary.name);
+    for (const visa of visaSubclasses) {
+      const article = getVisaArticle(visa.slug)!;
+      assert.notEqual(main.sections, article.sections, `${summary.slug}: copied subclass sections`);
+      assert.ok(!(main.intro ?? [main.description]).includes(article.intro[0]), `${summary.slug}: copied subclass introduction`);
+    }
+    const html = renderToStaticMarkup(createElement(ServicePage, { service: main }));
+    assert.doesNotMatch(html, /class="pv-wrap"/);
+  }
+  for (const visa of visaSubclasses) assert.ok(getVisaArticle(visa.slug), visa.slug);
+  const parent = getServicePage('parent-visa')!;
+  assert.equal(parent.name, 'Parent Visa');
+  assert.doesNotMatch(renderToStaticMarkup(createElement(ServicePage, { service: parent })), /Balance of Family Test and What to Expect/);
+  assert.ok(getVisaArticle('aged-parent-visa-804')?.sections.length);
 });

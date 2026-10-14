@@ -11,7 +11,7 @@ export type ToolSlug = typeof tools[number]['slug'];
 export const allTools = [...tools, { slug: 'occupation-search', name: 'CSOL Occupation Search', description: 'Search official Core Skills occupation titles and ANZSCO codes, with stream-specific caveats and 186 assessing authorities.' }] as const;
 export const verifiedOn = '2026-10-10';
 export const rulesEffectiveUntil = '2027-06-30';
-export const disclaimer = 'Preliminary guidance only, not a formal migration assessment. Results do not guarantee eligibility, an invitation or visa approval. Evidence, exemptions and your full circumstances must be checked. Answers stay in this page and are not submitted or stored.';
+export const disclaimer = 'Preliminary guidance only, not a formal migration assessment. Results do not guarantee eligibility, an invitation or visa approval. Evidence, exemptions and your full circumstances must be checked. Answers stay in this page unless you choose to send your result to our team.';
 const immi = 'https://immi.homeaffairs.gov.au';
 export const sources = {
   points: `${immi}/supporting/Pages/Work/189-points-table.aspx`,

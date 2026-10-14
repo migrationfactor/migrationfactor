@@ -1,12 +1,17 @@
 import type { NextConfig } from 'next';
 import { visaSubclasses } from './src/content/visa-subclasses/catalog';
-import { splitVisaSlug } from './src/lib/visa-path';
+import { legacyVisaPaths, visaPath } from './src/lib/visa-path';
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { formats: ['image/avif', 'image/webp'] },
   async redirects() {
-    return visaSubclasses.flatMap(({ slug }) => { const parts = splitVisaSlug(slug); return parts ? [{ source: `/services/${slug}`, destination: `/services/${parts.join('/')}`, permanent: true }] : []; });
+    // Redirect legacy subclass aliases; keep main service URLs separate from their guides.
+    const contributory = visaPath('contributory-parent-visa-143-173-864-884');
+    return [
+      { source: '/services/contributory-parent-visa', destination: contributory, permanent: true },
+      ...visaSubclasses.flatMap(({ slug }) => legacyVisaPaths(slug).map(source => ({ source, destination: visaPath(slug), permanent: true }))),
+    ];
   },
   async headers() {
     return [

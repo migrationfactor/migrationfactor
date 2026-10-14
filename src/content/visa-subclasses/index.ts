@@ -1,5 +1,5 @@
 import { visaSubclasses } from './catalog';
-import { agedParent804 } from '../service-pages/aged-parent-804';
+import { agedParent804 } from './aged-parent-visa-804';
 import type { VisaArticleContent, VisaArticle } from './types';
 import article0 from './contributory-parent-visa';
 import article1 from './national-innovation-visa-858';
@@ -14,8 +14,8 @@ import article9 from './student-visa-500';
 import article10 from './visitor-visa-600';
 
 const articles: Record<string, VisaArticleContent> = {
- 'parent-visa': agedParent804,
- 'contributory-parent-visa': article0,
+ 'aged-parent-visa-804': agedParent804,
+ 'contributory-parent-visa-143-173-864-884': article0,
  'national-innovation-visa-858': article1,
  'offshore-partner-visa-309-100': article2,
  'onshore-partner-visa-820-801': article3,

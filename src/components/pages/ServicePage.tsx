@@ -7,6 +7,7 @@ import CtaSection from '@/components/sections/CtaSection';
 import JsonLd from '@/components/shared/JsonLd';
 import PageContents from '@/components/shared/PageContents';
 import Icon from '@/components/ui/Icon';
+import WhatsAppIcon from '@/components/ui/WhatsAppIcon';
 import Button from '@/components/ui/Button';
 import { company } from '@/content/company';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
@@ -64,6 +65,7 @@ export default function ServicePage({ service }: { service: Service }) {
           <div className="visa-sidebar-cta"><span className="eyebrow">Plan your next step</span><h3>Your future starts with the right destination.</h3><Button text="Discuss this service" href={`/contact/?service=${encodeURIComponent(service.name)}`} /></div>
           <div className="visa-sidebar-guides"><h3>Useful resources</h3><Link href="/guides/document-checklist/">Document checklist <span aria-hidden="true">↗</span></Link><Link href="/guides/preparing-your-profile/">Preparing your profile <span aria-hidden="true">↗</span></Link></div>
           <a className="sidebar-phone" href={`tel:${company.tel}`}><Icon type="phone" />{company.phone}</a>
+          <a className="sidebar-phone sidebar-whatsapp" href={company.whatsapp} target="_blank" rel="noopener noreferrer"><WhatsAppIcon />Chat on WhatsApp<span className="sr-only"> (opens in a new tab)</span></a>
         </aside>
       </div>
     </section>

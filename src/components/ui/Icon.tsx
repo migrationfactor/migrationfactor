@@ -2,7 +2,7 @@ import React from 'react';
 
 export type IconType =
   | 'globe' | 'study' | 'document' | 'people' | 'case' | 'shield'
-  | 'folder' | 'check' | 'screen' | 'phone' | 'mail' | 'clock' | 'pin';
+  | 'folder' | 'check' | 'screen' | 'phone' | 'mail' | 'clock' | 'pin' | 'calendar';
 
 const paths: Record<string, string> = {
   globe: '<circle cx="24" cy="24" r="18"/><ellipse cx="24" cy="24" rx="8" ry="18"/><path d="M7 18h34M7 30h34"/>',
@@ -18,6 +18,7 @@ const paths: Record<string, string> = {
   mail: '<rect x="4" y="9" width="40" height="30" rx="3"/><path d="m5 11 19 15 19-15"/>',
   clock: '<circle cx="24" cy="24" r="19"/><path d="M24 12v13l9 5"/>',
   pin: '<path d="M38 19c0 12-14 25-14 25S10 31 10 19a14 14 0 0 1 28 0Z"/><circle cx="24" cy="19" r="5"/>',
+  calendar: '<rect x="6" y="9" width="36" height="33" rx="4"/><path d="M6 19h36M16 5v8M32 5v8M15 27h4M22 27h4M29 27h4M15 34h4M22 34h4"/>',
 };
 
 interface IconProps {

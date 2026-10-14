@@ -198,7 +198,7 @@ export function initVisaAssessment(form: HTMLFormElement): () => void {
         const response = await fetch('/api/enquiries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify({ ...data, source: 'visa_assessment' }),
           signal,
         });
         const result = await response.json();
@@ -250,7 +250,7 @@ export function initVisaAssessment(form: HTMLFormElement): () => void {
       const deliveryEl = form.querySelector<HTMLElement>('[data-assessment-delivery]');
       if (deliveryEl) {
         deliveryEl.textContent = config.deliveryConfigured
-          ? 'Your profile will be saved and forwarded to the configured enquiry service.'
+          ? 'Your profile is stored securely and sent to our team for review.'
           : 'Your profile can be saved on this server, but email delivery is not configured. For a direct response, email info@migrationfactor.com.';
       }
     })

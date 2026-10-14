@@ -3,8 +3,9 @@ export const company = {
   name: 'Migration Factor',
   tagline: 'Your Future Starts with the Right Destination.',
   email: 'info@migrationfactor.com',
-  phone: '+61 426 122 786',
-  tel: '+61426122786',
+  phone: '+61 0450 635 162',
+  tel: '+61450635162',
+  whatsapp: 'https://wa.me/61450635162',
   overview:
     'Migration Factor is a migration and visa consultancy based in Perth, Western Australia. We support students, professionals and families with overseas education, employment, permanent residence and family-reunification pathways.',
   mission:
@@ -14,3 +15,13 @@ export const company = {
   offices: ['Mirrabooka, Perth, WA 6064', 'Cranbourne, Melbourne, VIC 3951'],
   hours: 'Monday–Friday',
 };
+
+/**
+ * Official social profiles. Only add a URL once the business has confirmed it;
+ * profiles left empty are not rendered anywhere on the site.
+ */
+export const socialLinks: { name: 'Facebook' | 'Instagram' | 'LinkedIn'; url: string }[] = [
+  { name: 'Facebook', url: '' },
+  { name: 'Instagram', url: '' },
+  { name: 'LinkedIn', url: '' },
+];

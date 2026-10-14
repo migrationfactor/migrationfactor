@@ -2,7 +2,7 @@ import type { VisaSummary } from './types';
 
 export const visaSubclasses: VisaSummary[] = [
   {
-    "slug": "parent-visa",
+    "slug": "aged-parent-visa-804",
     "name": "Aged Parent Visa — Subclass 804",
     "shortName": "Aged Parent Visa",
     "subclasses": [
@@ -16,7 +16,7 @@ export const visaSubclasses: VisaSummary[] = [
     "officialUrl": "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/aged-parent-804"
   },
   {
-    "slug": "contributory-parent-visa",
+    "slug": "contributory-parent-visa-143-173-864-884",
     "name": "Contributory Parent Visas — Subclass 143 / 173 / 864 / 884",
     "shortName": "Contributory Parent Visas",
     "subclasses": [

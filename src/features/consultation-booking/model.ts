@@ -1,5 +1,7 @@
+import { services } from '@/content/services';
 export const consultation = { minutes: 30, timezone: 'Asia/Karachi', hours: 'Monday–Friday, 9am–9pm Pakistan time', price: 'Free' } as const;
 export const preferenceTimes = Array.from({ length: 24 }, (_, i) => `${String(9 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+export const bookingCategories = [...services.map(service => service.name), 'Not sure yet'];
 export interface ConsultationDetails {
   format: string; date: string; time: string; name: string; email: string;
   phone: string; country: string; category: string; message: string; consent: boolean;

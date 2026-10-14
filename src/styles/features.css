@@ -15,3 +15,5 @@
 .tool-directory-intro{max-width:850px;margin-bottom:28px}.tool-directory .tool-card h3{font-size:23px;margin:0 0 16px;line-height:1.3}
 .occupation-results h3{font-size:22px;margin:0 0 12px;line-height:1.3}.feature-workspace .tool-sources h2{font-size:23px;margin:0 0 14px}
 @media(max-width:600px){.tool-guide-grid{grid-template-columns:1fr;gap:24px}.tool-related ul{flex-direction:column;gap:8px}.tool-guide{margin-top:32px}}
+
+.feature-note-error{border-left-color:#a01b2b}.feature-actions .button:disabled{opacity:.7;cursor:progress}.feature-note:focus,.tool-lead:focus{outline:none}.tool-lead{margin-top:30px;padding-top:26px;border-top:1px solid #c7dcdc}.tool-lead h3{margin-top:0}.tool-lead textarea{resize:vertical}

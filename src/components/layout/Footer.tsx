@@ -2,7 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
-import { company } from '@/content/company';
+import WhatsAppIcon from '@/components/ui/WhatsAppIcon';
+import { company, socialLinks } from '@/content/company';
 import { navigation } from '@/content/navigation';
 import { services } from '@/content/services';
 
@@ -106,11 +107,17 @@ export default function Footer() {
             <a className="footer-contact-link" href="/contact/">
               Request an eligibility assessment <span aria-hidden="true">↗</span>
             </a>
+            <ul className="footer-social" aria-label="Contact and social links">
+              <li><a href={company.whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`Chat on WhatsApp at ${company.phone} (opens in a new tab)`}><WhatsAppIcon /></a></li>
+              {socialLinks.filter((link) => link.url).map((link) => (
+                <li key={link.name}><a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on ${link.name} (opens in a new tab)`}>{link.name}</a></li>
+              ))}
+            </ul>
             <div className="footer-ornament" aria-hidden="true"><span /><i /><b /></div>
           </div>
           <div>
             <h3>Explore</h3>
-            {navigation.slice(1).map(([name, url]) => (
+            {[...navigation.slice(1), ['Countries', '/countries/'], ['FAQ', '/faq/'], ['Book a consultation', '/consultation']].map(([name, url]) => (
               <Link key={url} href={url}>
                 {name}
               </Link>

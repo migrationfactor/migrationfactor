@@ -30,6 +30,6 @@ export const faqs: [string, string][] = [
   ],
   [
     'How can I contact Migration Factor?',
-    'Call +61 426 122 786 or email info@migrationfactor.com. Office days are Monday–Friday.',
+    'Call or WhatsApp +61 0450 635 162, or email info@migrationfactor.com. Office days are Monday–Friday.',
   ],
 ];
