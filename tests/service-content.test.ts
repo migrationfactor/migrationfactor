@@ -68,6 +68,36 @@ test('Main Student Visa uses the supplied study guide and keeps subclass 500 con
   assert.equal(getServiceSeo(service).title, 'Study in Australia for International Students');
 });
 
+test('Supplied main-service documents render complete sections, FAQs and consultation links', () => {
+  const expected = [
+    ['partner-visa', 'Australia Partner Visa: Choosing the Right Pathway and Planning Your Application', 19, 12],
+    ['business-migration', 'Australia Business Migration: What Is Available Now and How to Plan', 17, 11],
+    ['humanitarian-protection', 'Australia Humanitarian and Protection Visas: Pathways, Requirements and What to Expect', 20, 12],
+    ['parent-visa', 'Australia Parent Visa: Choosing the Right Pathway for Your Parents', 16, 12],
+    ['skilled-visa', 'Australia Skilled Migration: Choosing a Pathway and Planning Your Journey', 17, 12],
+    ['australian-citizenship', 'Australian Citizenship: Requirements, Eligibility and How to Apply', 20, 12],
+    ['employer-sponsored-visa', 'Australia Employer Sponsored Visa: Requirements, Process and Pathways to Permanent Residence', 19, 12],
+  ] as const;
+  const titles = new Set<string>();
+  for (const [slug, heading, count, faqCount] of expected) {
+    const page = getServicePage(slug)!;
+    assert.equal(page.heading, heading, slug);
+    assert.equal(page.sections?.length, count, slug);
+    const sections = page.sections!;
+    assert.equal(new Set(sections.map(section => section.id)).size, count, `${slug}: unique contents anchors`);
+    const faq = sections.find(section => section.heading === 'Frequently Asked Questions')!;
+    assert.equal(faq.blocks?.filter(block => block.type === 'heading').length, faqCount, `${slug}: complete FAQ`);
+    const html = renderToStaticMarkup(createElement(ServicePage, { service: page }));
+    for (const section of sections) assert.ok(html.includes(`id="${section.id}"`), `${slug}: ${section.heading}`);
+    assert.match(html, /On this page/);
+    assert.match(html, /class="service-faqs"/);
+    assert.ok(html.includes(`service=${encodeURIComponent(page.name)}`));
+    assert.doesNotMatch(html, /INSERT VERIFIED|\{\{consultation\}\}|class="pv-wrap"|Start with your circumstances/);
+    titles.add(getServiceSeo(page).title);
+  }
+  assert.equal(titles.size, expected.length);
+});
+
 test('Main service pages do not resolve subclass guides or copy their long content', () => {
   for (const summary of services) {
     assert.equal(getVisaArticle(summary.slug), undefined, summary.slug);

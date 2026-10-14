@@ -20,10 +20,10 @@ Updated: 13 October 2026. Documentation only; no new implementation requested du
 
 ## Latest user decision / pending work
 - **Supplied `pv-*` CSS applies ONLY to subclass pages. Main service pages must keep their existing service design.** Add matching supplied content there only when required; do not apply the subclass design to every service.
-- All 12 subclass documents are imported. Main Student Visa now has its own supplied study-in-Australia guide in `service-pages/student-visa.ts`. Subclass-derived excerpts were removed from five main categories; the other main services keep their original company summaries until their own long copy is supplied. The obsolete `service-pages/overviews.ts` was removed.
+- All 12 subclass guides are imported separately. Eight main services now have their own supplied Word content in `src/content/service-pages/`: Student, Partner, Parent, Business, Skilled, Employer Sponsored, Citizenship and Humanitarian/Protection. Visitor and Appeals/Reviews retain existing summaries pending their own documents. The subclass-derived `service-pages/overviews.ts` was removed; do not restore it.
 - Content work centres on `src/content/services.ts`, `src/content/service-pages/index.ts` and `src/content/visa-subclasses/`; rendering is in `ServicePage.tsx` and `VisaArticlePage.tsx`.
-- **Verified routing changes** are present: `src/lib/visa-path.ts`, `src/app/services/[slug]/[sub]/page.tsx`, existing service route, `next.config.ts`, sitemap and renderer links. They split e.g. `student-visa-500` into `/services/student/visa-500` and add permanent redirects. Production HTTP checks passed for all 12 articles, 10 service routes, 10 redirects, canonicals/sitemap and 3 unknown-route 404s.
-- `/services/parent-visa` is now the main Parent Visa category. The unchanged 804 article was moved to `visa-subclasses/aged-parent-visa-804.ts` and is served at `/services/aged-parent/visa-804`. All 12 subclass URLs are distinct from the 10 main services; menus and sitemap derive them from the catalogue. Do not restore the old main/subclass collision.
+- **Verified routing changes** are present: `src/lib/visa-path.ts`, `src/app/services/[slug]/[sub]/page.tsx`, existing service route, `next.config.ts`, sitemap and renderer links. They split e.g. `student-visa-500` into `/services/student/subclass-visa-500` and add permanent redirects from older paths. Use the helper rather than hardcoding old URLs.
+- `/services/parent-visa` is now the main Parent Visa category. The unchanged 804 article was moved to `visa-subclasses/aged-parent-visa-804.ts` and is served at `/services/aged-parent/subclass-visa-804`. All 12 subclass URLs are distinct from the 10 main services; use `visaPath()` for links. Do not restore the old main/subclass collision.
 
 ## Next steps
 1. Read `AGENTS.md`, inspect `git status`/diffs, and review installed Next.js docs before changing framework code. Preserve all uncommitted work.
@@ -33,6 +33,7 @@ Updated: 13 October 2026. Documentation only; no new implementation requested du
 5. Report changes to the user. The user explicitly requested pushing completed changes on 13 October 2026. Future pushes still require authorization.
 
 ## Important limitations
+- Latest main-content verification (14 October): TypeScript/lint, 41 tests, build (56 entries), 32 desktop/tablet/mobile browser cases, 1,015 supplied text entries and 19 internal link destinations passed. All 43 public sitemap pages returned 200 with unique full bodies/titles and present canonicals. See the latest entry in `IMPLEMENTATION.md`; older snapshots below are historical.
 - Last verified subclass-design snapshot: typecheck/lint, **27 tests**, build **48 entries**, 36 browser cases (12 pages × 1440/390/320px), 30 internal links. Latest pre-push verification also passed lint, 27 tests, production build (48 entries), route/redirect checks above and 12 production browser cases for service/subclass pages at 1440/390/320px without overflow or page errors.
 - Home mobile lab LCP remained ~4.1–4.5s; the 2.5s target is not met. Do not claim field Core Web Vitals success.
 - Enquiries use local NDJSON plus optional HTTPS webhook. Vercel filesystem is not durable; rate limiting is process-local. Real production delivery/storage requires configuration/work.

@@ -16,13 +16,17 @@ Content lives here; design lives in `src/components/`. Photos stay in `public/me
 | `navigation.ts` | Shared menu entries |
 | `service-navigation.ts` | Service-to-subclass menu links derived from the existing service and subclass catalogues |
 | `service-pages/student-visa.ts` | Main Student Visa page: supplied study-in-Australia guide; separate from subclass 500 requirements |
+| `service-pages/partner-visa.ts`, `parent-visa.ts` | Supplied main family-service guides; separate from the numbered subclass articles |
+| `service-pages/business-migration.ts`, `skilled-visa.ts`, `employer-sponsored-visa.ts` | Supplied main work/business guides |
+| `service-pages/australian-citizenship.ts`, `humanitarian-protection.ts` | Supplied citizenship and humanitarian/protection guides |
 | `tools.ts` | Tool SEO titles/descriptions, introductions, instructions, result explanations and related links; calculator rules remain in `src/features/immigration-tools/` |
 
 ## One service design, different content
 
 ```text
 src/content/services.ts
-          ↓ slug lookup
+src/content/service-pages/ (long articles)
+          ↓ service-pages/index.ts lookup
 src/app/services/[slug]/page.tsx
           ↓ service data
 src/components/pages/ServicePage.tsx
@@ -68,11 +72,11 @@ fees and consultation scheduling stay in their existing `src/features/` modules.
 After edits, run `npm run typecheck` and `npm run build`, then review the affected
 route. Verify legal requirements before publishing new immigration guidance.
 
-Main service articles live in `src/content/service-pages/`. The main Student Visa page uses its separate study-planning article. Other main services use their existing company summaries until their own long content is supplied. Do not fill main services with subclass article excerpts. The short catalogue remains in `services.ts`, keeping long page text out of navbar/client imports.
+Main service articles live in `src/content/service-pages/` and are registered in `service-pages/index.ts`. Eight supplied Word documents now populate Student, Partner, Parent, Business, Skilled, Employer Sponsored, Citizenship and Humanitarian/Protection main pages. Visitor and Appeals/Reviews retain their existing summaries until their own main-page documents are supplied. Do not fill main services with subclass article excerpts. The short catalogue remains in `services.ts`, keeping long page text out of navbar/client imports. Originals are retained in `content-input/`; edit the TypeScript modules to change published copy. All main guides share the existing service renderer, contents navigation and FAQ design.
 
 ## Subclass content pages
 
-All unique Word files supplied in `content-input/` use one shared component: `src/components/pages/VisaArticlePage.tsx`. The supplied HTML controls the layout direction only; its Migration Republic business copy, script blocks, schema, fonts and demo colours are not imported.
+All supplied subclass Word documents use one shared component: `src/components/pages/VisaArticlePage.tsx`. Main service documents use `ServicePage.tsx`. The supplied subclass HTML controls the layout direction only; its Migration Republic business copy, script blocks, schema, fonts and demo colours are not imported.
 
 Edit page copy in `src/content/visa-subclasses/<slug>.ts`; summary, existing image slot and category mapping are in `catalog.ts`. Reviewed Subclass 804 content lives in `visa-subclasses/aged-parent-visa-804.ts`. The server-only resolver in `visa-subclasses/index.ts` combines the article with the short catalogue. Do not import that resolver into navbar/client components. Original Word files and identical duplicate copies remain untouched.
 
