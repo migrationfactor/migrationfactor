@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { listCommunicationLeads, type CommunicationLead } from '@/lib/admin/queries';
+import { listCommunicationLeads, markSectionSeen, type CommunicationLead } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import Filters from './Filters';
 import Pagination from './Pagination';
 import StatusBadge from './StatusBadge';
 import SourceBadge from './SourceBadge';
+import UnreadDot from './UnreadDot';
 import { formatDateTime, telHref } from './format';
 
 export const channelPages = {
@@ -16,7 +17,7 @@ interface Props { channel: CommunicationLead['channel']; q?: string; status?: st
 
 /** One row per WhatsApp number or email address; repeat enquiries are listed on the detail page. */
 export default async function CommunicationLeadsList({ channel, q, status, page }: Props) {
-  const { rows, count } = await listCommunicationLeads(channel, { q, status, page });
+  const [{ rows, count }] = await Promise.all([listCommunicationLeads(channel, { q, status, page }), markSectionSeen(channel)]);
   const config = channelPages[channel];
   return (
     <>
@@ -24,9 +25,9 @@ export default async function CommunicationLeadsList({ channel, q, status, page 
       <Filters q={q} status={status} statuses={leadStatuses} />
       {rows.length ? <div className="admin-table-wrap"><table className="admin-table">
         <thead><tr><th scope="col">Last enquiry</th><th scope="col">Name</th><th scope="col">Phone</th>{channel === 'email' && <th scope="col">Email</th>}<th scope="col">Topic</th><th scope="col">Source</th><th scope="col">Status</th></tr></thead>
-        <tbody>{rows.map((lead) => <tr key={lead.id}>
+        <tbody>{rows.map((lead) => <tr key={lead.id} className={lead.viewed_at ? undefined : 'admin-row-unread'}>
           <td data-label="Last enquiry">{formatDateTime(lead.last_message_at)}</td>
-          <td data-label="Name"><Link href={`${config.href}/${lead.id}`}>{lead.name}</Link></td>
+          <td data-label="Name"><UnreadDot viewedAt={lead.viewed_at} /><Link href={`${config.href}/${lead.id}`}>{lead.name}</Link></td>
           <td data-label="Phone">{lead.phone ? <a href={telHref(lead.phone)}>{lead.phone}</a> : '—'}</td>
           {channel === 'email' && <td data-label="Email">{lead.email ? <a href={`mailto:${lead.email}`}>{lead.email}</a> : '—'}</td>}
           <td data-label="Topic">{lead.topic || '—'}</td>

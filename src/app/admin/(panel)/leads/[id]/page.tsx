@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin/auth';
-import { getRecord, type ContactLead } from '@/lib/admin/queries';
+import { getRecord, markViewed, type ContactLead } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import { updateLead } from '@/app/admin/actions';
 import UpdateForm from '@/components/admin/UpdateForm';
@@ -17,6 +17,7 @@ export default async function ContactLeadPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const lead = await getRecord<ContactLead>('contact_leads', id);
   if (!lead) notFound();
+  await markViewed('contact_leads', lead);
   return (
     <>
       <Link className="admin-back" href="/admin/leads">← All contact form leads</Link>

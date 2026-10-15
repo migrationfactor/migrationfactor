@@ -7,7 +7,7 @@ import { supabaseConfigured } from '@/lib/supabase/config';
 import { requireAdmin } from '@/lib/admin/auth';
 import { bookingStatuses, leadStatuses } from '@/lib/leads/validation';
 import { sendBookingStatusEmail } from '@/lib/leads/service';
-import type { Booking } from '@/lib/admin/queries';
+import { newLeadCounts, type Booking, type NewLeadCounts } from '@/lib/admin/queries';
 
 export interface ActionState {
   ok?: boolean;
@@ -31,6 +31,12 @@ export async function signIn(_state: ActionState, formData: FormData): Promise<A
     return { message: 'This account does not have admin access.', email };
   }
   redirect('/admin');
+}
+
+/** Refreshes the sidebar dots without reloading the page. */
+export async function fetchNewLeadCounts(): Promise<NewLeadCounts> {
+  await requireAdmin();
+  return newLeadCounts();
 }
 
 export async function signOut() {

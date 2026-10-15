@@ -27,8 +27,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user && !isLogin) {
+  // Verifies the JWT signature locally and refreshes an expired session; no Auth server call per request.
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims?.sub && !isLogin) {
     const redirect = NextResponse.redirect(new URL('/admin/login', request.url));
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
     return redirect;

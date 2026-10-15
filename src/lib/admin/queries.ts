@@ -1,5 +1,7 @@
 import 'server-only';
+import { cache } from 'react';
 import { createUserClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { bookingStatuses, leadStatuses } from '@/lib/leads/validation';
 
 export const PAGE_SIZE = 20;
@@ -7,26 +9,26 @@ export const PAGE_SIZE = 20;
 export interface ContactLead {
   id: string; created_at: string; updated_at: string; name: string; email: string; phone: string | null;
   service: string | null; message: string; consent: boolean; source: string; status: string;
-  admin_notes: string | null; notification_status: string;
+  admin_notes: string | null; notification_status: string; viewed_at: string | null;
 }
 
 export interface ToolLead {
   id: string; created_at: string; updated_at: string; tool_slug: string; tool_name: string; name: string;
   email: string; phone: string | null; message: string | null; answers: Record<string, string>;
-  result_summary: string | null; consent: boolean; status: string; admin_notes: string | null; notification_status: string;
+  result_summary: string | null; consent: boolean; status: string; admin_notes: string | null; notification_status: string; viewed_at: string | null;
 }
 
 export interface Booking {
   id: string; reference: string; created_at: string; updated_at: string; name: string; email: string; phone: string;
   country: string; service: string; format: string; preferred_date: string; preferred_time: string; timezone: string;
   starts_at: string; duration_minutes: number; message: string; consent: boolean; status: string;
-  admin_notes: string | null; notification_status: string;
+  admin_notes: string | null; notification_status: string; viewed_at: string | null;
 }
 
 export interface CommunicationLead {
   id: string; created_at: string; updated_at: string; last_message_at: string; channel: 'whatsapp' | 'email'; name: string;
   email: string | null; phone: string | null; topic: string | null; source: string; consent: boolean; status: string;
-  admin_notes: string | null; notification_status: string;
+  admin_notes: string | null; notification_status: string; viewed_at: string | null;
 }
 
 export interface CommunicationMessage {
@@ -139,38 +141,58 @@ export async function getRecord<T>(table: 'contact_leads' | 'tool_leads' | 'book
   return data as T | null;
 }
 
+export type LeadSection = 'whatsapp' | 'email' | 'contact' | 'booking' | 'tool';
+export type NewLeadCounts = Record<LeadSection, number>;
+interface AdminCounts {
+  unread: NewLeadCounts;
+  totals: Record<'whatsappNew' | 'whatsappTotal' | 'emailNew' | 'emailTotal' | 'contactNew' | 'contactTotal' | 'toolNew' | 'toolTotal' | 'bookingsPending' | 'bookingsUpcoming', number>;
+}
+
+/** Every sidebar and dashboard count in one database call, shared by the layout and page of a request. */
+const adminCounts = cache(async (): Promise<AdminCounts> => {
+  const supabase = await createUserClient();
+  const { data, error } = await supabase.rpc('admin_counts');
+  if (error || !data) throw new Error('Could not load admin counts.');
+  return data as AdminCounts;
+});
+
+/** Unopened items per section, shown as dots in the sidebar. */
+export async function newLeadCounts(): Promise<NewLeadCounts> {
+  try { return (await adminCounts()).unread; } catch { return { whatsapp: 0, email: 0, contact: 0, booking: 0, tool: 0 }; }
+}
+
+/** Marks a lead as opened so its sidebar dot clears. Status is left for the admin to change. */
+export async function markViewed(table: 'contact_leads' | 'tool_leads' | 'bookings' | 'communication_leads', record: { id: string; viewed_at: string | null }) {
+  if (record.viewed_at) return;
+  const supabase = await createUserClient();
+  const { error } = await supabase.from(table).update({ viewed_at: new Date().toISOString() }).eq('id', record.id).is('viewed_at', null);
+  if (error) console.warn('Could not mark the record as viewed.');
+}
+
 export async function dashboardSummary() {
   const supabase = await createUserClient();
   const now = new Date().toISOString();
-  const head = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true });
-  const total = async (query: PromiseLike<{ count: number | null; error: unknown }>) => {
-    const { count, error } = await query;
-    if (error) throw new Error('Could not load dashboard totals.');
-    return count ?? 0;
-  };
-  const [contactNew, contactTotal, toolNew, toolTotal, bookingsPending, bookingsUpcoming, whatsappNew, whatsappTotal, emailNew, emailTotal] = await Promise.all([
-    total(head('contact_leads').eq('status', 'new')),
-    total(head('contact_leads')),
-    total(head('tool_leads').eq('status', 'new')),
-    total(head('tool_leads')),
-    total(head('bookings').eq('status', 'pending')),
-    total(head('bookings').in('status', ['pending', 'confirmed']).gte('starts_at', now)),
-    total(head('communication_leads').eq('channel', 'whatsapp').eq('status', 'new')),
-    total(head('communication_leads').eq('channel', 'whatsapp')),
-    total(head('communication_leads').eq('channel', 'email').eq('status', 'new')),
-    total(head('communication_leads').eq('channel', 'email')),
-  ]);
-  const [recentContacts, recentTools, nextBookings, recentMessages] = await Promise.all([
-    supabase.from('contact_leads').select('id, created_at, name, service, status').order('created_at', { ascending: false }).limit(5),
-    supabase.from('tool_leads').select('id, created_at, name, tool_name, status').order('created_at', { ascending: false }).limit(5),
-    supabase.from('bookings').select('id, reference, name, preferred_date, preferred_time, timezone, status').in('status', ['pending', 'confirmed']).gte('starts_at', now).order('starts_at').limit(5),
-    supabase.from('communication_leads').select('id, last_message_at, name, channel, phone, email, topic, status').order('last_message_at', { ascending: false }).limit(6),
+  const [{ totals }, recentContacts, recentTools, nextBookings, recentMessages] = await Promise.all([
+    adminCounts(),
+    supabase.from('contact_leads').select('id, created_at, name, service, status, viewed_at').order('created_at', { ascending: false }).limit(5),
+    supabase.from('tool_leads').select('id, created_at, name, tool_name, status, viewed_at').order('created_at', { ascending: false }).limit(5),
+    supabase.from('bookings').select('id, reference, name, preferred_date, preferred_time, timezone, status, viewed_at').in('status', ['pending', 'confirmed']).gte('starts_at', now).order('starts_at').limit(5),
+    supabase.from('communication_leads').select('id, last_message_at, name, channel, phone, email, topic, status, viewed_at').order('last_message_at', { ascending: false }).limit(6),
   ]);
   return {
-    totals: { contactNew, contactTotal, toolNew, toolTotal, bookingsPending, bookingsUpcoming, whatsappNew, whatsappTotal, emailNew, emailTotal },
-    recentContacts: (recentContacts.data ?? []) as Pick<ContactLead, 'id' | 'created_at' | 'name' | 'service' | 'status'>[],
-    recentTools: (recentTools.data ?? []) as Pick<ToolLead, 'id' | 'created_at' | 'name' | 'tool_name' | 'status'>[],
-    recentMessages: (recentMessages.data ?? []) as Pick<CommunicationLead, 'id' | 'last_message_at' | 'name' | 'channel' | 'phone' | 'email' | 'topic' | 'status'>[],
-    nextBookings: (nextBookings.data ?? []) as Pick<Booking, 'id' | 'reference' | 'name' | 'preferred_date' | 'preferred_time' | 'timezone' | 'status'>[],
+    totals,
+    recentContacts: (recentContacts.data ?? []) as Pick<ContactLead, 'id' | 'created_at' | 'name' | 'service' | 'status' | 'viewed_at'>[],
+    recentTools: (recentTools.data ?? []) as Pick<ToolLead, 'id' | 'created_at' | 'name' | 'tool_name' | 'status' | 'viewed_at'>[],
+    recentMessages: (recentMessages.data ?? []) as Pick<CommunicationLead, 'id' | 'last_message_at' | 'name' | 'channel' | 'phone' | 'email' | 'topic' | 'status' | 'viewed_at'>[],
+    nextBookings: (nextBookings.data ?? []) as Pick<Booking, 'id' | 'reference' | 'name' | 'preferred_date' | 'preferred_time' | 'timezone' | 'status' | 'viewed_at'>[],
   };
+}
+
+/** Records that this admin opened a section, which clears its sidebar badge (not the per-lead dots). */
+export async function markSectionSeen(section: LeadSection) {
+  const admin = await requireAdmin();
+  const supabase = await createUserClient();
+  const { error } = await supabase.from('admin_section_views')
+    .upsert({ user_id: admin.userId, section, seen_at: new Date().toISOString() }, { onConflict: 'user_id,section' });
+  if (error) console.warn('Could not record the section view.');
 }

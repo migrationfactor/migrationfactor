@@ -9,19 +9,24 @@ export interface AdminSession {
   email: string;
 }
 
-/** Verifies the session with Supabase Auth and checks admin membership (RLS-protected). */
+/**
+ * Verifies the session JWT signature locally (the project signs with asymmetric ES256 keys, so
+ * no Auth server round trip), then checks admin membership in the database on every request,
+ * so removing an admin takes effect immediately.
+ */
 export const getAdmin = cache(async (): Promise<AdminSession | null> => {
   if (!supabaseConfigured()) return null;
   const supabase = await createUserClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub) return null;
   const { data: membership } = await supabase
     .from('admin_users')
     .select('user_id')
-    .eq('user_id', user.id)
+    .eq('user_id', claims.sub)
     .maybeSingle();
   if (!membership) return null;
-  return { userId: user.id, email: user.email || '' };
+  return { userId: claims.sub, email: typeof claims.email === 'string' ? claims.email : '' };
 });
 
 /** Use at the top of every admin page and server action. */

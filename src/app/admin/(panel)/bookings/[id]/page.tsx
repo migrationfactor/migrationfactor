@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin/auth';
-import { getRecord, type Booking } from '@/lib/admin/queries';
+import { getRecord, markViewed, type Booking } from '@/lib/admin/queries';
 import { bookingStatuses } from '@/lib/leads/validation';
 import { updateBooking } from '@/app/admin/actions';
 import UpdateForm from '@/components/admin/UpdateForm';
@@ -17,6 +17,7 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const booking = await getRecord<Booking>('bookings', id);
   if (!booking) notFound();
+  await markViewed('bookings', booking);
   return (
     <>
       <Link className="admin-back" href="/admin/bookings">← All bookings</Link>
