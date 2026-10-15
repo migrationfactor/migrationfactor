@@ -17,11 +17,11 @@ export const company = {
 };
 
 /**
- * Official social profiles. Only add a URL once the business has confirmed it;
- * profiles left empty are not rendered anywhere on the site.
+ * Business-supplied social destinations. Facebook currently links to search,
+ * not a verified profile. Empty destinations are not rendered.
  */
 export const socialLinks: { name: 'Facebook' | 'Instagram' | 'LinkedIn'; url: string }[] = [
-  { name: 'Facebook', url: '' },
-  { name: 'Instagram', url: '' },
+  { name: 'Facebook', url: 'https://www.facebook.com/search/top?q=migration%20factor' },
+  { name: 'Instagram', url: 'https://www.instagram.com/migrationfactor/' },
   { name: 'LinkedIn', url: '' },
 ];

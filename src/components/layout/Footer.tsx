@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
 import WhatsAppIcon from '@/components/ui/WhatsAppIcon';
+import SocialIcon from '@/components/ui/SocialIcon';
 import { company, socialLinks } from '@/content/company';
 import { navigation } from '@/content/navigation';
 import { services } from '@/content/services';
@@ -108,9 +109,9 @@ export default function Footer() {
               Request an eligibility assessment <span aria-hidden="true">↗</span>
             </a>
             <ul className="footer-social" aria-label="Contact and social links">
-              <li><a href={company.whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`Chat on WhatsApp at ${company.phone} (opens in a new tab)`}><WhatsAppIcon /></a></li>
+              <li><a href={company.whatsapp} target="_blank" rel="noopener noreferrer" title="WhatsApp" aria-label={`Chat on WhatsApp at ${company.phone} (opens in a new tab)`}><WhatsAppIcon /></a></li>
               {socialLinks.filter((link) => link.url).map((link) => (
-                <li key={link.name}><a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on ${link.name} (opens in a new tab)`}>{link.name}</a></li>
+                <li key={link.name}><a href={link.url} target="_blank" rel="noopener noreferrer" title={link.name} aria-label={`${link.url.includes('/search/') ? 'Find ' : ''}${company.name} on ${link.name} (opens in a new tab)`}><SocialIcon platform={link.name} /></a></li>
               ))}
             </ul>
             <div className="footer-ornament" aria-hidden="true"><span /><i /><b /></div>

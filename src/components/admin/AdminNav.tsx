@@ -4,9 +4,11 @@ import { usePathname } from 'next/navigation';
 
 const links: [string, string][] = [
   ['Dashboard', '/admin'],
-  ['Contact leads', '/admin/leads'],
-  ['Tool leads', '/admin/tool-leads'],
+  ['WhatsApp leads', '/admin/whatsapp-leads'],
+  ['Email leads', '/admin/email-leads'],
+  ['Contact form leads', '/admin/leads'],
   ['Bookings', '/admin/bookings'],
+  ['Tool leads', '/admin/tool-leads'],
 ];
 
 export default function AdminNav() {

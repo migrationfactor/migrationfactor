@@ -25,7 +25,6 @@ function HeaderLogo({ drawer = false }: { drawer?: boolean }) {
 export default function Header() {
   const pathname = usePathname();
   const menus: Record<string, [string, string][]> = {
-    Home: [['Homepage', '/'], ['Explore services', '/services/'], ['Contact our team', '/contact/'], ['Book a consultation', '/consultation']],
     Services: services.map(service => [service.name, `/services/${service.slug}/`]),
   };
 

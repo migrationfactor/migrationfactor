@@ -5,6 +5,12 @@
 .hero p{max-width:640px;margin-bottom:30px;font-size:18px}
 .hero-shade{background:#0007}
 .hero-flights{width:50%;height:auto;margin:0 auto -10px;pointer-events:none}
+/* Planes enter from beyond the artwork box; dots and planes stay hidden until HeroFlights runs. */
+svg.hero-flights{overflow:visible}
+.hero-flights .flight-route{fill:none;stroke:none}
+.hero-flights .flight-dot{fill:#fff;opacity:0;transition:opacity .3s ease}
+.hero-flights .flight-plane{opacity:0}
+.hero-flights.is-done .flight-dot,.hero-flights.is-done .flight-plane{opacity:1}
 .features{gap:30px;margin-top:-60px}
 .feature{padding:67px 50px 40px;background:#fff url('/media/featurePattern.webp') right top/contain no-repeat;overflow:hidden}
 .feature.active{background-color:var(--primary)}

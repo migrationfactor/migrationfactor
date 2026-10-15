@@ -93,6 +93,6 @@ export default function VisaArticlePage({ visa }: { visa: VisaArticle }) {
       <nav className="pv-related" aria-label="Related visa services"><h3 className="pv-related-title">Explore related visa pathways</h3><div className="pv-related-links">{visa.parentSlug !== visa.slug && <Link className="pv-related-link" href={`/services/${visa.parentSlug}`}>Explore {visa.group.toLowerCase()} services ↗</Link>}{related.map(item => <Link className="pv-related-link" href={visaPath(item.slug)} key={item.slug}>{item.name} ↗</Link>)}<Link className="pv-related-link" href="/services">All visa and immigration services ↗</Link></div></nav>
       <p className="pv-disclaimer">{visa.sourceNote} <a className="pv-link" href={visa.officialUrl}>Read the official Home Affairs guidance.</a></p>
     </article></div></section>
-    <CtaSection />
+    <CtaSection destinationImage={photo} />
   </>;
 }

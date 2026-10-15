@@ -6,6 +6,7 @@ import { bookingStatuses } from '@/lib/leads/validation';
 import { updateBooking } from '@/app/admin/actions';
 import UpdateForm from '@/components/admin/UpdateForm';
 import StatusBadge from '@/components/admin/StatusBadge';
+import SourceBadge from '@/components/admin/SourceBadge';
 import DetailList from '@/components/admin/DetailList';
 import { formatDateTime, statusLabel, telHref } from '@/components/admin/format';
 
@@ -19,7 +20,7 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <Link className="admin-back" href="/admin/bookings">← All bookings</Link>
-      <header className="admin-header"><h1>{booking.name}</h1><StatusBadge status={booking.status} /></header>
+      <header className="admin-header"><h1>{booking.name}</h1><SourceBadge source="booking" /><StatusBadge status={booking.status} /></header>
       <div className="admin-detail">
         <section className="admin-panel"><h2>Booking request</h2>
           <DetailList rows={[

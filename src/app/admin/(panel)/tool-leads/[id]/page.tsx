@@ -6,6 +6,7 @@ import { leadStatuses } from '@/lib/leads/validation';
 import { updateLead } from '@/app/admin/actions';
 import UpdateForm from '@/components/admin/UpdateForm';
 import StatusBadge from '@/components/admin/StatusBadge';
+import SourceBadge from '@/components/admin/SourceBadge';
 import DetailList from '@/components/admin/DetailList';
 import { formatDateTime, statusLabel, telHref } from '@/components/admin/format';
 
@@ -20,7 +21,7 @@ export default async function ToolLeadPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <Link className="admin-back" href="/admin/tool-leads">← All tool leads</Link>
-      <header className="admin-header"><h1>{lead.name}</h1><StatusBadge status={lead.status} /></header>
+      <header className="admin-header"><h1>{lead.name}</h1><SourceBadge source="tool" /><StatusBadge status={lead.status} /></header>
       <div className="admin-detail">
         <section className="admin-panel"><h2>Details</h2>
           <DetailList rows={[

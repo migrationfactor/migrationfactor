@@ -52,7 +52,8 @@ function readUpdate(formData: FormData, allowed: readonly string[]) {
 
 export async function updateLead(_state: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
-  const table = formData.get('table') === 'tool_leads' ? 'tool_leads' : 'contact_leads';
+  const requested = formData.get('table');
+  const table = requested === 'tool_leads' || requested === 'communication_leads' ? requested : 'contact_leads';
   const input = readUpdate(formData, leadStatuses);
   if ('error' in input) return { message: input.error };
   const supabase = await createUserClient();

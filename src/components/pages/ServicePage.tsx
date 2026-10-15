@@ -70,6 +70,6 @@ export default function ServicePage({ service }: { service: Service }) {
       </div>
     </section>
     <ProcessSection />
-    {service.slug === 'parent-visa' && <CtaSection />}
+    {service.slug === 'parent-visa' && <CtaSection destinationImage={getServiceImage(service)} />}
   </>;
 }

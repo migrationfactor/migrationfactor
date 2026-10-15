@@ -1,5 +1,6 @@
 import type { IconType } from '@/components/ui/Icon';
 import { images } from '@/content/media';
+import { serviceDestinations } from '@/content/service-destinations';
 
 // Existing Migration Factor content; edit copy here without changing page components.
 export interface Service {
@@ -143,6 +144,8 @@ export const services: Service[] = [
 export function getService(slug: string) { return services.find(service => service.slug === slug); }
 
 export function getServiceImage(service: Service & { parentSlug?: string }) {
+  const destination = serviceDestinations[service.parentSlug ?? service.slug];
+  if (destination) return destination;
   if (service.image && images[service.image]) return images[service.image];
   if (service.parentSlug) {
     const parent = services.find(s => s.slug === service.parentSlug);
@@ -152,6 +155,8 @@ export function getServiceImage(service: Service & { parentSlug?: string }) {
 }
 
 export function getServiceInsetImage(service: Service & { parentSlug?: string }) {
+  const destination = serviceDestinations[service.parentSlug ?? service.slug];
+  if (destination) return destination;
   if (service.insetImage && images[service.insetImage]) return images[service.insetImage];
   if (service.parentSlug) {
     const parent = services.find(s => s.slug === service.parentSlug);

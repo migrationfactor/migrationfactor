@@ -11,12 +11,15 @@
 .topbar .topbar-booking .icon{width:15px;height:15px}
 @media(min-width:1024px){.topbar .topbar-booking{margin-left:auto}}
 .footer-social{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:22px 0 0;padding:0}
-.footer-social a{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:42px;padding:0 12px;border-radius:21px;border:1px solid #ffffff33;color:#fff;font-size:13px;font-weight:700;text-decoration:none;transition:background-color .25s,border-color .25s}
-.footer-social a:hover,.footer-social a:focus-visible{background:#35b5ac;border-color:#35b5ac;color:#042628}
-.footer-social .icon{width:19px;height:19px}
+.footer-social a{display:inline-flex;align-items:center;justify-content:center;width:44px;min-width:44px;height:44px;padding:0;border-radius:50%;border:1px solid #35b5ac66;background:#35b5ac14;color:#bfeee9;text-decoration:none;transition:background-color .25s,border-color .25s,color .25s,transform .25s,box-shadow .25s}
+.footer-social a:hover,.footer-social a:focus-visible{background:#35b5ac;border-color:#35b5ac;color:#042628;transform:translateY(-3px);box-shadow:0 6px 18px #04262840}
+.footer-social a:focus-visible{outline:2px solid #bfeee9;outline-offset:4px}
+.footer-social .icon{width:20px;height:20px}
+@media(prefers-reduced-motion:reduce){.footer-social a{transition:none}.footer-social a:hover,.footer-social a:focus-visible{transform:none}}
 .sidebar-whatsapp{text-decoration:none}
 
 /* Floating WhatsApp launcher and chat panel, bottom-right. Brand palette only. */
+.back-top{right:33px;bottom:112px}
 .floating-whatsapp{position:fixed;right:24px;bottom:24px;z-index:90;display:flex;flex-direction:column;align-items:flex-end;gap:16px}
 .floating-whatsapp-button{position:relative;display:grid;place-items:center;flex:none;width:60px;height:60px;padding:0;border:0;border-radius:50%;background:linear-gradient(145deg,#35b5ac,#0b666a 62%,#07484b);color:#fff;box-shadow:0 12px 28px #04262859,inset 0 0 0 2px #ffffff26;cursor:pointer;transition:transform .3s cubic-bezier(.165,.84,.44,1),box-shadow .3s}
 .floating-whatsapp-button:before,.floating-whatsapp-button:after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid #35b5ac;opacity:0;animation:whatsapp-ring 2.6s ease-out infinite;pointer-events:none}
@@ -29,6 +32,14 @@
 
 .whatsapp-panel{width:min(380px,calc(100vw - 32px));max-height:calc(100dvh - 120px);overflow-y:auto;border-radius:26px;background:#fff;border:1px solid #35b5ac33;box-shadow:0 24px 60px #04262840;transform-origin:bottom right;animation:whatsapp-panel-in .32s cubic-bezier(.165,.84,.44,1)}
 .whatsapp-panel[hidden]{display:none}
+.whatsapp-panel{scrollbar-width:thin;scrollbar-color:#0b666a #eef6f5}
+.whatsapp-panel::-webkit-scrollbar{width:6px}
+.whatsapp-panel::-webkit-scrollbar-track{background:#eef6f5;border-radius:999px;margin-block:16px}
+.whatsapp-panel::-webkit-scrollbar-thumb{background:#0b666a;border-radius:999px}
+.whatsapp-panel::-webkit-scrollbar-thumb:hover{background:#07484b}
+.whatsapp-panel::-webkit-scrollbar-button{display:none;width:0;height:0}
+.whatsapp-panel::-webkit-scrollbar-corner{background:transparent}
+@supports selector(::-webkit-scrollbar){.whatsapp-panel{scrollbar-width:auto;scrollbar-color:auto}}
 @keyframes whatsapp-panel-in{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
 .whatsapp-panel-head{position:relative;padding:22px 56px 20px 24px;background:linear-gradient(135deg,#0b666a,#07484b 70%,#042628);color:#fff;overflow:hidden}
 .whatsapp-panel-head:after{content:'';position:absolute;right:-50px;top:-60px;width:170px;height:170px;border-radius:50%;background:#35b5ac2e;pointer-events:none}
@@ -57,5 +68,22 @@
 .whatsapp-start .whatsapp-icon{width:20px;height:20px}
 .whatsapp-start:hover{transform:translateY(-2px);box-shadow:0 16px 30px #0b666a52;filter:brightness(1.05)}
 .whatsapp-start:focus-visible{outline:3px solid #35b5ac;outline-offset:3px}
-@media(max-width:767px){.floating-whatsapp{right:16px;bottom:16px}.floating-whatsapp-button{width:54px;height:54px}.floating-whatsapp-button .whatsapp-icon{width:25px;height:25px}.whatsapp-panel{max-height:calc(100dvh - 100px)}}
+@media(max-width:767px){.back-top{right:24px;bottom:96px}.floating-whatsapp{right:16px;bottom:16px}.floating-whatsapp-button{width:54px;height:54px}.floating-whatsapp-button .whatsapp-icon{width:25px;height:25px}.whatsapp-panel{max-height:calc(100dvh - 100px)}}
 @media print{.floating-whatsapp{display:none}}
+
+/* Explicit enquiry capture keeps the approved WhatsApp panel and brand palette. */
+.whatsapp-privacy{margin:12px 0 0;font-size:12px;line-height:1.6;color:#52666a}
+.whatsapp-save-status{margin:12px 0 0;font-size:12px;font-weight:700;line-height:1.6;color:#07484b}
+.whatsapp-start:disabled{cursor:wait;opacity:.75;transform:none}
+.whatsapp-continue{margin-top:12px;color:#07484b;font-size:14px;font-weight:700;text-decoration:underline}
+.email-enquiry-dialog{position:fixed;inset:0;margin:auto;padding:0;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 40px);border:1px solid #35b5ac66;border-radius:24px;background:#fff;color:#042628;overflow-y:auto;box-shadow:0 24px 60px #04262866}
+.email-enquiry-dialog::backdrop{background:#04262899}
+.email-enquiry-content{min-width:0}
+.email-enquiry-form{display:flex;flex-direction:column;padding:24px;background:#f6fbfb}
+.email-enquiry-form>label:not(.email-enquiry-consent){font-size:14px;font-weight:700;margin:14px 0 7px}
+.email-enquiry-form>label:first-child{margin-top:0}
+.email-enquiry-form>input,.email-enquiry-form>textarea{width:100%;min-height:46px;border:1px solid #a5c4c6;border-radius:12px;padding:12px;font:inherit;color:#042628;background:#fff}
+.email-enquiry-form input:focus-visible,.email-enquiry-form textarea:focus-visible{outline:2px solid #35b5ac;outline-offset:3px}
+.email-enquiry-consent{display:flex;gap:10px;margin:18px 0 0;font-size:12px;line-height:1.6}
+.email-enquiry-consent input{width:18px;height:18px;flex:none;accent-color:#0b666a;margin-top:2px}
+.whatsapp-field-gap{margin-top:16px}

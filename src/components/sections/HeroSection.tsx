@@ -2,6 +2,7 @@ import React from 'react';
 import Image, { getImageProps } from 'next/image';
 import Button from '@/components/ui/Button';
 import WordReveal from '@/components/shared/WordReveal';
+import HeroFlights from '@/components/shared/HeroFlights';
 import { home } from '@/content/home';
 
 export default function HeroSection() {
@@ -27,7 +28,7 @@ export default function HeroSection() {
       <div className="hero-shade" />
       <div className="hero-diagonal" aria-hidden="true" />
       <div className="container hero-content">
-        <Image className="hero-flights" src="/media/heroFlights.webp" width={800} height={180} sizes="(max-width: 767px) 90vw, 800px" alt="" aria-hidden="true" loading="eager" />
+        <HeroFlights />
         <h1 className="split">
           <WordReveal>
           {home.hero.headingLines[0]} <br />

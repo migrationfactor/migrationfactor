@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
-    "admin:create": "node scripts/create-admin.mjs"
+    "admin:create": "node scripts/create-admin.mjs",
+    "db:migrate": "node scripts/migrate-leads.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -20,10 +21,12 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "pg": "^8.23.1",
     "tsx": "^4.23.15",
     "typescript": "^5"
   },

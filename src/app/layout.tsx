@@ -14,6 +14,7 @@ import PublicOnly from '@/components/layout/PublicOnly';
 import MotionEffect from '@/components/shared/MotionEffect';
 import PageLoader from '@/components/shared/PageLoader';
 import FloatingWhatsApp from '@/components/shared/FloatingWhatsApp';
+import EmailEnquiryDialog from '@/components/shared/EmailEnquiryDialog';
 import JsonLd from '@/components/shared/JsonLd';
 import { organization } from '@/lib/seo';
 import { SITE_URL } from '@/lib/constants';
@@ -39,12 +40,12 @@ export default function RootLayout({
       <head><link rel="preload" href="/fonts/manrope.woff2" as="font" type="font/woff2" crossOrigin="anonymous" /></head>
       <body id="top">
         <PageLoader />
-        <noscript><style>{'.page-loader{display:none}'}</style></noscript>
+        <noscript><style>{'.page-loader{display:none}.hero-flights .flight-dot,.hero-flights .flight-plane{opacity:1}'}</style></noscript>
         <JsonLd data={organization} />
         <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'Migration Factor', publisher: { '@id': organization['@id'] } }} />
         <PublicOnly><Header /></PublicOnly>
         <main id="main">{children}</main>
-        <PublicOnly><Footer /><FloatingWhatsApp /></PublicOnly>
+        <PublicOnly><Footer /><FloatingWhatsApp /><EmailEnquiryDialog /></PublicOnly>
         <MotionEffect />
       </body>
     </html>
