@@ -22,6 +22,6 @@ export const company = {
  */
 export const socialLinks: { name: 'Facebook' | 'Instagram' | 'LinkedIn'; url: string }[] = [
   { name: 'Facebook', url: 'https://www.facebook.com/search/top?q=migration%20factor' },
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/company/migrationfactor/' },
   { name: 'Instagram', url: 'https://www.instagram.com/migrationfactor/' },
-  { name: 'LinkedIn', url: '' },
 ];

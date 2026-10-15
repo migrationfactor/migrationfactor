@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/constants';
-import { company } from '@/content/company';
+import { company, socialLinks } from '@/content/company';
 
 export function absoluteUrl(path = '/') {
   const clean = path === '/' ? '/' : path.replace(/\/+$/, '');
@@ -25,6 +25,8 @@ export const organization = {
   '@context': 'https://schema.org', '@type': 'Organization',
   '@id': `${SITE_URL}/#organization`, name: company.name, url: SITE_URL,
   logo: absoluteUrl('/brand/mark.webp'), email: company.email, telephone: company.tel,
+  // Verified profiles only; a search-results link is not the business's own page.
+  sameAs: socialLinks.filter(link => link.url && !link.url.includes('/search/')).map(link => link.url),
 };
 
 export function pageSchema(path: string, name: string, description: string, kind: 'WebPage' | 'Service' | 'Article' = 'WebPage') {
