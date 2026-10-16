@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { listContactLeads, markSectionSeen } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import Filters from '@/components/admin/Filters';
@@ -14,10 +14,9 @@ export const metadata = { title: 'Contact leads' };
 type Search = Promise<{ q?: string; status?: string; page?: string }>;
 
 export default async function ContactLeadsPage({ searchParams }: { searchParams: Search }) {
-  await requireAdmin();
   const { q, status, page: rawPage } = await searchParams;
   const page = Math.max(1, Number(rawPage) || 1);
-  const [{ rows, count }] = await Promise.all([listContactLeads({ q, status, page }), markSectionSeen('contact')]);
+  const [{ rows, count }] = await withAdmin(Promise.all([listContactLeads({ q, status, page }), markSectionSeen('contact')]));
   return (
     <>
       <header className="admin-header"><h1>Contact form leads</h1><p>Submissions from the contact and enquiry forms.</p></header>

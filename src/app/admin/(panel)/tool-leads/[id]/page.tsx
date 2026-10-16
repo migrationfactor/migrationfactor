@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { getRecord, markViewed, type ToolLead } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import { updateLead } from '@/app/admin/actions';
@@ -13,11 +13,9 @@ import { formatDateTime, statusLabel, telHref } from '@/components/admin/format'
 export const metadata = { title: 'Tool lead' };
 
 export default async function ToolLeadPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
   const { id } = await params;
-  const lead = await getRecord<ToolLead>('tool_leads', id);
+  const [lead] = await withAdmin(Promise.all([getRecord<ToolLead>('tool_leads', id), markViewed('tool_leads', id)]));
   if (!lead) notFound();
-  await markViewed('tool_leads', lead);
   const answers = Object.entries(lead.answers || {});
   return (
     <>

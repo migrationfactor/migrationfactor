@@ -111,8 +111,11 @@ export async function listCommunicationLeads(channel: CommunicationLead['channel
   return { rows: (data ?? []) as CommunicationLead[], count: count ?? 0 };
 }
 
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Every website request or received message for one WhatsApp number or email address, newest first. */
 export async function listCommunicationMessages(leadId: string) {
+  if (!uuid.test(leadId)) return [];
   const supabase = await createUserClient();
   const { data, error } = await supabase.from('communication_messages').select('id, kind, body, subject, received_at')
     .eq('lead_id', leadId).order('received_at', { ascending: false }).limit(100);
@@ -130,8 +133,6 @@ export async function leadActivity(days: 7 | 30 | 90) {
     whatsapp: Number(row.whatsapp_count), email: Number(row.email_count), tool: Number(row.tool_count),
   }));
 }
-
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function getRecord<T>(table: 'contact_leads' | 'tool_leads' | 'bookings' | 'communication_leads', id: string): Promise<T | null> {
   if (!uuid.test(id)) return null;
@@ -161,11 +162,14 @@ export async function newLeadCounts(): Promise<NewLeadCounts> {
   try { return (await adminCounts()).unread; } catch { return { whatsapp: 0, email: 0, contact: 0, booking: 0, tool: 0 }; }
 }
 
-/** Marks a lead as opened so its sidebar dot clears. Status is left for the admin to change. */
-export async function markViewed(table: 'contact_leads' | 'tool_leads' | 'bookings' | 'communication_leads', record: { id: string; viewed_at: string | null }) {
-  if (record.viewed_at) return;
+/**
+ * Marks a lead as opened so its sidebar dot clears. Status is left for the admin to change.
+ * Runs alongside the record read; it only writes when the lead has not been opened before.
+ */
+export async function markViewed(table: 'contact_leads' | 'tool_leads' | 'bookings' | 'communication_leads', id: string) {
+  if (!uuid.test(id)) return;
   const supabase = await createUserClient();
-  const { error } = await supabase.from(table).update({ viewed_at: new Date().toISOString() }).eq('id', record.id).is('viewed_at', null);
+  const { error } = await supabase.from(table).update({ viewed_at: new Date().toISOString() }).eq('id', id).is('viewed_at', null);
   if (error) console.warn('Could not mark the record as viewed.');
 }
 

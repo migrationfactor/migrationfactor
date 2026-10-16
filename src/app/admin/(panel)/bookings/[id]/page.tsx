@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { getRecord, markViewed, type Booking } from '@/lib/admin/queries';
 import { bookingStatuses } from '@/lib/leads/validation';
 import { updateBooking } from '@/app/admin/actions';
@@ -13,11 +13,9 @@ import { formatDateTime, statusLabel, telHref } from '@/components/admin/format'
 export const metadata = { title: 'Booking' };
 
 export default async function BookingPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
   const { id } = await params;
-  const booking = await getRecord<Booking>('bookings', id);
+  const [booking] = await withAdmin(Promise.all([getRecord<Booking>('bookings', id), markViewed('bookings', id)]));
   if (!booking) notFound();
-  await markViewed('bookings', booking);
   return (
     <>
       <Link className="admin-back" href="/admin/bookings">← All bookings</Link>

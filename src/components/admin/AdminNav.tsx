@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { fetchNewLeadCounts } from '@/app/admin/actions';
 import type { NewLeadCounts } from '@/lib/admin/queries';
 
 const links: [string, string, keyof NewLeadCounts | null][] = [
@@ -15,6 +14,12 @@ const links: [string, string, keyof NewLeadCounts | null][] = [
 ];
 
 const REFRESH_MS = 60000;
+
+async function fetchNewLeadCounts(): Promise<NewLeadCounts> {
+  const response = await fetch('/admin/counts', { cache: 'no-store' });
+  if (!response.ok) throw new Error('Counts unavailable');
+  return response.json();
+}
 
 /** Sidebar links with a count of leads that arrived since the section was last opened, like notifications. */
 export default function AdminNav({ initialCounts }: { initialCounts: NewLeadCounts }) {

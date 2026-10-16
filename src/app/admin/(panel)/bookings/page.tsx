@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { listBookings, markSectionSeen } from '@/lib/admin/queries';
 import { bookingStatuses } from '@/lib/leads/validation';
 import Filters from '@/components/admin/Filters';
@@ -13,10 +13,9 @@ type Search = Promise<{ q?: string; status?: string; when?: string; page?: strin
 const whenOptions: [string, string][] = [['', 'Upcoming'], ['past', 'Past'], ['all', 'All (newest first)']];
 
 export default async function BookingsPage({ searchParams }: { searchParams: Search }) {
-  await requireAdmin();
   const { q, status, when, page: rawPage } = await searchParams;
   const page = Math.max(1, Number(rawPage) || 1);
-  const [{ rows, count }] = await Promise.all([listBookings({ q, status, when, page }), markSectionSeen('booking')]);
+  const [{ rows, count }] = await withAdmin(Promise.all([listBookings({ q, status, when, page }), markSectionSeen('booking')]));
   return (
     <>
       <header className="admin-header"><h1>Consultation bookings</h1><p>Requests from the booking form. Times are the client’s preference until you confirm them.</p></header>

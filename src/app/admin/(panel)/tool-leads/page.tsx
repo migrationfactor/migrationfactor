@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { listToolLeads, markSectionSeen } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import { allTools } from '@/features/immigration-tools/catalog';
@@ -19,10 +19,9 @@ const toolOptions: [string, string][] = [
 ];
 
 export default async function ToolLeadsPage({ searchParams }: { searchParams: Search }) {
-  await requireAdmin();
   const { q, status, tool, page: rawPage } = await searchParams;
   const page = Math.max(1, Number(rawPage) || 1);
-  const [{ rows, count }] = await Promise.all([listToolLeads({ q, status, tool, page }), markSectionSeen('tool')]);
+  const [{ rows, count }] = await withAdmin(Promise.all([listToolLeads({ q, status, tool, page }), markSectionSeen('tool')]));
   return (
     <>
       <header className="admin-header"><h1>Tool leads</h1><p>Visitors who sent a migration or visa tool result to the team.</p></header>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { withAdmin } from '@/lib/admin/auth';
 import { getRecord, listCommunicationMessages, markViewed, type CommunicationLead } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import { updateLead } from '@/app/admin/actions';
@@ -17,9 +18,8 @@ function whatsappHref(phone: string) {
 }
 
 export default async function CommunicationLeadDetail({ channel, id }: { channel: CommunicationLead['channel']; id: string }) {
-  const lead = await getRecord<CommunicationLead>('communication_leads', id);
+  const [lead, messages] = await withAdmin(Promise.all([getRecord<CommunicationLead>('communication_leads', id), listCommunicationMessages(id), markViewed('communication_leads', id)]));
   if (!lead || lead.channel !== channel) notFound();
-  const [messages] = await Promise.all([listCommunicationMessages(lead.id), markViewed('communication_leads', lead)]);
   const config = channelPages[channel];
   return (
     <>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { withAdmin } from '@/lib/admin/auth';
 import { listCommunicationLeads, markSectionSeen, type CommunicationLead } from '@/lib/admin/queries';
 import { leadStatuses } from '@/lib/leads/validation';
 import Filters from './Filters';
@@ -17,7 +18,7 @@ interface Props { channel: CommunicationLead['channel']; q?: string; status?: st
 
 /** One row per WhatsApp number or email address; repeat enquiries are listed on the detail page. */
 export default async function CommunicationLeadsList({ channel, q, status, page }: Props) {
-  const [{ rows, count }] = await Promise.all([listCommunicationLeads(channel, { q, status, page }), markSectionSeen(channel)]);
+  const [{ rows, count }] = await withAdmin(Promise.all([listCommunicationLeads(channel, { q, status, page }), markSectionSeen(channel)]));
   const config = channelPages[channel];
   return (
     <>

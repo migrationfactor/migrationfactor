@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireAdmin } from '@/lib/admin/auth';
+import { withAdmin } from '@/lib/admin/auth';
 import { dashboardSummary, leadActivity } from '@/lib/admin/queries';
 import StatusBadge from '@/components/admin/StatusBadge';
 import SourceBadge from '@/components/admin/SourceBadge';
@@ -10,10 +10,9 @@ import { formatDateTime } from '@/components/admin/format';
 export const metadata = { title: 'Dashboard' };
 
 export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  await requireAdmin();
   const requested = Number((await searchParams).days);
   const period = requested === 7 || requested === 90 ? requested : 30;
-  const [{ totals, recentContacts, recentTools, recentMessages, nextBookings }, activity] = await Promise.all([dashboardSummary(), leadActivity(period)]);
+  const [{ totals, recentContacts, recentTools, recentMessages, nextBookings }, activity] = await withAdmin(Promise.all([dashboardSummary(), leadActivity(period)]));
   const cards: [string, number, string, string][] = [
     ['New WhatsApp leads', totals.whatsappNew, `${totals.whatsappTotal} total`, '/admin/whatsapp-leads?status=new'],
     ['New email leads', totals.emailNew, `${totals.emailTotal} total`, '/admin/email-leads?status=new'],

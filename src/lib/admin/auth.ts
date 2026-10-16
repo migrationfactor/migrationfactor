@@ -35,3 +35,13 @@ export async function requireAdmin(): Promise<AdminSession> {
   if (!admin) redirect('/admin/login');
   return admin;
 }
+
+/**
+ * Runs admin reads at the same time as the admin check instead of after it, saving a database
+ * round trip per page. RLS still returns nothing to non-admins, and the check still redirects them.
+ */
+export async function withAdmin<T>(load: Promise<T>): Promise<T> {
+  load.catch(() => undefined);
+  await requireAdmin();
+  return load;
+}
