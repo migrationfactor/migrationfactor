@@ -15,3 +15,12 @@ export const serviceDestinations: Record<string, ImageMeta> = {
   'services-banner': { src: '/media/services-destinations/services-banner.webp', alt: 'Sydney Harbour panorama in warm daylight', width: 1536, height: 1024 },
 };
 
+
+/** People remain appropriate for student, partner and family services. */
+export const servicePeople: Record<string, ImageMeta> = {
+  'student-visa': { src: '/media/services-destinations/student-people-v2.webp', alt: 'Two university students with notebooks and backpacks on an Australian campus', width: 1536, height: 1024 },
+  'partner-visa': { src: '/media/services-destinations/partner-people.webp', alt: 'Couple walking together by an Australian harbour', width: 1536, height: 1024 },
+  'parent-visa': { src: '/media/services-destinations/parent-people.webp', alt: 'Parents and their adult daughter together in an Australian waterfront park', width: 1536, height: 1024 },
+};
+
+export const serviceTraveller: ImageMeta = { src: '/media/services-destinations/services-traveller.webp', alt: 'Woman ready to travel with her suitcase and passport', width: 700, height: 729 };

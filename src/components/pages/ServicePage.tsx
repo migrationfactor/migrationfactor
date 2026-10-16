@@ -9,6 +9,7 @@ import PageContents from '@/components/shared/PageContents';
 import Icon from '@/components/ui/Icon';
 import WhatsAppIcon from '@/components/ui/WhatsAppIcon';
 import Button from '@/components/ui/Button';
+import { serviceTraveller } from '@/content/service-destinations';
 import { company } from '@/content/company';
 import { visaSubclasses } from '@/content/visa-subclasses/catalog';
 import { services, servicePageContent, getServiceImage, getServiceInsetImage, type Service, type ServiceSection } from '@/content/services';
@@ -70,6 +71,6 @@ export default function ServicePage({ service }: { service: Service }) {
       </div>
     </section>
     <ProcessSection />
-    {service.slug === 'parent-visa' && <CtaSection destinationImage={getServiceImage(service)} />}
+    {service.slug === 'parent-visa' && <CtaSection travellerImage={serviceTraveller} />}
   </>;
 }

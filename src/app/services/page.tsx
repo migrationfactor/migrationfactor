@@ -4,7 +4,7 @@ import Breadcrumb from '@/components/layout/Breadcrumb';
 import ServiceGrid from '@/components/sections/ServiceGrid';
 import ProcessSection from '@/components/sections/ProcessSection';
 import CtaSection from '@/components/sections/CtaSection';
-import { serviceDestinations } from '@/content/service-destinations';
+import { serviceTraveller } from '@/content/service-destinations';
 
 export const metadata = pageMetadata("/services", "Visa & Immigration Services", "Explore Migration Factor student, visitor, partner, parent, skilled, employer-sponsored, citizenship, business, protection and review services.");
 
@@ -23,7 +23,7 @@ export default function ServicesPage() {
         </div>
       </section>
       <ProcessSection />
-      <CtaSection destinationImage={serviceDestinations['services-banner']} />
+      <CtaSection travellerImage={serviceTraveller} />
     </>
   );
 }
