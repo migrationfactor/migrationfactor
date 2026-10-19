@@ -41,8 +41,8 @@ export default function ServiceCount() {
   }, []);
 
   return (
-    <div ref={ref} className="about-badge reveal reveal-down" aria-label={`${serviceCount} clients supported`}>
-      <strong aria-hidden="true">{count}</strong>
+    <div ref={ref} className="about-badge reveal reveal-down" aria-label={`${serviceCount}+ clients supported`}>
+      <strong aria-hidden="true">{count}+</strong>
       <span aria-hidden="true">Clients<br />supported</span>
     </div>
   );
