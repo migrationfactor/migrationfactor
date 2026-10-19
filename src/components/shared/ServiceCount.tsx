@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-const serviceCount = 25;
+const serviceCount = 500;
 
 /** Animate the requested service count when the badge enters view. */
 export default function ServiceCount() {
@@ -41,9 +41,9 @@ export default function ServiceCount() {
   }, []);
 
   return (
-    <div ref={ref} className="about-badge reveal reveal-down" aria-label={`${serviceCount} visa and immigration services`}>
+    <div ref={ref} className="about-badge reveal reveal-down" aria-label={`${serviceCount} clients supported`}>
       <strong aria-hidden="true">{count}</strong>
-      <span aria-hidden="true">Visa &amp; immigration<br />services</span>
+      <span aria-hidden="true">Clients<br />supported</span>
     </div>
   );
 }
