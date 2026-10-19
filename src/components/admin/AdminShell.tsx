@@ -1,12 +1,15 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from '@/app/admin/actions';
 import AdminNav from './AdminNav';
+import AdminProgress from './AdminProgress';
 import type { NewLeadCounts } from '@/lib/admin/queries';
 
 export default function AdminShell({ email, counts, children }: { email: string; counts: NewLeadCounts; children: React.ReactNode }) {
   return (
     <div className="admin-shell">
+      <Suspense fallback={null}><AdminProgress /></Suspense>
       <aside className="admin-sidebar">
         <Link className="admin-brand" href="/admin" aria-label="Admin dashboard">
           <Image src="/brand/mark.webp" width={56} height={56} alt="" />

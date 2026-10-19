@@ -218,4 +218,10 @@
 .admin-skeleton-bar{height:52px}
 .admin-skeleton-block{height:360px}
 @keyframes admin-skeleton{0%{background-position:100% 0}100%{background-position:-100% 0}}
-@media(prefers-reduced-motion:reduce){.admin-skeleton{animation:none}}
+/* Top loading bar: from the click until the next page appears */
+.admin-progress{position:fixed;top:0;left:0;right:0;z-index:200;height:3px;overflow:hidden;background:#cfe3e3;pointer-events:none}
+.admin-progress span{position:absolute;inset:0 auto 0 0;width:40%;border-radius:3px;background:linear-gradient(90deg,#0b666a,#35b5ac);box-shadow:0 0 8px #35b5ac99;animation:admin-progress 1.1s ease-in-out infinite}
+@keyframes admin-progress{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@keyframes admin-pulse{50%{opacity:.45}}
+/* Calmer, still visible loading motion when the device asks for reduced motion */
+@media(prefers-reduced-motion:reduce){.admin-skeleton{animation:admin-pulse 1.6s ease-in-out infinite}.admin-progress span{width:100%;animation:admin-pulse 1.6s ease-in-out infinite}}

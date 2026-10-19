@@ -3,6 +3,7 @@ export default function AdminLoading() {
   return (
     <div className="admin-loading" role="status" aria-live="polite">
       <span className="sr-only">Loading…</span>
+      <div className="admin-progress" aria-hidden="true"><span /></div>
       <div className="admin-skeleton admin-skeleton-title" />
       <div className="admin-skeleton admin-skeleton-bar" />
       <div className="admin-skeleton admin-skeleton-block" />

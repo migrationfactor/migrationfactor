@@ -1,3 +1,4 @@
+import Form from 'next/form';
 import { statusLabel } from './format';
 
 interface FiltersProps {
@@ -7,10 +8,10 @@ interface FiltersProps {
   extra?: { name: string; label: string; value?: string; options: [string, string][] };
 }
 
-/** Plain GET form so filters work without JavaScript and stay in the URL. */
+/** GET form: filters stay in the URL, update without a full reload, and still work without JavaScript. */
 export default function Filters({ q, status, statuses, extra }: FiltersProps) {
   return (
-    <form className="admin-filters" method="get" role="search">
+    <Form className="admin-filters" action="" role="search">
       <label>Search<input type="search" name="q" defaultValue={q} maxLength={80} placeholder="Name, email or phone" /></label>
       <label>Status<select name="status" defaultValue={status || ''}>
         <option value="">All statuses</option>
@@ -20,6 +21,6 @@ export default function Filters({ q, status, statuses, extra }: FiltersProps) {
         {extra.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>}
       <button type="submit" className="admin-button">Apply</button>
-    </form>
+    </Form>
   );
 }
