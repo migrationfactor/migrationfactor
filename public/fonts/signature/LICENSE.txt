@@ -1,0 +1,2 @@
+All five fonts are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org).
+Great Vibes, Caveat, Mrs Saint Delafield, Sacramento and Alex Brush, latin subsets from Google Fonts.

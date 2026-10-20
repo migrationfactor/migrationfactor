@@ -22,7 +22,8 @@ const windowMs = 600000;
 export async function readPublicJson(
   req: NextRequest,
   scope: string,
-  maxRequests = 8
+  maxRequests = 8,
+  bodyLimit = 16384
 ): Promise<{ input: Record<string, unknown> } | { response: NextResponse }> {
   const contentType = req.headers.get('content-type') || '';
   if (!/^application\/json(?:;|$)/i.test(contentType)) {
@@ -58,7 +59,7 @@ export async function readPublicJson(
     };
   }
 
-  const raw = await readBoundedBody(req);
+  const raw = await readBoundedBody(req, bodyLimit);
   if (raw === null) return { response: jsonResponse({ message: 'Your submission is too large. Please use fewer characters.' }, 413) };
   try {
     const input = JSON.parse(raw);

@@ -7,6 +7,7 @@ import type { CatalogItem, CustomerSuggestion, InvoiceWithItems } from '@/lib/in
 import { currencies, currencyNames, invoiceStatuses, invoiceTotals, lineTotals, formatMoney, type Currency } from '@/lib/invoices/totals';
 import { validateInvoice, type InvoiceInput } from '@/lib/invoices/validation';
 import { statusLabel } from '@/components/admin/format';
+import Combobox from '@/components/admin/Combobox';
 
 interface Row { key: number; item_name: string; description: string; quantity: string; rate: string; discount_percent: string; tax_percent: string }
 
@@ -48,11 +49,6 @@ export default function InvoiceEditor({ invoice, defaults, catalog, customers, o
   function set<K extends keyof typeof fields>(key: K, value: (typeof fields)[K]) {
     setFields((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => { const copy = { ...prev }; delete copy[key]; return copy; });
-  }
-  function chooseCustomer(name: string) {
-    set('bill_to_name', name);
-    const match = customers.find((c) => c.name === name);
-    if (match) setFields((prev) => ({ ...prev, bill_to_name: match.name, bill_to_email: match.email, bill_to_phone: match.phone || prev.bill_to_phone }));
   }
   function setRow(key: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -109,8 +105,10 @@ export default function InvoiceEditor({ invoice, defaults, catalog, customers, o
       <form noValidate onSubmit={(e) => { e.preventDefault(); submit(false); }}>
         <section className="admin-panel invoice-form-grid">
           <label className="span-2">Customer Name *
-            <input list="invoice-customers" value={fields.bill_to_name} onChange={(e) => chooseCustomer(e.target.value)} placeholder="Select or type a customer name..." maxLength={160} aria-invalid={Boolean(errors.bill_to_name)} autoComplete="off" />
-            <datalist id="invoice-customers">{customers.map((c) => <option key={c.email} value={c.name}>{c.email}</option>)}</datalist>
+            <Combobox value={fields.bill_to_name} placeholder="Select or type a customer name..." maxLength={160} invalid={Boolean(errors.bill_to_name)}
+              options={customers.map((c) => ({ value: c.email, label: c.name, hint: c.email }))}
+              onChange={(text) => set('bill_to_name', text)}
+              onSelect={(o) => { const c = customers.find((x) => x.email === o.value); if (c) setFields((prev) => ({ ...prev, bill_to_name: c.name, bill_to_email: c.email, bill_to_phone: c.phone || prev.bill_to_phone })); setErrors((prev) => { const copy = { ...prev }; delete copy.bill_to_name; delete copy.bill_to_email; return copy; }); }} />
             {err('bill_to_name')}
           </label>
           <label>Email *<input type="email" value={fields.bill_to_email} onChange={(e) => set('bill_to_email', e.target.value)} maxLength={254} aria-invalid={Boolean(errors.bill_to_email)} />{err('bill_to_email')}</label>
@@ -124,14 +122,13 @@ export default function InvoiceEditor({ invoice, defaults, catalog, customers, o
           <label className="span-2">Billing Address<textarea rows={2} value={fields.bill_to_address} onChange={(e) => set('bill_to_address', e.target.value)} maxLength={1000} /></label>
           <label>Invoice Date *<input type="date" value={fields.invoice_date} onChange={(e) => set('invoice_date', e.target.value)} aria-invalid={Boolean(errors.invoice_date)} />{err('invoice_date')}</label>
           <label>Due Date *<input type="date" value={fields.due_date} onChange={(e) => set('due_date', e.target.value)} aria-invalid={Boolean(errors.due_date)} />{err('due_date')}</label>
-          <label>Terms<input value={fields.terms} onChange={(e) => set('terms', e.target.value)} maxLength={80} list="invoice-terms" />
-            <datalist id="invoice-terms">{['Due on Receipt', 'Net 7', 'Net 15', 'Net 30'].map((t) => <option key={t} value={t} />)}</datalist></label>
+          <label>Terms<Combobox value={fields.terms} maxLength={80} options={['Due on Receipt', 'Net 7', 'Net 15', 'Net 30'].map((t) => ({ value: t, label: t }))}
+            onChange={(text) => set('terms', text)} onSelect={(o) => set('terms', o.value)} /></label>
           {invoice && <div className="invoice-readonly"><span>Amount Paid <strong>{fm(invoice.amount_paid)}</strong></span><span>Balance Due <strong>{fm(totals.balance_due)}</strong></span></div>}
         </section>
 
         <section className="admin-panel">
           <h2>Item Table</h2>
-          <datalist id="invoice-catalog">{catalog.map((c) => <option key={c.id} value={c.name}>{fm(c.default_rate)}</option>)}</datalist>
           <div className="invoice-items" role="table" aria-label="Invoice items">
             <div className="invoice-item invoice-item-head" role="row">
               <span role="columnheader">Item &amp; Description</span><span role="columnheader">Qty</span><span role="columnheader">Rate</span>
@@ -143,7 +140,9 @@ export default function InvoiceEditor({ invoice, defaults, catalog, customers, o
               return (
                 <div className="invoice-item" role="row" key={row.key}>
                   <div className="invoice-item-name">
-                    <input list="invoice-catalog" aria-label={`Row ${i + 1} item`} placeholder="Type or select an item..." value={row.item_name} maxLength={160} aria-invalid={invalid} onChange={(e) => chooseItem(row.key, e.target.value)} autoComplete="off" />
+                    <Combobox ariaLabel={`Row ${i + 1} item`} placeholder="Type or select an item..." value={row.item_name} maxLength={160} invalid={invalid}
+                      options={catalog.map((c) => ({ value: c.id, label: c.name, hint: fm(c.default_rate) }))}
+                      onChange={(text) => setRow(row.key, { item_name: text })} onSelect={(o) => chooseItem(row.key, o.label)} />
                     <textarea aria-label={`Row ${i + 1} description`} placeholder="Description (optional)" rows={1} value={row.description} maxLength={1000} onChange={(e) => setRow(row.key, { description: e.target.value })} />
                   </div>
                   <label className="invoice-cell"><span className="invoice-cell-label">Qty</span><input aria-label={`Row ${i + 1} quantity`} type="number" min="0" step="0.01" inputMode="decimal" value={row.quantity} onChange={(e) => setRow(row.key, { quantity: e.target.value })} /></label>

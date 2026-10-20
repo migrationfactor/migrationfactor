@@ -335,3 +335,11 @@ a.admin-button.admin-button-danger{color:#7a1f2b!important}
 .invoice-cell{display:block;min-width:0}
 .invoice-cell-label{display:none;font-size:12px;font-weight:700;color:#3d5557;margin-bottom:4px}
 @media(max-width:1000px){.invoice-cell-label{display:block}}
+
+/* Themed suggestion list (replaces the browser's grey datalist popup) */
+.admin-combo{position:relative;min-width:0}
+.admin-combo-list{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 6px);margin:0;padding:6px;list-style:none;max-height:280px;overflow:auto;overscroll-behavior:contain;background:#fff;border:1px solid #b9d3d4;border-radius:14px;box-shadow:0 18px 44px #04262824,0 4px 10px #04262810;scrollbar-width:thin;scrollbar-color:#0b666a #eef6f5}
+.admin-combo-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:42px;padding:9px 12px;border-radius:9px;cursor:pointer;font-weight:600;color:#042628}
+.admin-combo-list li small{font-weight:500;color:#3d5557;font-size:12px;white-space:nowrap}
+.admin-combo-list li.is-active{background:#35b5ac1f;color:#0b666a}
+.admin-combo-list li.is-active small{color:#0b666a}

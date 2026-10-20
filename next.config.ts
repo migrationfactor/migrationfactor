@@ -4,9 +4,11 @@ import { legacyVisaPaths, visaPath } from './src/lib/visa-path';
 
 // The site loads only its own scripts, styles, fonts and images. Next.js needs inline scripts for
 // hydration and inline styles for style attributes. Development is excluded because it relies on eval.
+// Signing PDFs and uploads go directly between the browser and private Supabase Storage via signed URLs.
+const supabaseOrigin = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').origin; } catch { return ''; } })();
 const contentSecurityPolicy = [
   "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:", "font-src 'self' data:", "media-src 'self'", "connect-src 'self'",
+  "img-src 'self' data: blob:", "font-src 'self' data:", "media-src 'self'", `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`,
   "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'",
 ].join('; ');
 const productionOnly = process.env.NODE_ENV === 'production' ? [

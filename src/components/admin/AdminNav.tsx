@@ -12,6 +12,7 @@ const links: [string, string, keyof NewLeadCounts | null][] = [
   ['Bookings', '/admin/bookings', 'booking'],
   ['Tool leads', '/admin/tool-leads', 'tool'],
   ['Invoices', '/admin/invoices', null],
+  ['Signature Requests', '/admin/signature-requests', null],
   ['Settings', '/admin/settings', null],
 ];
 

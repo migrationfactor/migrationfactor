@@ -1,5 +1,5 @@
 import 'server-only';
-import { createUserClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { company } from '@/content/company';
 import type { Currency } from './totals';
 
@@ -38,7 +38,8 @@ export const FALLBACK_SETTINGS: AppSettings = {
 
 export async function getSettings(): Promise<AppSettings> {
   try {
-    const supabase = await createUserClient();
+    // Business details are not secret, and public pages (e.g. signing) need them too; read on the server only.
+    const supabase = createServiceClient();
     const { data } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle();
     if (!data) return FALLBACK_SETTINGS;
     return { ...FALLBACK_SETTINGS, ...Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null)) } as AppSettings;

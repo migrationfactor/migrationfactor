@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "docs/**",
     "tmp/**",
+    // Third-party minified build served as-is.
+    "public/vendor/**",
   ]),
 ]);
 

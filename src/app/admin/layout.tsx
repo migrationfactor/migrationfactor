@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@/styles/admin.css';
+import '@/styles/signing.css';
 
 export const metadata: Metadata = {
   title: { template: '%s | Admin', default: 'Admin' },
