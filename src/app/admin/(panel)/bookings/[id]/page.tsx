@@ -9,12 +9,13 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import SourceBadge from '@/components/admin/SourceBadge';
 import DetailList from '@/components/admin/DetailList';
 import { formatDateTime, statusLabel, telHref } from '@/components/admin/format';
+import { getInvoiceByBookingId } from '@/lib/invoices/service';
 
 export const metadata = { title: 'Booking' };
 
 export default async function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [booking] = await withAdmin(Promise.all([getRecord<Booking>('bookings', id), markViewed('bookings', id)]));
+  const [booking, , invoice] = await withAdmin(Promise.all([getRecord<Booking>('bookings', id), markViewed('bookings', id), getInvoiceByBookingId(id).catch(() => null)]));
   if (!booking) notFound();
   return (
     <>
@@ -35,7 +36,10 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
           <h2>Enquiry</h2><p className="admin-pre">{booking.message}</p></section>
         <section className="admin-panel"><h2>Manage</h2>
           <p className="admin-hint">Confirm only after checking the consultant’s availability. A time can be confirmed for one client only.</p>
-          <UpdateForm action={updateBooking} id={booking.id} status={booking.status} notes={booking.admin_notes} statuses={bookingStatuses} notifyOption /></section>
+          <UpdateForm action={updateBooking} id={booking.id} status={booking.status} notes={booking.admin_notes} statuses={bookingStatuses} notifyOption />
+          <h2>Invoice</h2>
+          {invoice ? <p><Link href={`/admin/invoices/${invoice.id}`}>View invoice {invoice.invoice_number} →</Link></p>
+            : <Link className="admin-button" href={`/admin/invoices/new?booking=${booking.id}`}>Create invoice from this booking</Link>}</section>
       </div>
     </>
   );

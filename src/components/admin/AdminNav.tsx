@@ -11,6 +11,8 @@ const links: [string, string, keyof NewLeadCounts | null][] = [
   ['Contact form leads', '/admin/leads', 'contact'],
   ['Bookings', '/admin/bookings', 'booking'],
   ['Tool leads', '/admin/tool-leads', 'tool'],
+  ['Invoices', '/admin/invoices', null],
+  ['Settings', '/admin/settings', null],
 ];
 
 const REFRESH_MS = 60000;

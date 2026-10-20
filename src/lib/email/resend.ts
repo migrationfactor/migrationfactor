@@ -7,6 +7,8 @@ export interface EmailMessage {
   text: string;
   html: string;
   replyTo?: string;
+  /** Base64 file content, e.g. an invoice PDF. */
+  attachments?: { filename: string; content: string }[];
 }
 
 export type EmailOutcome = 'sent' | 'failed' | 'skipped';
@@ -34,8 +36,9 @@ export async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
         text: message.text,
         html: message.html,
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+        ...(message.attachments?.length ? { attachments: message.attachments } : {}),
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(message.attachments?.length ? 20000 : 8000),
     });
     if (!response.ok) {
       const detail = await response.json().then((body) => body?.name || '').catch(() => '');
