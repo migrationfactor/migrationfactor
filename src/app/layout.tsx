@@ -8,6 +8,7 @@ import '@/styles/form-controls.css';
 import '@/styles/services.css';
 import '@/styles/visa-subclasses.css';
 import '@/styles/contact-links.css';
+import '@/styles/blog.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PublicOnly from '@/components/layout/PublicOnly';
