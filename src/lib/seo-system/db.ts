@@ -18,9 +18,11 @@ function parseConnection(value: string) {
 
 export function getDbPool(): Pool {
   if (globalPool.__seoDbPool) return globalPool.__seoDbPool;
-  const raw = process.env.DIRECT_URL || process.env.DATABASE_URL;
+  // DB_POOL_URL = Supabase transaction pooler (port 6543). Use it on serverless hosts (Vercel), where every instance opens its own
+  // connections; the session pooler behind DIRECT_URL/DATABASE_URL only allows ~15 clients in total.
+  const raw = process.env.DB_POOL_URL || process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!raw) {
-    throw new Error('DIRECT_URL or DATABASE_URL must be configured in environment.');
+    throw new Error('DB_POOL_URL, DIRECT_URL or DATABASE_URL must be configured in environment.');
   }
 
   const config = parseConnection(raw);
