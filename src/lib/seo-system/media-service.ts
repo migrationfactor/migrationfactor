@@ -43,7 +43,8 @@ export interface MediaUpdateInput {
 function normalizeMediaRow(m: any) {
   if (!m) return null;
   const storagePath = m.storage_path || '';
-  const url = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+  // Absolute URLs (Supabase Storage uploads) must stay as they are; only bare relative paths get a leading slash.
+  const url = /^https?:\/\//i.test(storagePath) || storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
   return {
     ...m,
     url,
