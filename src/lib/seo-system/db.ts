@@ -5,7 +5,9 @@ import { Pool, PoolClient } from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
 
-let poolInstance: Pool | null = null;
+// Kept on globalThis so dev hot-reloads reuse one pool instead of leaking a new one each time. Supabase's session-mode
+// pooler allows only ~15 clients in total across every process, so each process keeps its pool small.
+const globalPool = globalThis as unknown as { __seoDbPool?: Pool };
 
 function parseConnection(value: string) {
   const match = /^postgres(?:ql)?:\/\/([^:]+):(.*)@([^@:/]+)(?::(\d+))?\/([^?]+)/.exec(value.trim().replace(/^"|"$/g, ''));
@@ -15,7 +17,7 @@ function parseConnection(value: string) {
 }
 
 export function getDbPool(): Pool {
-  if (poolInstance) return poolInstance;
+  if (globalPool.__seoDbPool) return globalPool.__seoDbPool;
   const raw = process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!raw) {
     throw new Error('DIRECT_URL or DATABASE_URL must be configured in environment.');
@@ -35,15 +37,15 @@ export function getDbPool(): Pool {
     sslConfig = { ca, rejectUnauthorized: true };
   }
 
-  poolInstance = new Pool({
+  globalPool.__seoDbPool = new Pool({
     ...config,
     ssl: sslConfig as any,
-    max: 10,
+    max: Number(process.env.DB_POOL_MAX || 4),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   });
 
-  return poolInstance;
+  return globalPool.__seoDbPool;
 }
 
 export async function query<T = any>(sql: string, params: unknown[] = []): Promise<T[]> {
