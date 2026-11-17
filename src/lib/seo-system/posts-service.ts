@@ -2,6 +2,7 @@ import { query, queryOne, withTransaction } from './db';
 import { logAudit } from './audit';
 import { runContentAnalysis, calculateFleschScore } from './analysis';
 import { renderBlocksToHtml, ContentBlock, slugifyHeading } from './sanitizer';
+import { SITE_URL } from './technical-seo';
 
 export interface PostListFilters {
   status?: string;
@@ -86,6 +87,29 @@ export interface CreatePostInput {
 /**
  * Generates a clean URL slug from title
  */
+export function validateCanonicalUrl(value: string | null | undefined): string | null {
+  if (value === null || value === undefined || value.trim() === '') return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    const err: any = new Error('Canonical URL must be an absolute URL such as https://migrationfactor.com/blog/my-post/.');
+    err.status = 422;
+    throw err;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    const err: any = new Error('Canonical URL must use https:// (javascript:, data: and other schemes are rejected).');
+    err.status = 422;
+    throw err;
+  }
+  if (url.hash) {
+    const err: any = new Error('Canonical URL must not contain a #fragment.');
+    err.status = 422;
+    throw err;
+  }
+  return url.toString();
+}
+
 export function generateSlug(title: string): string {
   return title
     .toLowerCase()
@@ -236,7 +260,7 @@ export async function listPosts(filters: PostListFilters = {}) {
     SELECT 
       p.id, p.status, p.title, p.slug, p.excerpt, p.version, p.word_count, p.reading_time_min,
       p.published_at, p.modified_at, p.scheduled_at, p.created_at, p.featured_media_id,
-      m.url as featured_image_url, m.alt_text as featured_image_alt,
+      m.storage_path as featured_image_url, m.alt as featured_image_alt,
       s.focus_keyword, s.seo_title_effective, s.meta_description_effective,
       s.robots_index, s.sitemap_include, s.canonical_url,
       a.overall as seo_score, a.basic as seo_basic, a.additional as seo_additional,
@@ -293,8 +317,8 @@ export async function listPosts(filters: PostListFilters = {}) {
 export async function getPost(id: string) {
   const post = await queryOne<any>(
     `SELECT p.*, 
-            m.url as featured_media_url, m.alt_text as featured_media_alt,
-            u.display_name as creator_name
+            m.storage_path as featured_media_url, m.alt as featured_media_alt,
+            u.name as creator_name
      FROM public.seo_posts p
      LEFT JOIN public.seo_media m ON m.id = p.featured_media_id
      LEFT JOIN public.seo_users u ON u.id = p.created_by
@@ -311,7 +335,7 @@ export async function getPost(id: string) {
   const analysis = await queryOne<any>(`SELECT * FROM public.seo_analysis WHERE post_id = $1`, [id]);
 
   const authors = await query<any>(
-    `SELECT pa.position, pa.role, a.id, a.display_name, a.slug, a.avatar_url, a.job_title
+    `SELECT pa.position, pa.role, a.id, a.display_name, a.slug, a.job_title
      FROM public.seo_post_authors pa
      JOIN public.seo_authors a ON a.id = pa.author_id
      WHERE pa.post_id = $1 ORDER BY pa.position ASC`,
@@ -340,7 +364,7 @@ export async function getPost(id: string) {
   );
 
   const editLock = await queryOne<any>(
-    `SELECT l.acquired_at, l.heartbeat_at, u.display_name as locked_by_name, u.id as locked_by_id
+    `SELECT l.acquired_at, l.heartbeat_at, u.name as locked_by_name, u.id as locked_by_id
      FROM public.seo_edit_locks l
      JOIN public.seo_users u ON u.id = l.user_id
      WHERE l.post_id = $1 AND l.heartbeat_at > now() - interval '2 minutes'`,
@@ -369,6 +393,8 @@ export async function createDraft(actorId: string, input: CreatePostInput) {
   if (!input.title || input.title.trim().length === 0) {
     throw new Error('Add a post title before saving.');
   }
+
+  input = { ...input, canonicalUrl: validateCanonicalUrl(input.canonicalUrl) };
 
   const rawSlug = input.slug || generateSlug(input.title);
   const finalSlug = await ensureUniqueSlug(rawSlug);
@@ -559,6 +585,18 @@ export async function createDraft(actorId: string, input: CreatePostInput) {
       }
     }
 
+    // 8b. References (GEO G1, G2)
+    if (input.references) {
+      for (let i = 0; i < input.references.length; i++) {
+        const ref = input.references[i];
+        await client.query(
+          `INSERT INTO public.seo_post_references (post_id, position, title, url, publisher, published_date)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [post.id, i + 1, ref.title, ref.url, ref.publisher || null, ref.publishedDate || null]
+        );
+      }
+    }
+
     // 9. Initial Revision
     const snapshot = {
       title: input.title,
@@ -602,6 +640,10 @@ export async function updatePost(
     throw new Error('Post not found');
   }
 
+  if (input.canonicalUrl !== undefined) {
+    input = { ...input, canonicalUrl: validateCanonicalUrl(input.canonicalUrl) };
+  }
+
   // Optimistic concurrency check (Section 15.1, FR-BLG-002)
   if (expectedVersion !== undefined && current.version !== expectedVersion) {
     const error: any = new Error('Concurrency conflict: post was modified by another user or session.');
@@ -631,10 +673,17 @@ export async function updatePost(
   return await withTransaction(async (client) => {
     // Check if slug changed on a published post: auto-create 301 redirect (FR-TEC-010)
     if (slugChanged && current.status === 'published') {
-      const oldPath = `/blog/${current.slug}/`;
-      const newPath = `/blog/${newSlug}/`;
+      const oldPath = `/blog/${current.slug}`;
+      const newPath = `/blog/${newSlug}`;
+      // A live URL can never be a redirect source (prevents loops, e.g. C -> A after A -> B -> C)
+      await client.query(`DELETE FROM public.seo_redirects WHERE rtrim(source_path, '/') = $1`, [newPath]);
+      // Flatten chains: earlier redirects that pointed at the old URL now point straight at the new one
       await client.query(
-        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+        `UPDATE public.seo_redirects SET target_url = $2 WHERE rtrim(target_url, '/') = $1 AND active = true`,
+        [oldPath, newPath]
+      );
+      await client.query(
+        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
          VALUES ($1, $2, 301, $3, 'Automatic redirect created on slug change')
          ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url, http_code = 301`,
         [oldPath, newPath, actorId]
@@ -689,10 +738,10 @@ export async function updatePost(
     const updatedPost = updatedPostRes.rows[0];
 
     // 2. Update SEO
-    if (input.focusKeyword !== undefined || input.seoTitleRaw !== undefined || input.metaDescriptionRaw !== undefined || input.canonicalUrl !== undefined || input.robotsIndex !== undefined) {
+    if ([input.focusKeyword, input.additionalKeywords, input.seoTitleRaw, input.metaDescriptionRaw, input.canonicalUrl, input.robotsIndex, input.robotsFollow, input.robotsAdvanced, input.breadcrumbTitle, input.customH1, input.sitemapInclude, input.isCornerstone].some((v) => v !== undefined)) {
       await client.query(
         `UPDATE public.seo_post_seo SET
-          focus_keyword = COALESCE($1, focus_keyword),
+          focus_keyword = $1,
           additional_keywords = COALESCE($2, additional_keywords),
           seo_title_raw = $3,
           seo_title_effective = $4,
@@ -708,7 +757,7 @@ export async function updatePost(
           is_cornerstone = COALESCE($14, is_cornerstone)
         WHERE post_id = $15`,
         [
-          input.focusKeyword !== undefined ? input.focusKeyword : null,
+          input.focusKeyword !== undefined ? (input.focusKeyword?.trim() || null) : current.seo?.focus_keyword ?? null,
           input.additionalKeywords ? JSON.stringify(input.additionalKeywords) : null,
           input.seoTitleRaw !== undefined ? input.seoTitleRaw : current.seo?.seo_title_raw,
           effectiveTitle,
@@ -838,6 +887,17 @@ export async function updatePost(
         );
       }
     }
+    if (input.references) {
+      await client.query(`DELETE FROM public.seo_post_references WHERE post_id = $1`, [id]);
+      for (let i = 0; i < input.references.length; i++) {
+        const ref = input.references[i];
+        await client.query(
+          `INSERT INTO public.seo_post_references (post_id, position, title, url, publisher, published_date)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [id, i + 1, ref.title, ref.url, ref.publisher || null, ref.publishedDate || null]
+        );
+      }
+    }
 
     // 7. Calculate Authoritative Analysis Scores (Section 7)
     const analysisPayload = {
@@ -867,7 +927,7 @@ export async function updatePost(
     await client.query(
       `INSERT INTO public.seo_analysis (
         post_id, config_version, overall, basic, additional, readability, technical,
-        geo, aeo, checks, calculated_at
+        geo, aeo, checks, analyzed_at
       ) VALUES ($1, 1, $2, $3, $4, $5, $6, $7, $8, $9, now())
       ON CONFLICT (post_id) DO UPDATE SET
         overall = EXCLUDED.overall,
@@ -878,7 +938,7 @@ export async function updatePost(
         geo = EXCLUDED.geo,
         aeo = EXCLUDED.aeo,
         checks = EXCLUDED.checks,
-        calculated_at = now()`,
+        analyzed_at = now()`,
       [
         id,
         analysisResult.overallScore,
@@ -907,7 +967,7 @@ export async function updatePost(
         id,
         nextRev,
         isMinorUpdate ? 'minor_update' : 'update',
-        JSON.stringify({ title: newTitle, slug: newSlug, body_json: { blocks }, seo: input }),
+        JSON.stringify(await buildSnapshot(client, id, updatedPost)),
         JSON.stringify({ overall: analysisResult.overallScore, geo: analysisResult.geoScore, aeo: analysisResult.aeoScore }),
         actorId,
       ]
@@ -941,6 +1001,31 @@ export async function updatePost(
       checks: analysisResult.checks,
     };
   });
+}
+
+/**
+ * Full post snapshot (FR-BLG-011): content, SEO, social, schema, GEO/AEO and taxonomy,
+ * read inside the same transaction so a restore can rebuild the exact saved state.
+ */
+async function buildSnapshot(client: any, postId: string, postRow: any) {
+  const one = async (table: string) =>
+    (await client.query(`SELECT * FROM public.${table} WHERE post_id = $1`, [postId])).rows[0] || null;
+  const ids = async (sql: string) => (await client.query(sql, [postId])).rows.map((r: any) => r.id);
+  return {
+    post: {
+      title: postRow.title, slug: postRow.slug, excerpt: postRow.excerpt, body_json: postRow.body_json,
+      featured_media_id: postRow.featured_media_id, featured_alt_override: postRow.featured_alt_override,
+      featured_caption_override: postRow.featured_caption_override, primary_category_id: postRow.primary_category_id,
+      template: postRow.template,
+    },
+    seo: await one('seo_post_seo'),
+    social: await one('seo_post_social'),
+    schema: await one('seo_post_schema'),
+    geo_aeo: await one('seo_post_geo_aeo'),
+    category_ids: await ids('SELECT category_id AS id FROM public.seo_post_categories WHERE post_id = $1'),
+    tag_ids: await ids('SELECT tag_id AS id FROM public.seo_post_tags WHERE post_id = $1'),
+    author_ids: await ids('SELECT author_id AS id FROM public.seo_post_authors WHERE post_id = $1 ORDER BY position'),
+  };
 }
 
 /**
@@ -986,6 +1071,92 @@ export async function runPrepublishChecks(post: any): Promise<{
   // 6. Authors
   if (!post.authors || post.authors.length === 0) {
     blocking.push({ code: 'author_missing', message: 'At least one author must be assigned.' });
+  }
+
+  // 7. Image alt text, FAQ and Steps blocks (Section 17.3)
+  for (const block of blocks) {
+    if (block.type === 'image' && !block.data?.isDecorative && !(block.data?.alt || '').trim()) {
+      blocking.push({ code: 'image_alt_missing', message: 'Every non-decorative image needs alt text (or mark it decorative).' });
+      break;
+    }
+  }
+  for (const block of blocks) {
+    if (block.type === 'faq') {
+      const items = Array.isArray(block.data?.items) ? block.data.items : [];
+      if (items.some((i: any) => !(i?.question || '').trim() || !(i?.answer || '').trim())) {
+        blocking.push({ code: 'faq_empty_item', message: 'FAQ items cannot have an empty question or answer.' });
+        break;
+      }
+    }
+  }
+  for (const block of blocks) {
+    if (block.type === 'steps') {
+      const steps = Array.isArray(block.data?.steps) ? block.data.steps : [];
+      if (steps.some((st: any) => !(st?.text || '').trim())) {
+        blocking.push({ code: 'steps_empty_item', message: 'Steps cannot have an empty description.' });
+        break;
+      }
+    }
+  }
+
+  // 8. Canonical URL (FR-SEO-006): valid absolute URL; same-site target must be a live, indexable post
+  const canonical = post.seo?.canonical_url as string | null | undefined;
+  if (canonical && canonical.trim()) {
+    try {
+      const normalized = validateCanonicalUrl(canonical);
+      const url = new URL(normalized as string);
+      const siteHost = new URL(SITE_URL).host;
+      if (url.host === siteHost) {
+        const m = url.pathname.match(/^\/blog\/([^/]+)\/?$/);
+        if (m && m[1] !== post.slug) {
+          const target = await queryOne<{ status: string; robots_index: boolean }>(
+            `SELECT p.status, s.robots_index FROM public.seo_posts p
+             LEFT JOIN public.seo_post_seo s ON s.post_id = p.id WHERE p.slug = $1`,
+            [m[1]]
+          );
+          if (!target || target.status !== 'published' || target.robots_index === false) {
+            blocking.push({ code: 'canonical_target_invalid', message: 'The canonical URL points to a page that is not published and indexable. Choose an indexable page.' });
+          } else {
+            warnings.push({ code: 'canonical_elsewhere', message: 'This post asks search engines to index another URL instead of this one.' });
+          }
+        }
+      } else {
+        warnings.push({ code: 'canonical_cross_domain', message: 'Canonical points to another domain; this page will not be indexed.' });
+      }
+    } catch (e: any) {
+      blocking.push({ code: 'canonical_invalid', message: e.message });
+    }
+  }
+
+  // 9. Duplicate metadata (FR-SEO-013)
+  const effTitle = post.seo?.seo_title_effective as string | undefined;
+  if (effTitle) {
+    const dup = await queryOne<{ title: string }>(
+      `SELECT p.title FROM public.seo_posts p JOIN public.seo_post_seo s ON s.post_id = p.id
+       WHERE p.id <> $1 AND p.status IN ('published','scheduled') AND lower(trim(s.seo_title_effective)) = lower(trim($2)) LIMIT 1`,
+      [post.id, effTitle]
+    );
+    if (dup) warnings.push({ code: 'seo_title_duplicate', message: `SEO title is identical to '${dup.title}'.` });
+  }
+  const effDesc = (post.seo?.meta_description_raw as string | undefined)?.trim();
+  if (effDesc) {
+    const dup = await queryOne<{ title: string }>(
+      `SELECT p.title FROM public.seo_posts p JOIN public.seo_post_seo s ON s.post_id = p.id
+       WHERE p.id <> $1 AND p.status IN ('published','scheduled') AND lower(trim(s.meta_description_raw)) = lower($2) LIMIT 1`,
+      [post.id, effDesc.toLowerCase()]
+    );
+    if (dup) warnings.push({ code: 'meta_description_duplicate', message: `Meta description is identical to '${dup.title}'.` });
+  }
+  if (post.seo?.focus_keyword) {
+    const dup = await queryOne<{ title: string }>(
+      `SELECT p.title FROM public.seo_posts p JOIN public.seo_post_seo s ON s.post_id = p.id
+       WHERE p.id <> $1 AND p.status = 'published' AND lower(trim(s.focus_keyword)) = lower(trim($2)) LIMIT 1`,
+      [post.id, post.seo.focus_keyword]
+    );
+    if (dup) warnings.push({ code: 'focus_keyword_duplicate', message: `Focus keyword is already used by '${dup.title}' (possible cannibalization).` });
+  }
+  if (post.seo?.robots_follow === false) {
+    warnings.push({ code: 'nofollow_warning', message: 'Links on this post will not be followed by search engines.' });
   }
 
   // Warnings
@@ -1080,9 +1251,9 @@ export async function publishPost(id: string, actorId: string, acknowledgeWarnin
 
     // 3. Queue Outbox job: post.published (NFR-REL-01, FR-IDX)
     await client.query(
-      `INSERT INTO public.seo_scheduled_jobs (job_type, payload, scheduled_for)
-       VALUES ('post.published', $1, now())`,
-      [JSON.stringify({ postId: id, slug: post.slug, url: `https://migrationfactor.com/blog/${post.slug}/` })]
+      `INSERT INTO public.seo_scheduled_jobs (event_type, aggregate_id, payload, available_at)
+       VALUES ('post.published', $1, $2, now())`,
+      [id, JSON.stringify({ postId: id, slug: post.slug, url: `https://migrationfactor.com/blog/${post.slug}` })]
     );
 
     // 4. Audit Log
@@ -1098,7 +1269,7 @@ export async function publishPost(id: string, actorId: string, acknowledgeWarnin
     return {
       success: true,
       publishedAt,
-      url: `/blog/${post.slug}/`,
+      url: `/blog/${post.slug}`,
     };
   });
 }
@@ -1128,9 +1299,9 @@ export async function schedulePost(id: string, actorId: string, publishAtIso: st
     );
 
     await client.query(
-      `INSERT INTO public.seo_scheduled_jobs (job_type, payload, scheduled_for)
-       VALUES ('post.scheduled_publish', $1, $2)`,
-      [JSON.stringify({ postId: id }), publishAt]
+      `INSERT INTO public.seo_scheduled_jobs (event_type, aggregate_id, payload, available_at)
+       VALUES ('post.scheduled_publish', $1, $2, $3)`,
+      [id, JSON.stringify({ postId: id }), publishAt]
     );
 
     await logAudit({
@@ -1176,10 +1347,10 @@ export async function unpublishPost(
 
     if (behavior === '301' && redirectTarget) {
       await client.query(
-        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
          VALUES ($1, $2, 301, $3, 'Created upon unpublishing post')
          ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-        [`/blog/${post.slug}/`, redirectTarget, actorId]
+        [`/blog/${post.slug}`, redirectTarget, actorId]
       );
     }
 
@@ -1217,10 +1388,10 @@ export async function trashPost(id: string, actorId: string, behavior: '410' | '
 
     if (behavior === '301' && redirectTarget) {
       await client.query(
-        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+        `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
          VALUES ($1, $2, 301, $3, 'Created upon moving post to trash')
          ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-        [`/blog/${post.slug}/`, redirectTarget, actorId]
+        [`/blog/${post.slug}`, redirectTarget, actorId]
       );
     }
 
@@ -1330,10 +1501,10 @@ export async function permanentDeletePost(id: string, actorId: string, confirmTe
   return await withTransaction(async (client) => {
     // 1. Create tombstone
     await client.query(
-      `INSERT INTO public.seo_url_tombstones (url_path, post_id, original_title, deleted_by)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (url_path) DO NOTHING`,
-      [`/blog/${post.slug}/`, id, post.title, actorId]
+      `INSERT INTO public.seo_url_tombstones (path, former_post_id, http_code)
+       VALUES ($1, $2, 410)
+       ON CONFLICT (path) DO NOTHING`,
+      [`/blog/${post.slug}`, id]
     );
 
     // 2. Delete post row (cascades to child tables)

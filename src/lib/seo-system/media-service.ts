@@ -1,19 +1,18 @@
-import { query, queryOne, withTransaction } from './db';
-import { logAudit } from './audit';
+if (typeof window !== 'undefined') {
+  throw new Error('This module can only be used on the server.');
+}
+
 import path from 'path';
 import fs from 'fs/promises';
+import { query, queryOne, withTransaction } from './db';
+import { logAudit } from './audit';
 
-export const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/avif',
-]);
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 
 export interface MediaUploadInput {
   filename: string;
-  mimeType: string;
   buffer: Buffer;
+  mimeType: string;
   altText?: string;
   title?: string;
   caption?: string;
@@ -36,6 +35,19 @@ export interface MediaUpdateInput {
   focusY?: number;
 }
 
+function normalizeMediaRow(m: any) {
+  if (!m) return null;
+  const storagePath = m.storage_path || '';
+  const url = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+  return {
+    ...m,
+    url,
+    storage_key: storagePath,
+    alt_text: m.alt || '',
+    file_size: m.size_bytes || 0,
+  };
+}
+
 /**
  * Lists media items with pagination and filters
  */
@@ -46,11 +58,11 @@ export async function listMedia(filters: { missingAlt?: boolean; search?: string
   let paramIdx = 1;
 
   if (missingAlt) {
-    whereClauses.push(`(m.alt_text IS NULL OR trim(m.alt_text) = '')`);
+    whereClauses.push(`(m.alt IS NULL OR trim(m.alt) = '')`);
   }
 
   if (search) {
-    whereClauses.push(`(m.title ILIKE $${paramIdx} OR m.filename ILIKE $${paramIdx} OR m.alt_text ILIKE $${paramIdx})`);
+    whereClauses.push(`(m.title ILIKE $${paramIdx} OR m.filename ILIKE $${paramIdx} OR m.alt ILIKE $${paramIdx})`);
     params.push(`%${search}%`);
     paramIdx++;
   }
@@ -65,7 +77,7 @@ export async function listMedia(filters: { missingAlt?: boolean; search?: string
 
   const mediaList = await query<any>(
     `SELECT m.*, 
-            u.display_name as uploaded_by_name,
+            u.name as uploaded_by_name,
             (SELECT count(*) FROM public.seo_media_usage u WHERE u.media_id = m.id) as usage_count
      FROM public.seo_media m
      LEFT JOIN public.seo_users u ON u.id = m.uploaded_by
@@ -75,7 +87,7 @@ export async function listMedia(filters: { missingAlt?: boolean; search?: string
     [...params, limit, offset]
   );
 
-  return { media: mediaList, total, limit, offset };
+  return { media: mediaList.map(normalizeMediaRow), total, limit, offset };
 }
 
 /**
@@ -83,7 +95,7 @@ export async function listMedia(filters: { missingAlt?: boolean; search?: string
  */
 export async function getMedia(id: string) {
   const item = await queryOne<any>(
-    `SELECT m.*, u.display_name as uploaded_by_name
+    `SELECT m.*, u.name as uploaded_by_name
      FROM public.seo_media m
      LEFT JOIN public.seo_users u ON u.id = m.uploaded_by
      WHERE m.id = $1`,
@@ -93,9 +105,9 @@ export async function getMedia(id: string) {
   if (!item) return null;
 
   const usage = await query<any>(
-    `SELECT u.field_name, u.created_at, p.id as post_id, p.title as post_title, p.slug as post_slug
+    `SELECT u.field as field_name, u.created_at, p.id as post_id, p.title as post_title, p.slug as post_slug
      FROM public.seo_media_usage u
-     JOIN public.seo_posts p ON p.id = u.post_id
+     JOIN public.seo_posts p ON p.id = u.entity_id AND u.entity_type = 'post'
      WHERE u.media_id = $1`,
     [id]
   );
@@ -105,7 +117,7 @@ export async function getMedia(id: string) {
     [id]
   );
 
-  return { ...item, usage, variants };
+  return { ...normalizeMediaRow(item), usage, variants };
 }
 
 /**
@@ -141,31 +153,29 @@ export async function uploadMedia(input: MediaUploadInput) {
   await fs.writeFile(filePath, input.buffer);
 
   const publicUrl = `/uploads/blog/${yearMonth}/${finalFilename}`;
-  const storageKey = `uploads/blog/${yearMonth}/${finalFilename}`;
 
   // Default width/height (standard 1200x800 if not extracted via sharp)
   const width = 1200;
   const height = 800;
 
   const title = input.title || baseName.replace(/-/g, ' ');
-  const altText = input.altText || '';
+  const alt = input.altText || '';
 
   const media = await queryOne<any>(
     `INSERT INTO public.seo_media (
-      filename, storage_key, url, mime_type, file_size, width, height,
-      alt_text, title, caption, description, credit, license,
+      filename, storage_path, mime_type, size_bytes, width, height,
+      alt, title, caption, description, credit, license,
       focus_x, focus_y, uploaded_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     RETURNING *`,
     [
       finalFilename,
-      storageKey,
       publicUrl,
       input.mimeType,
       input.buffer.length,
       width,
       height,
-      altText,
+      alt,
       title,
       input.caption || null,
       input.description || null,
@@ -179,19 +189,19 @@ export async function uploadMedia(input: MediaUploadInput) {
 
   // Register social and schema crops (FR-MED-001)
   const variants = [
-    { name: 'social_og', width: 1200, height: 630 },
-    { name: 'social_x', width: 1200, height: 600 },
-    { name: 'schema_16_9', width: 1200, height: 675 },
-    { name: 'schema_4_3', width: 1200, height: 900 },
-    { name: 'schema_1_1', width: 800, height: 800 },
+    { purpose: 'social_og', width: 1200, height: 630 },
+    { purpose: 'social_x', width: 1200, height: 600 },
+    { purpose: 'schema_16_9', width: 1200, height: 675 },
+    { purpose: 'schema_4_3', width: 1200, height: 900 },
+    { purpose: 'schema_1_1', width: 800, height: 800 },
   ];
 
   for (const v of variants) {
     await query(
       `INSERT INTO public.seo_media_variants (
-        media_id, variant_name, url, width, height, format, file_size
+        media_id, purpose, storage_path, width, height, format, size_bytes
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [media.id, v.name, publicUrl, v.width, v.height, input.mimeType.replace('image/', ''), input.buffer.length]
+      [media.id, v.purpose, publicUrl, v.width, v.height, input.mimeType.replace('image/', ''), input.buffer.length]
     );
   }
 
@@ -203,7 +213,7 @@ export async function uploadMedia(input: MediaUploadInput) {
     afterState: { filename: finalFilename, url: publicUrl, size: input.buffer.length },
   });
 
-  return media;
+  return normalizeMediaRow(media);
 }
 
 /**
@@ -215,7 +225,7 @@ export async function updateMedia(id: string, actorId: string, input: MediaUpdat
 
   const updated = await queryOne<any>(
     `UPDATE public.seo_media SET
-      alt_text = COALESCE($1, alt_text),
+      alt = COALESCE($1, alt),
       title = COALESCE($2, title),
       caption = COALESCE($3, caption),
       description = COALESCE($4, description),
@@ -248,7 +258,7 @@ export async function updateMedia(id: string, actorId: string, input: MediaUpdat
     afterState: updated,
   });
 
-  return updated;
+  return normalizeMediaRow(updated);
 }
 
 /**
@@ -258,11 +268,15 @@ export async function deleteMedia(id: string, actorId: string) {
   const current = await queryOne<any>(`SELECT * FROM public.seo_media WHERE id = $1`, [id]);
   if (!current) throw new Error('Media not found');
 
-  // Check usage
+  // Check usage in seo_posts (featured image) or seo_media_usage
   const usages = await query<any>(
-    `SELECT u.field_name, p.title as post_title, p.slug as post_slug
+    `SELECT 'featured_image' as field_name, p.title as post_title, p.slug as post_slug
+     FROM public.seo_posts p
+     WHERE p.featured_media_id = $1
+     UNION
+     SELECT u.field as field_name, p.title as post_title, p.slug as post_slug
      FROM public.seo_media_usage u
-     JOIN public.seo_posts p ON p.id = u.post_id
+     JOIN public.seo_posts p ON p.id = u.entity_id AND u.entity_type = 'post'
      WHERE u.media_id = $1`,
     [id]
   );
@@ -277,8 +291,9 @@ export async function deleteMedia(id: string, actorId: string) {
   }
 
   // Delete physical file if exists
-  if (current.storage_key) {
-    const fullPath = path.join(process.cwd(), 'public', current.storage_key);
+  if (current.storage_path) {
+    const relPath = current.storage_path.replace(/^\//, '');
+    const fullPath = path.join(process.cwd(), 'public', relPath);
     try {
       await fs.unlink(fullPath);
     } catch {

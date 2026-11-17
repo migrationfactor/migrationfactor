@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 
 export default function SeoAdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('seo@migrationfactor.com');
-  const [password, setPassword] = useState('Migration2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -80,7 +80,7 @@ export default function SeoAdminLoginPage() {
             SEO Specialist Portal
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-            Dedicated SEO, GEO & AEO Blog Management System
+            SEO, GEO & AEO Blog Management System
           </p>
         </div>
 
@@ -163,12 +163,9 @@ export default function SeoAdminLoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: 12, background: '#f8fafc', borderRadius: 8, fontSize: '0.75rem', color: '#64748b' }}>
-          <strong>Default Credentials (Dev):</strong>
-          <div>SEO Manager: <code>seo@migrationfactor.com</code></div>
-          <div>Super Admin: <code>admin@migrationfactor.com</code></div>
-          <div>Password: <code>Migration2026!</code></div>
-        </div>
+        <p style={{ marginTop: 24, fontSize: '0.75rem', color: '#64748b', textAlign: 'center' }}>
+          Use your Migration Factor admin email and password. The SEO panel uses the same login as /admin.
+        </p>
       </div>
     </div>
   );

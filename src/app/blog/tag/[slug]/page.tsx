@@ -25,7 +25,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const title = tag.seo_title || `${tag.name} - Topics & Guides | Migration Factor`;
   const description = tag.meta_description || tag.description || `Articles and guides tagged with ${tag.name}.`;
-  const canonical = `${SITE_URL}/blog/tag/${tag.slug}/`;
+  const canonical = `${SITE_URL}/blog/tag/${tag.slug}`;
   const robots = isIndexable ? 'index, follow' : 'noindex, follow';
 
   return {
@@ -45,7 +45,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function TagArchivePage(props: Props) {
   const { slug } = await props.params;
 
-  const redirectMatch = await resolveRedirect(`/blog/tag/${slug}/`);
+  const redirectMatch = await resolveRedirect(`/blog/tag/${slug}`);
   if (redirectMatch) redirect(redirectMatch.target);
 
   const tag = await queryOne<any>(`SELECT * FROM public.seo_tags WHERE slug = $1`, [slug]);
@@ -70,7 +70,7 @@ export default async function TagArchivePage(props: Props) {
       <nav className="blog-breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><Link href="/">Home</Link></li>
-          <li><Link href="/blog/">Blog</Link></li>
+          <li><Link href="/blog">Blog</Link></li>
           <li aria-current="page">Tag: {tag.name}</li>
         </ol>
       </nav>
@@ -98,7 +98,7 @@ export default async function TagArchivePage(props: Props) {
             return (
               <article key={post.id} className="blog-card">
                 {post.featured_image_url && (
-                  <Link href={`/blog/${post.slug}/`}>
+                  <Link href={`/blog/${post.slug}`}>
                     <img
                       src={post.featured_image_url}
                       alt={post.featured_image_alt || post.title}
@@ -109,7 +109,7 @@ export default async function TagArchivePage(props: Props) {
                 )}
                 <div className="blog-card-body">
                   <h2 className="blog-card-title">
-                    <Link href={`/blog/${post.slug}/`}>{post.title}</Link>
+                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                   </h2>
                   <p className="blog-card-excerpt">{post.excerpt || ''}</p>
                   <div className="blog-card-footer">

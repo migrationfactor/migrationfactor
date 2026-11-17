@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { query } from '@/lib/seo-system/db';
+import { publishDueScheduledPostsThrottled } from '@/lib/seo-system/scheduler-service';
 import { SITE_URL } from '@/lib/seo-system/technical-seo';
 
 export const dynamic = 'force-dynamic';
@@ -10,12 +11,12 @@ export const metadata: Metadata = {
   title: 'Blog - Australian Visa & Migration Insights | Migration Factor',
   description: 'Explore Australian migration guides, employer sponsorship requirements, skilled visa updates and expert advice.',
   alternates: {
-    canonical: `${SITE_URL}/blog/`,
+    canonical: `${SITE_URL}/blog`,
   },
   openGraph: {
     title: 'Migration Factor Blog - Australian Immigration Guides',
     description: 'Explore Australian migration guides, employer sponsorship requirements, skilled visa updates and expert advice.',
-    url: `${SITE_URL}/blog/`,
+    url: `${SITE_URL}/blog`,
     type: 'website',
   },
 };
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 export default async function BlogIndexPage(props: {
   searchParams: Promise<{ category?: string; page?: string }>;
 }) {
+  await publishDueScheduledPostsThrottled();
   const searchParams = await props.searchParams;
   const categorySlug = searchParams.category;
   const page = parseInt(searchParams.page || '1', 10);
@@ -76,7 +78,7 @@ export default async function BlogIndexPage(props: {
         {/* Category Filter Pills */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24 }}>
           <Link
-            href="/blog/"
+            href="/blog"
             style={{
               padding: '6px 16px',
               borderRadius: 20,
@@ -92,7 +94,7 @@ export default async function BlogIndexPage(props: {
           {categories.map((c: any) => (
             <Link
               key={c.id}
-              href={`/blog/category/${c.slug}/`}
+              href={`/blog/category/${c.slug}`}
               style={{
                 padding: '6px 16px',
                 borderRadius: 20,
@@ -123,7 +125,7 @@ export default async function BlogIndexPage(props: {
             return (
               <article key={post.id} className="blog-card">
                 {post.featured_image_url && (
-                  <Link href={`/blog/${post.slug}/`}>
+                  <Link href={`/blog/${post.slug}`}>
                     <img
                       src={post.featured_image_url}
                       alt={post.featured_image_alt || post.title}
@@ -137,7 +139,7 @@ export default async function BlogIndexPage(props: {
                     <div className="blog-card-category">{post.category_name}</div>
                   )}
                   <h2 className="blog-card-title">
-                    <Link href={`/blog/${post.slug}/`}>{post.title}</Link>
+                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                   </h2>
                   <p className="blog-card-excerpt">{post.excerpt || ''}</p>
                   <div className="blog-card-footer">

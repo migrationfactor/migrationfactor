@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiRequest } from '@/lib/seo-system/api-auth';
 import { listPosts, createDraft } from '@/lib/seo-system/posts-service';
+import { hasPermission } from '@/lib/seo-system/rbac';
 
 export async function GET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateApiRequest(req, 'post.read');
@@ -42,6 +43,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    if (!hasPermission((auth!.user.roles || []) as any, 'seo.edit_advanced')) {
+      for (const key of ['robotsIndex', 'robotsFollow', 'robotsAdvanced', 'canonicalUrl', 'sitemapInclude', 'customJsonld', 'disableAuto', 'customMode']) {
+        delete body[key];
+      }
+    }
     const post = await createDraft(auth!.userId, body);
     return NextResponse.json({ success: true, post }, { status: 201 });
   } catch (err: any) {

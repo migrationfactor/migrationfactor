@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { queryOne, query } from '@/lib/seo-system/db';
 import { renderSeoHead, generateNextMetadata } from '@/lib/seo-system/head-service';
+import { publishDueScheduledPostsThrottled } from '@/lib/seo-system/scheduler-service';
 import { SITE_URL, resolveRedirect, checkTombstoneOrRecord404 } from '@/lib/seo-system/technical-seo';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,9 @@ interface Props {
 }
 
 async function getPostData(slug: string) {
+  await publishDueScheduledPostsThrottled();
   // Check redirects first
-  const redirectMatch = await resolveRedirect(`/blog/${slug}/`);
+  const redirectMatch = await resolveRedirect(`/blog/${slug}`);
   if (redirectMatch) {
     redirect(redirectMatch.target);
   }
@@ -31,7 +33,7 @@ async function getPostData(slug: string) {
   );
 
   if (!post) {
-    await checkTombstoneOrRecord404(`/blog/${slug}/`);
+    await checkTombstoneOrRecord404(`/blog/${slug}`);
     return null;
   }
 
@@ -114,7 +116,7 @@ export default async function BlogPostPage(props: Props) {
       <div className="blog-page-container" style={{ textAlign: 'center', padding: '80px 20px' }}>
         <h1 style={{ fontSize: '2rem', color: '#042628' }}>410 — Content Removed</h1>
         <p style={{ color: '#6b7280', marginTop: 12 }}>
-          This article has been permanently removed. Explore our latest guides in the <Link href="/blog/" style={{ color: '#0b666a' }}>Blog</Link>.
+          This article has been permanently removed. Explore our latest guides in the <Link href="/blog" style={{ color: '#0b666a' }}>Blog</Link>.
         </p>
       </div>
     );
@@ -168,9 +170,9 @@ export default async function BlogPostPage(props: Props) {
         <nav className="blog-breadcrumb" aria-label="Breadcrumb">
           <ol>
             <li><Link href="/">Home</Link></li>
-            <li><Link href="/blog/">Blog</Link></li>
+            <li><Link href="/blog">Blog</Link></li>
             {category && (
-              <li><Link href={`/blog/category/${category.slug}/`}>{category.name}</Link></li>
+              <li><Link href={`/blog/category/${category.slug}`}>{category.name}</Link></li>
             )}
             <li aria-current="page">{breadcrumbTitle}</li>
           </ol>
@@ -186,7 +188,7 @@ export default async function BlogPostPage(props: Props) {
                 authors.map((a: any, i: number) => (
                   <span key={a.id}>
                     {i > 0 && ', '}
-                    <Link href={`/blog/author/${a.slug}/`}>{a.display_name}</Link>
+                    <Link href={`/blog/author/${a.slug}`}>{a.display_name}</Link>
                     {a.job_title ? `, ${a.job_title}` : ''}
                   </span>
                 ))
@@ -281,7 +283,7 @@ export default async function BlogPostPage(props: Props) {
                 )}
                 <div className="blog-author-meta">
                   <h3 className="blog-author-name">
-                    <Link href={`/blog/author/${author.slug}/`}>{author.display_name}</Link>
+                    <Link href={`/blog/author/${author.slug}`}>{author.display_name}</Link>
                   </h3>
                   {author.job_title && <div className="blog-author-title">{author.job_title}</div>}
                   <p className="blog-author-bio">{author.short_bio || author.long_bio || ''}</p>

@@ -150,7 +150,7 @@ export default function PostEditor({
   const liveAnalysis = useMemo(() => {
     return runContentAnalysis({
       title,
-      h1: customH1 || title,
+      customH1: customH1 || title,
       seoTitle: effectiveTitle,
       metaDescription: effectiveDesc,
       slug,
@@ -489,10 +489,10 @@ export default function PostEditor({
                     key={btn}
                     type="button"
                     onClick={() => {
-                      if (btn === '## H2') setContentMarkdown((prev) => prev + '\n\n## Section Title\n\n');
-                      if (btn === '### H3') setContentMarkdown((prev) => prev + '\n\n### Sub-heading\n\n');
-                      if (btn === 'Quote') setContentMarkdown((prev) => prev + '\n\n> Key quote or citation here\n\n');
-                      if (btn === 'List') setContentMarkdown((prev) => prev + '\n\n- Item 1\n- Item 2\n- Item 3\n\n');
+                      if (btn === '## H2') setContentMarkdown((prev: string) => prev + '\n\n## Section Title\n\n');
+                      if (btn === '### H3') setContentMarkdown((prev: string) => prev + '\n\n### Sub-heading\n\n');
+                      if (btn === 'Quote') setContentMarkdown((prev: string) => prev + '\n\n> Key quote or citation here\n\n');
+                      if (btn === 'List') setContentMarkdown((prev: string) => prev + '\n\n- Item 1\n- Item 2\n- Item 3\n\n');
                     }}
                     style={{
                       padding: '4px 8px',
@@ -866,16 +866,16 @@ export default function PostEditor({
                 {/* Basic SEO Accordion */}
                 <details open style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Basic SEO ({liveAnalysis.checks.filter(c => c.category === 'basic' && c.status === 'passed').length} / {liveAnalysis.checks.filter(c => c.category === 'basic').length} passed)
+                    Basic SEO ({liveAnalysis.checks.basic.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.basic.length} passed)
                   </summary>
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.filter(c => c.category === 'basic').map(chk => (
+                    {liveAnalysis.checks.basic.map(chk => (
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'warning' ? '🟡' : '🔴'}</span>
+                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.result}</span>
-                          {chk.status !== 'passed' && chk.fixGuidance && (
-                            <div style={{ color: '#0b666a', marginTop: 2, fontStyle: 'italic' }}>Tip: {chk.fixGuidance}</div>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
+                          {chk.status !== 'passed' && chk.fixAdvice && (
+                            <div style={{ color: '#0b666a', marginTop: 2, fontStyle: 'italic' }}>Tip: {chk.fixAdvice}</div>
                           )}
                         </div>
                       </div>
@@ -886,14 +886,14 @@ export default function PostEditor({
                 {/* Additional SEO Accordion */}
                 <details style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Additional SEO ({liveAnalysis.checks.filter(c => c.category === 'additional' && c.status === 'passed').length} / {liveAnalysis.checks.filter(c => c.category === 'additional').length} passed)
+                    Additional SEO ({liveAnalysis.checks.additional.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.additional.length} passed)
                   </summary>
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.filter(c => c.category === 'additional').map(chk => (
+                    {liveAnalysis.checks.additional.map(chk => (
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'warning' ? '🟡' : '🔴'}</span>
+                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.result}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}
@@ -903,14 +903,14 @@ export default function PostEditor({
                 {/* Readability Accordion */}
                 <details style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Readability ({liveAnalysis.checks.filter(c => c.category === 'readability' && c.status === 'passed').length} / {liveAnalysis.checks.filter(c => c.category === 'readability').length} passed)
+                    Readability ({liveAnalysis.checks.readability.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.readability.length} passed)
                   </summary>
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.filter(c => c.category === 'readability').map(chk => (
+                    {liveAnalysis.checks.readability.map(chk => (
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'warning' ? '🟡' : '🔴'}</span>
+                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.result}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}
@@ -920,14 +920,14 @@ export default function PostEditor({
                 {/* Technical SEO Accordion */}
                 <details style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Technical SEO ({liveAnalysis.checks.filter(c => c.category === 'technical' && c.status === 'passed').length} / {liveAnalysis.checks.filter(c => c.category === 'technical').length} passed)
+                    Technical SEO ({liveAnalysis.checks.technical.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.technical.length} passed)
                   </summary>
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.filter(c => c.category === 'technical').map(chk => (
+                    {liveAnalysis.checks.technical.map(chk => (
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'warning' ? '🟡' : '🔴'}</span>
+                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.result}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}

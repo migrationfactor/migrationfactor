@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { verifySeoSession } from '@/lib/seo-system/auth';
 
 export const dynamic = 'force-dynamic';
@@ -10,19 +11,13 @@ export default async function SeoAdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('seo_session_token')?.value;
+  const session = await verifySeoSession();
+  const user: any = session ? session.user : null;
 
-  let user: any = null;
-  if (sessionToken) {
-    const session = await verifySeoSession(sessionToken);
-    if (session) {
-      user = session.user;
-    }
-  }
-
-  // If user is not logged in, render the login/child content without the admin chrome
+  // Signed-out visitors may only see the login page (it shares the main admin login).
   if (!user) {
+    const path = (await headers()).get('x-pathname') || '';
+    if (path !== '/seo-admin/login') redirect('/seo-admin/login');
     return <div style={{ minHeight: '100vh', background: '#f8fafc' }}>{children}</div>;
   }
 
@@ -220,6 +215,29 @@ export default async function SeoAdminLayout({
           >
             🤖 Robots.txt
           </Link>
+          {[
+            { href: '/seo-admin/seo/reports', label: '📊 SEO Reports' },
+            { href: '/seo-admin/seo/indexing', label: '📡 Sitemaps & Indexing' },
+            { href: '/seo-admin/seo/audit-log', label: '🧾 Audit Log' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '8px 12px',
+                borderRadius: 6,
+                color: '#f8fafc',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
           <a
             href="/sitemap_index.xml"
             target="_blank"

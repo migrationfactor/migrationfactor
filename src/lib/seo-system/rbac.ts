@@ -67,6 +67,20 @@ export function hasPermission(roles: SeoRole[], permission: string): boolean {
 }
 
 /**
+ * Returns a distinct array of all permissions granted across the given roles.
+ */
+export function getUserPermissions(roles: SeoRole[]): string[] {
+  const permsSet = new Set<string>();
+  for (const role of roles) {
+    const perms = PERMISSION_MATRIX[role];
+    if (perms) {
+      perms.forEach((p) => permsSet.add(p));
+    }
+  }
+  return Array.from(permsSet);
+}
+
+/**
  * Checks object-level permission for post actions.
  * Authors can only edit own drafts/pending, and cannot change advanced robots/canonical.
  */

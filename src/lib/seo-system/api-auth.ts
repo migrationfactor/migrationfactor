@@ -17,17 +17,8 @@ export async function authenticateApiRequest(
   req: NextRequest,
   requiredPermission?: string
 ): Promise<{ auth: AuthContext | null; errorResponse: NextResponse | null }> {
-  const sessionToken = req.cookies.get('seo_session_token')?.value;
-
-  if (!sessionToken) {
-    return {
-      auth: null,
-      errorResponse: NextResponse.json(
-        { error: 'unauthenticated', message: 'You must be logged into the SEO system to access this endpoint.' },
-        { status: 401 }
-      ),
-    };
-  }
+  // Single sign-on: the session is the main admin (Supabase) login.
+  const sessionToken = undefined;
 
   const session = await verifySeoSession(sessionToken);
   if (!session) {
@@ -43,20 +34,36 @@ export async function authenticateApiRequest(
   // Validate CSRF token on state-changing methods (POST, PUT, PATCH, DELETE)
   const method = req.method.toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    // SEC-03: a request must be same-origin (Origin header matches host) or carry the
+    // session's synchronizer token. A missing header alone no longer passes.
     const csrfHeader = req.headers.get('x-csrf-token');
-    // If not matching session csrfToken, check if Bearer PAT token is present (otherwise reject)
-    if (csrfHeader && csrfHeader !== session.csrfToken) {
+    const origin = req.headers.get('origin');
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    let sameOrigin = false;
+    if (origin && host) {
+      try {
+        sameOrigin = new URL(origin).host === host;
+      } catch {
+        sameOrigin = false;
+      }
+    }
+    const tokenValid = Boolean(csrfHeader) && csrfHeader === session.csrfToken;
+    if (!tokenValid && !sameOrigin) {
       return {
         auth: null,
         errorResponse: NextResponse.json(
-          { error: 'invalid_csrf_token', message: 'CSRF token mismatch. Please reload.' },
+          { error: 'invalid_csrf_token', message: 'Cross-site request rejected. Reload the page and try again.' },
           { status: 403 }
         ),
       };
     }
   }
 
-  if (requiredPermission && !hasPermission(session.user.permissions, requiredPermission)) {
+  if (
+    requiredPermission &&
+    !session.user.permissions?.includes(requiredPermission) &&
+    !hasPermission((session.user.roles || []) as any, requiredPermission)
+  ) {
     return {
       auth: null,
       errorResponse: NextResponse.json(

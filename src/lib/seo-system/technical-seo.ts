@@ -3,6 +3,9 @@ import { logAudit } from './audit';
 
 export const SITE_URL = 'https://migrationfactor.com';
 
+export const generateSitemapIndexXml = generateSitemapIndex;
+export const generatePostSitemapXml = generatePostSitemap;
+
 /**
  * Generates XML Sitemap Index (FR-TEC-001)
  */
@@ -52,11 +55,12 @@ export async function generatePostSitemap(): Promise<string> {
      WHERE p.status = 'published'
        AND s.robots_index = true
        AND s.sitemap_include = true
+       AND (s.canonical_url IS NULL OR s.canonical_url = '' OR rtrim(s.canonical_url, '/') = '${SITE_URL}/blog/' || p.slug)
      ORDER BY p.published_at DESC`
   );
 
   const urlEntries = posts.map(p => {
-    const loc = `${SITE_URL}/blog/${p.slug}/`;
+    const loc = `${SITE_URL}/blog/${p.slug}`;
     const lastmod = new Date(p.modified_at || p.published_at || new Date()).toISOString();
     let imageTag = '';
     if (p.image_url) {
@@ -94,7 +98,7 @@ export async function generateCategorySitemap(): Promise<string> {
   );
 
   const urlEntries = categories.map(c => {
-    const loc = `${SITE_URL}/blog/category/${c.slug}/`;
+    const loc = `${SITE_URL}/blog/category/${c.slug}`;
     const lastmod = new Date(c.last_post_mod || c.updated_at || new Date()).toISOString();
     return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`;
   });
@@ -127,7 +131,7 @@ export async function generateTagSitemap(): Promise<string> {
   );
 
   const urlEntries = tags.map(t => {
-    const loc = `${SITE_URL}/blog/tag/${t.slug}/`;
+    const loc = `${SITE_URL}/blog/tag/${t.slug}`;
     const lastmod = new Date(t.last_post_mod || t.updated_at || new Date()).toISOString();
     return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`;
   });
@@ -159,7 +163,7 @@ export async function generateAuthorSitemap(): Promise<string> {
   );
 
   const urlEntries = authors.map(a => {
-    const loc = `${SITE_URL}/blog/author/${a.slug}/`;
+    const loc = `${SITE_URL}/blog/author/${a.slug}`;
     const lastmod = new Date(a.last_post_mod || a.updated_at || new Date()).toISOString();
     return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`;
   });
@@ -192,6 +196,21 @@ Disallow: /preview/
 
 Sitemap: ${SITE_URL}/sitemap_index.xml
 `;
+}
+
+/**
+ * Sanitizes and validates robots.txt content (FR-TEC-007)
+ * Ensures protected paths are disallowed.
+ */
+export function sanitizeRobotsTxt(content: string): string {
+  let text = content ? content.trim() : '';
+  const mandatoryRules = ['Disallow: /admin/', 'Disallow: /seo-admin/', 'Disallow: /api/'];
+  for (const rule of mandatoryRules) {
+    if (!text.includes(rule)) {
+      text += `\n${rule}`;
+    }
+  }
+  return text;
 }
 
 /**

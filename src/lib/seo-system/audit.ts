@@ -76,3 +76,30 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
     // Audit logging failure should not crash the request, but must be alerted
   }
 }
+
+export async function logAudit(entry: {
+  actorId?: string | null;
+  actorRole?: string | null;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  ipHash?: string | null;
+  userAgent?: string | null;
+}): Promise<void> {
+  return writeAuditLog({
+    actorId: entry.actorId,
+    actorRole: entry.actorRole,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    before: entry.beforeState || entry.before,
+    after: entry.afterState || entry.after,
+    ipHash: entry.ipHash,
+    userAgent: entry.userAgent,
+  });
+}
+

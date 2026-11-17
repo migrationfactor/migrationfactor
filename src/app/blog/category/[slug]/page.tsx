@@ -17,7 +17,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const title = cat.seo_title || `${cat.name} Articles | Migration Factor`;
   const description = cat.meta_description || cat.description || `Guides, requirements and updates on ${cat.name}.`;
-  const canonical = cat.canonical_url || `${SITE_URL}/blog/category/${cat.slug}/`;
+  const canonical = cat.canonical_url || `${SITE_URL}/blog/category/${cat.slug}`;
   const robots = cat.robots_index ? 'index, follow' : 'noindex, follow';
 
   return {
@@ -37,7 +37,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function CategoryArchivePage(props: Props) {
   const { slug } = await props.params;
 
-  const redirectMatch = await resolveRedirect(`/blog/category/${slug}/`);
+  const redirectMatch = await resolveRedirect(`/blog/category/${slug}`);
   if (redirectMatch) redirect(redirectMatch.target);
 
   const category = await queryOne<any>(`SELECT * FROM public.seo_categories WHERE slug = $1`, [slug]);
@@ -62,7 +62,7 @@ export default async function CategoryArchivePage(props: Props) {
       <nav className="blog-breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><Link href="/">Home</Link></li>
-          <li><Link href="/blog/">Blog</Link></li>
+          <li><Link href="/blog">Blog</Link></li>
           <li aria-current="page">{category.name}</li>
         </ol>
       </nav>
@@ -90,7 +90,7 @@ export default async function CategoryArchivePage(props: Props) {
             return (
               <article key={post.id} className="blog-card">
                 {post.featured_image_url && (
-                  <Link href={`/blog/${post.slug}/`}>
+                  <Link href={`/blog/${post.slug}`}>
                     <img
                       src={post.featured_image_url}
                       alt={post.featured_image_alt || post.title}
@@ -101,7 +101,7 @@ export default async function CategoryArchivePage(props: Props) {
                 )}
                 <div className="blog-card-body">
                   <h2 className="blog-card-title">
-                    <Link href={`/blog/${post.slug}/`}>{post.title}</Link>
+                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                   </h2>
                   <p className="blog-card-excerpt">{post.excerpt || ''}</p>
                   <div className="blog-card-footer">

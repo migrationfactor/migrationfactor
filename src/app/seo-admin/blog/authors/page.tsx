@@ -100,7 +100,7 @@ export default function AuthorsAdminPage() {
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Ayesha Khan"
+                placeholder="e.g. Author full name"
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
               />
             </div>

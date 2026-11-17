@@ -17,7 +17,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const title = `${author.display_name} - Registered Migration Specialist | Migration Factor`;
   const description = author.short_bio || `Articles, insights and visa pathway guides written by ${author.display_name}.`;
-  const canonical = `${SITE_URL}/blog/author/${author.slug}/`;
+  const canonical = `${SITE_URL}/blog/author/${author.slug}`;
 
   return {
     title,
@@ -37,7 +37,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function AuthorProfilePage(props: Props) {
   const { slug } = await props.params;
 
-  const redirectMatch = await resolveRedirect(`/blog/author/${slug}/`);
+  const redirectMatch = await resolveRedirect(`/blog/author/${slug}`);
   if (redirectMatch) redirect(redirectMatch.target);
 
   const author = await queryOne<any>(`SELECT * FROM public.seo_authors WHERE slug = $1`, [slug]);
@@ -56,7 +56,7 @@ export default async function AuthorProfilePage(props: Props) {
     [author.id]
   );
 
-  const authorUrl = `${SITE_URL}/blog/author/${author.slug}/`;
+  const authorUrl = `${SITE_URL}/blog/author/${author.slug}`;
   const credentials = Array.isArray(author.credentials) ? author.credentials : [];
   const sameAs = Array.isArray(author.same_as) ? author.same_as : [];
 
@@ -93,7 +93,7 @@ export default async function AuthorProfilePage(props: Props) {
       <nav className="blog-breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><Link href="/">Home</Link></li>
-          <li><Link href="/blog/">Blog</Link></li>
+          <li><Link href="/blog">Blog</Link></li>
           <li aria-current="page">{author.display_name}</li>
         </ol>
       </nav>
@@ -203,7 +203,7 @@ export default async function AuthorProfilePage(props: Props) {
               return (
                 <article key={post.id} className="blog-card">
                   {post.featured_image_url && (
-                    <Link href={`/blog/${post.slug}/`}>
+                    <Link href={`/blog/${post.slug}`}>
                       <img
                         src={post.featured_image_url}
                         alt={post.featured_image_alt || post.title}
@@ -217,7 +217,7 @@ export default async function AuthorProfilePage(props: Props) {
                       <div className="blog-card-category">{post.category_name}</div>
                     )}
                     <h3 className="blog-card-title">
-                      <Link href={`/blog/${post.slug}/`}>{post.title}</Link>
+                      <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                     </h3>
                     <p className="blog-card-excerpt">{post.excerpt || ''}</p>
                     <div className="blog-card-footer">

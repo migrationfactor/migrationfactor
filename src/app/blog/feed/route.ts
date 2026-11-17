@@ -20,7 +20,7 @@ export async function GET() {
   );
 
   const items = posts.map(p => {
-    const link = `${SITE_URL}/blog/${p.slug}/`;
+    const link = `${SITE_URL}/blog/${p.slug}`;
     const pubDate = new Date(p.published_at).toUTCString();
     const desc = escapeHtml(p.meta_description_effective || p.excerpt || '');
     return `    <item>
@@ -40,7 +40,7 @@ export async function GET() {
     <link>${SITE_URL}/blog/</link>
     <description>Australian visa requirements, migration pathways, employer sponsorship and policy updates.</description>
     <language>en-AU</language>
-    <atom:link href="${SITE_URL}/blog/feed/" rel="self" type="application/rss+xml" />
+    <atom:link href="${SITE_URL}/blog/feed" rel="self" type="application/rss+xml" />
 ${items.join('\n')}
   </channel>
 </rss>`;

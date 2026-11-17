@@ -65,6 +65,7 @@ export interface AnalysisInput {
     schemaValidationErrors?: string[];
     schemaValidationWarnings?: string[];
   };
+  [key: string]: any;
 }
 
 export interface ContentBlock {
@@ -80,8 +81,8 @@ export interface ContentBlock {
   height?: number;
   url?: string;
   target?: string;
-  data?: Record<string, unknown>;
-  [key: string]: unknown;
+  data?: any;
+  [key: string]: any;
 }
 
 export interface FullAnalysisResult {
@@ -161,6 +162,8 @@ export function estimatePixelWidth(text: string, font: 'title' | 'desc' = 'title
   return Math.round(text.length * multiplier);
 }
 
+export const calculatePixelWidth = estimatePixelWidth;
+
 function countSyllables(word: string): number {
   const w = word.toLowerCase().replace(/[^a-z]/g, '');
   if (w.length <= 3) return 1;
@@ -205,24 +208,38 @@ export function extractContentDetails(blocks: ContentBlock[]) {
   let claimSentences: string[] = [];
 
   for (const b of blocks) {
-    if (b.type === 'paragraph' && b.text) {
-      const words = tokenize(b.text);
-      paragraphs.push({ text: b.text, wordCount: words.length });
+    const rawHtml = String(b.data?.text || b.text || '');
+    const text = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
-      // Look for statistics, %, currency, or claim markers for GEO G1
-      const sentences = b.text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean);
+    // Extract links in HTML
+    const hrefMatches = rawHtml.matchAll(/href=["']([^"']+)["']/gi);
+    for (const m of hrefMatches) {
+      const url = m[1];
+      if (url.startsWith('/') || url.includes('migrationfactor.com')) {
+        internalLinks.push(url);
+      } else if (url.startsWith('http')) {
+        externalLinks.push(url);
+      }
+    }
+
+    if (b.type === 'paragraph' && text) {
+      const words = tokenize(text);
+      paragraphs.push({ text, wordCount: words.length });
+
+      const sentences = text.split(/[.!?]+/).map((s: string) => s.trim()).filter(Boolean);
       for (const s of sentences) {
         if (/(\d+%|\$\d+|\bpercent\b|\bstatistics\b|\baccording to\b|\bresearch shows\b|\bstudies\b)/i.test(s)) {
           claimSentences.push(s);
         }
       }
-    } else if (b.type === 'heading' && b.text) {
-      headings.push({ level: b.level || 2, text: b.text });
+    } else if (b.type === 'heading' && text) {
+      const level = Number(b.data?.level || b.level) || 2;
+      headings.push({ level, text });
     } else if (b.type === 'image') {
       images.push({
-        alt: (b.alt as string) || '',
-        isDecorative: !!b.data?.isDecorative,
-        src: b.src as string,
+        alt: String(b.data?.alt || b.alt || ''),
+        isDecorative: !!(b.data?.isDecorative || b.isDecorative),
+        src: String(b.data?.url || b.src || ''),
       });
     } else if (b.type === 'table_of_contents' || b.type === 'toc') {
       hasTableOfContents = true;
@@ -233,19 +250,26 @@ export function extractContentDetails(blocks: ContentBlock[]) {
     } else if (b.type === 'steps') {
       hasStepsBlock = true;
     } else if (b.type === 'link') {
-      const url = (b.url as string) || '';
+      const url = String(b.data?.url || b.url || '');
       if (url.startsWith('/') || url.includes('migrationfactor.com')) {
         internalLinks.push(url);
       } else if (url.startsWith('http')) {
         externalLinks.push(url);
       }
+    } else if (b.type === 'key_takeaways' && (b.data?.items || b.items)) {
+      const items = (b.data?.items || b.items || []) as string[];
+      for (const item of items) {
+        paragraphs.push({ text: String(item), wordCount: tokenize(String(item)).length });
+      }
     }
   }
 
   const allText = blocks
-    .map((b) => {
-      if (b.text) return b.text;
-      if (Array.isArray(b.items)) return b.items.join(' ');
+    .map((b: any) => {
+      const text = b.data?.text || b.text;
+      if (text && typeof text === 'string') return text.replace(/<[^>]+>/g, ' ');
+      const items = b.data?.items || b.items;
+      if (Array.isArray(items)) return items.join(' ');
       return '';
     })
     .join(' ');
@@ -1039,3 +1063,6 @@ export function runSeoAnalysis(input: AnalysisInput): FullAnalysisResult {
     },
   };
 }
+
+export const runContentAnalysis = runSeoAnalysis;
+

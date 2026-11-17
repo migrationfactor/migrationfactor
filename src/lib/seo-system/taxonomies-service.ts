@@ -83,8 +83,8 @@ export async function createCategory(actorId: string, input: CategoryInput) {
   const res = await queryOne<any>(
     `INSERT INTO public.seo_categories (
       name, slug, parent_id, description, seo_title, meta_description,
-      canonical_url, og_image_media_id, robots_index, robots_follow
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      canonical_url, og_image_media_id, robots_index
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *`,
     [
       input.name.trim(),
@@ -96,7 +96,6 @@ export async function createCategory(actorId: string, input: CategoryInput) {
       input.canonicalUrl || null,
       input.ogImageMediaId || null,
       input.robotsIndex !== false,
-      input.robotsFollow !== false,
     ]
   );
 
@@ -123,10 +122,10 @@ export async function updateCategory(id: string, actorId: string, input: Partial
 
     // Create 301 redirect from old archive to new archive
     await query(
-      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
        VALUES ($1, $2, 301, $3, 'Category slug update')
        ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-      [`/blog/category/${current.slug}/`, `/blog/category/${newSlug}/`, actorId]
+      [`/blog/category/${current.slug}`, `/blog/category/${newSlug}`, actorId]
     );
   }
 
@@ -141,9 +140,8 @@ export async function updateCategory(id: string, actorId: string, input: Partial
       canonical_url = $7,
       og_image_media_id = $8,
       robots_index = COALESCE($9, robots_index),
-      robots_follow = COALESCE($10, robots_follow),
       updated_at = now()
-    WHERE id = $11
+    WHERE id = $10
     RETURNING *`,
     [
       input.name !== undefined ? input.name.trim() : null,
@@ -155,7 +153,6 @@ export async function updateCategory(id: string, actorId: string, input: Partial
       input.canonicalUrl !== undefined ? input.canonicalUrl : current.canonical_url,
       input.ogImageMediaId !== undefined ? input.ogImageMediaId : current.og_image_media_id,
       input.robotsIndex !== undefined ? input.robotsIndex : null,
-      input.robotsFollow !== undefined ? input.robotsFollow : null,
       id,
     ]
   );
@@ -199,12 +196,15 @@ export async function deleteCategory(id: string, actorId: string, fallbackCatego
     }
 
     // Create 301 redirect
-    const targetUrl = fallbackCategoryId ? `/blog/category/${fallbackCategoryId}/` : '/blog/';
+    const fallbackSlug = fallbackCategoryId
+      ? (await client.query(`SELECT slug FROM public.seo_categories WHERE id = $1`, [fallbackCategoryId])).rows[0]?.slug
+      : null;
+    const targetUrl = fallbackSlug ? `/blog/category/${fallbackSlug}` : '/blog';
     await client.query(
-      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
        VALUES ($1, $2, 301, $3, 'Category deletion redirect')
        ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-      [`/blog/category/${current.slug}/`, targetUrl, actorId]
+      [`/blog/category/${current.slug}`, targetUrl, actorId]
     );
 
     await client.query(`DELETE FROM public.seo_categories WHERE id = $1`, [id]);
@@ -259,8 +259,8 @@ export async function createTag(actorId: string, input: TagInput) {
 
   const res = await queryOne<any>(
     `INSERT INTO public.seo_tags (
-      name, slug, description, seo_title, meta_description, robots_index, robots_follow
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      name, slug, description, seo_title, meta_description, robots_index
+    ) VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *`,
     [
       input.name.trim(),
@@ -269,7 +269,6 @@ export async function createTag(actorId: string, input: TagInput) {
       input.seoTitle || null,
       input.metaDescription || null,
       input.robotsIndex !== undefined ? input.robotsIndex : true,
-      input.robotsFollow !== false,
     ]
   );
 
@@ -295,10 +294,10 @@ export async function updateTag(id: string, actorId: string, input: Partial<TagI
     newSlug = input.slug;
 
     await query(
-      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
        VALUES ($1, $2, 301, $3, 'Tag slug update')
        ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-      [`/blog/tag/${current.slug}/`, `/blog/tag/${newSlug}/`, actorId]
+      [`/blog/tag/${current.slug}`, `/blog/tag/${newSlug}`, actorId]
     );
   }
 
@@ -310,9 +309,8 @@ export async function updateTag(id: string, actorId: string, input: Partial<TagI
       seo_title = $4,
       meta_description = $5,
       robots_index = COALESCE($6, robots_index),
-      robots_follow = COALESCE($7, robots_follow),
       updated_at = now()
-    WHERE id = $8
+    WHERE id = $7
     RETURNING *`,
     [
       input.name !== undefined ? input.name.trim() : null,
@@ -321,7 +319,6 @@ export async function updateTag(id: string, actorId: string, input: Partial<TagI
       input.seoTitle !== undefined ? input.seoTitle : current.seo_title,
       input.metaDescription !== undefined ? input.metaDescription : current.meta_description,
       input.robotsIndex !== undefined ? input.robotsIndex : null,
-      input.robotsFollow !== undefined ? input.robotsFollow : null,
       id,
     ]
   );
@@ -433,10 +430,10 @@ export async function updateAuthor(id: string, actorId: string, input: Partial<A
     newSlug = input.slug;
 
     await query(
-      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, note)
+      `INSERT INTO public.seo_redirects (source_path, target_url, http_code, created_by, notes)
        VALUES ($1, $2, 301, $3, 'Author slug update')
        ON CONFLICT (source_path) DO UPDATE SET target_url = EXCLUDED.target_url`,
-      [`/blog/author/${current.slug}/`, `/blog/author/${newSlug}/`, actorId]
+      [`/blog/author/${current.slug}`, `/blog/author/${newSlug}`, actorId]
     );
   }
 

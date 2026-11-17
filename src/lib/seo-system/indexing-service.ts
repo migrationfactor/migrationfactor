@@ -132,7 +132,7 @@ export async function getPostIndexingStatus(postId: string): Promise<IndexingSta
   );
   if (!post) throw new Error('Post not found');
 
-  const url = `https://${DEFAULT_HOST}/blog/${post.slug}/`;
+  const url = `https://${DEFAULT_HOST}/blog/${post.slug}`;
 
   const submissions = await query<any>(
     `SELECT channel, action, status, requested_at, response_code, response_excerpt

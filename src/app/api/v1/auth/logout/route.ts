@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revokeSeoSession } from '@/lib/seo-system/auth';
+import { createUserClient } from '@/lib/supabase/server';
+import { supabaseConfigured } from '@/lib/supabase/config';
 
+// Shared login: signing out of the SEO panel signs out of the main admin as well.
 export async function POST(req: NextRequest) {
-  const sessionToken = req.cookies.get('seo_session_token')?.value;
-  if (sessionToken) {
-    await revokeSeoSession(sessionToken);
+  if (supabaseConfigured()) {
+    const supabase = await createUserClient();
+    await supabase.auth.signOut();
   }
-
-  const response = NextResponse.json({ success: true });
-  response.cookies.delete('seo_session_token');
-  return response;
+  // Form posts (the sidebar button) get redirected to the login page; fetch callers get JSON.
+  if ((req.headers.get('accept') || '').includes('text/html')) {
+    return NextResponse.redirect(new URL('/seo-admin/login', req.url), 303);
+  }
+  return NextResponse.json({ success: true });
 }

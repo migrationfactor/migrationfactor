@@ -61,7 +61,7 @@ export interface SchemaContext {
 export function buildSchemaGraph(ctx: SchemaContext) {
   const siteUrl = (ctx.siteUrl || 'https://migrationfactor.com').replace(/\/$/, '');
   const siteName = ctx.siteName || 'Migration Factor';
-  const pageUrl = `${siteUrl}/blog/${ctx.post.slug}/`;
+  const pageUrl = `${siteUrl}/blog/${ctx.post.slug}`;
 
   // Check if auto schema disabled
   if (ctx.schemaConfig?.disable_auto) {
@@ -168,7 +168,7 @@ export function buildSchemaGraph(ctx: SchemaContext) {
   }];
 
   for (const author of authorsList) {
-    const authorUrl = `${siteUrl}/blog/author/${author.slug}/`;
+    const authorUrl = `${siteUrl}/blog/author/${author.slug}`;
     const personId = `${authorUrl}#person`;
     authorRefs.push({ '@id': personId });
 
@@ -229,7 +229,7 @@ export function buildSchemaGraph(ctx: SchemaContext) {
   // 7. BreadcrumbList node
   const breadcrumbItems: any[] = [
     { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteUrl}/` },
-    { '@type': 'ListItem', position: 2, name: 'Blog', item: `${siteUrl}/blog/` },
+    { '@type': 'ListItem', position: 2, name: 'Blog', item: `${siteUrl}/blog` },
   ];
 
   let nextPos = 3;
@@ -238,7 +238,7 @@ export function buildSchemaGraph(ctx: SchemaContext) {
       '@type': 'ListItem',
       position: nextPos++,
       name: ctx.category.name,
-      item: `${siteUrl}/blog/category/${ctx.category.slug}/`,
+      item: `${siteUrl}/blog/category/${ctx.category.slug}`,
     });
   }
 

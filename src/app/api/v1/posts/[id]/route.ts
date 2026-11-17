@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiRequest } from '@/lib/seo-system/api-auth';
 import { getPost, updatePost, permanentDeletePost } from '@/lib/seo-system/posts-service';
-import { canEditPost } from '@/lib/seo-system/rbac';
+import { canEditPost, hasPermission } from '@/lib/seo-system/rbac';
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, context: Context) {
   }
 
   // Authorization check (Section 18.1): post.edit (own) or post.edit_any
-  if (!canEditPost(auth!.user, current.created_by)) {
+  if (!canEditPost(auth!.user, { created_by: current.created_by, status: current.status })) {
     return NextResponse.json(
       { error: 'forbidden', message: 'You can only edit your own posts.' },
       { status: 403 }
@@ -41,6 +41,31 @@ export async function PATCH(req: NextRequest, context: Context) {
 
   try {
     const body = await req.json();
+
+    // Field-level authorization (Section 18.1)
+    const roles = (auth!.user.roles || []) as any;
+    if (!hasPermission(roles, 'seo.edit_advanced')) {
+      const restricted = ['robotsIndex', 'robotsFollow', 'robotsAdvanced', 'canonicalUrl', 'sitemapInclude'];
+      const touched = restricted.filter((k) => body[k] !== undefined);
+      if (touched.length > 0) {
+        return NextResponse.json(
+          { error: 'forbidden', message: `Permission 'seo.edit_advanced' is required to change: ${touched.join(', ')}.` },
+          { status: 403 }
+        );
+      }
+    }
+    if (!hasPermission(roles, 'schema.edit_custom') && (body.customJsonld !== undefined || body.disableAuto !== undefined || body.customMode !== undefined)) {
+      return NextResponse.json(
+        { error: 'forbidden', message: "Permission 'schema.edit_custom' is required to change custom schema." },
+        { status: 403 }
+      );
+    }
+    if (!hasPermission(roles, 'schema.edit') && (body.articleType !== undefined || body.faqEnabled !== undefined || body.howtoEnabled !== undefined)) {
+      return NextResponse.json(
+        { error: 'forbidden', message: "Permission 'schema.edit' is required to change schema options." },
+        { status: 403 }
+      );
+    }
     const ifMatch = req.headers.get('if-match');
     const expectedVersion = ifMatch ? parseInt(ifMatch.replace(/"/g, ''), 10) : body.version;
 

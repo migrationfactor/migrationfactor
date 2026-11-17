@@ -72,3 +72,6 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
     client.release();
   }
 }
+
+export const withTransaction = transaction;
+

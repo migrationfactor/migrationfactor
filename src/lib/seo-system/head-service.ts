@@ -37,23 +37,20 @@ export function buildRobotsDirective(seo: any, isPreview: boolean = false): stri
   const follow = seo?.robots_follow !== false ? 'follow' : 'nofollow';
 
   const parts = [index, follow];
-  const adv = typeof seo?.robots_advanced === 'object' ? seo.robots_advanced : {};
+  const adv = (typeof seo?.robots_advanced === 'object' && seo.robots_advanced !== null) ? seo.robots_advanced : {};
 
   if (adv?.nosnippet) {
     parts.push('nosnippet');
-  } else if (adv?.max_snippet !== undefined && adv.max_snippet !== null) {
-    parts.push(`max-snippet:${adv.max_snippet}`);
-  }
-
-  if (adv?.max_image_preview) {
-    parts.push(`max-image-preview:${adv.max_image_preview}`);
   } else {
-    parts.push('max-image-preview:large');
+    const maxSnippet = adv?.max_snippet !== undefined && adv.max_snippet !== null ? adv.max_snippet : -1;
+    parts.push(`max-snippet:${maxSnippet}`);
   }
 
-  if (adv?.max_video_preview !== undefined && adv.max_video_preview !== null) {
-    parts.push(`max-video-preview:${adv.max_video_preview}`);
-  }
+  const maxImage = adv?.max_image_preview || 'large';
+  parts.push(`max-image-preview:${maxImage}`);
+
+  const maxVideo = adv?.max_video_preview !== undefined && adv.max_video_preview !== null ? adv.max_video_preview : -1;
+  parts.push(`max-video-preview:${maxVideo}`);
 
   if (adv?.noimageindex) parts.push('noimageindex');
   if (adv?.notranslate) parts.push('notranslate');
@@ -79,7 +76,7 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
   const metaDescription = seo.meta_description_raw || seo.meta_description_effective || post.excerpt || '';
 
   // Canonical cascade (Section 6.2, FR-SEO-004)
-  const canonical = seo.canonical_url || `${siteUrl}/blog/${post.slug}/`;
+  const canonical = seo.canonical_url || `${siteUrl}/blog/${post.slug}`;
 
   // Robots
   const robots = buildRobotsDirective(seo, input.isPreview);
@@ -157,7 +154,7 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
   tagMap.set('twitter:image:alt', `<meta name="twitter:image:alt" content="${escapeAttr(ogImgAlt)}">`);
 
   // RSS feed link
-  tagMap.set('rss', `<link rel="alternate" type="application/rss+xml" title="${escapeAttr(siteName)} Blog" href="${siteUrl}/blog/feed/">`);
+  tagMap.set('rss', `<link rel="alternate" type="application/rss+xml" title="${escapeAttr(siteName)} Blog" href="${siteUrl}/blog/feed">`);
 
   // Schema script
   tagMap.set('schema', schemaScript);

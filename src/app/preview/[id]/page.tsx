@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { getPost } from '@/lib/seo-system/posts-service';
 import { renderSeoHead } from '@/lib/seo-system/head-service';
 import { SITE_URL } from '@/lib/seo-system/technical-seo';
+import { getSessionUser } from '@/lib/seo-system/auth';
+import { hasPermission } from '@/lib/seo-system/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +21,11 @@ interface Props {
 
 export default async function PostPreviewPage(props: Props) {
   const { id } = await props.params;
-  const { token } = await props.searchParams;
+
+  // FR-BLG-010: previews are only available to authenticated users who may edit posts.
+  // Everyone else gets a 404 so the post's existence is never revealed.
+  const session = await getSessionUser();
+  if (!session || !hasPermission(session.user.roles, 'post.edit')) notFound();
 
   const post = await getPost(id);
   if (!post) notFound();
@@ -103,9 +109,9 @@ export default async function PostPreviewPage(props: Props) {
           <nav className="blog-breadcrumb" aria-label="Breadcrumb">
             <ol>
               <li><Link href="/">Home</Link></li>
-              <li><Link href="/blog/">Blog</Link></li>
+              <li><Link href="/blog">Blog</Link></li>
               {post.categories?.[0] && (
-                <li><Link href={`/blog/category/${post.categories[0].slug}/`}>{post.categories[0].name}</Link></li>
+                <li><Link href={`/blog/category/${post.categories[0].slug}`}>{post.categories[0].name}</Link></li>
               )}
               <li aria-current="page">{breadcrumbTitle}</li>
             </ol>

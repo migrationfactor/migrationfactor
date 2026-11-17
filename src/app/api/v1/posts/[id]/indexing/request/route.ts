@@ -14,7 +14,7 @@ export async function POST(
   const post = await getPost(id);
   if (!post) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const url = `https://${DEFAULT_HOST}/blog/${post.slug}/`;
+  const url = `https://${DEFAULT_HOST}/blog/${post.slug}`;
   const result = await submitToIndexNow([url], id, auth!.userId);
 
   return NextResponse.json(result);

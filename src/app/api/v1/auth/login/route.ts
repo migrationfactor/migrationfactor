@@ -1,66 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateSeoUser, createSeoSession } from '@/lib/seo-system/auth';
+import { createUserClient } from '@/lib/supabase/server';
+import { supabaseConfigured } from '@/lib/supabase/config';
+import { getMainAdminSeoSession } from '@/lib/seo-system/admin-bridge';
 import { logAudit } from '@/lib/seo-system/audit';
 
+/**
+ * The SEO panel shares the main admin login: credentials are verified by Supabase Auth and the
+ * account must be listed in `admin_users`, exactly like /admin/login.
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { email, password } = body;
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'validation_failed', message: 'Email and password are required.' },
-        { status: 422 }
-      );
+    if (!supabaseConfigured()) {
+      return NextResponse.json({ error: 'not_configured', message: 'Admin sign-in is not configured on this server.' }, { status: 503 });
+    }
+    const body = await req.json().catch(() => ({}));
+    const email = String(body.email || '').trim().toLowerCase();
+    const password = String(body.password || '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length > 200) {
+      return NextResponse.json({ error: 'validation_failed', message: 'Enter your admin email and password.' }, { status: 422 });
     }
 
-    const user = await authenticateSeoUser(email, password);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'invalid_credentials', message: 'Invalid email or password.' },
-        { status: 401 }
-      );
+    const supabase = await createUserClient();
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      return NextResponse.json({ error: 'invalid_credentials', message: 'Incorrect email or password.' }, { status: 401 });
+    }
+    const { data: membership } = await supabase.from('admin_users').select('user_id').eq('user_id', data.user.id).maybeSingle();
+    if (!membership) {
+      await supabase.auth.signOut();
+      return NextResponse.json({ error: 'forbidden', message: 'This account does not have admin access.' }, { status: 403 });
     }
 
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
-    const userAgent = req.headers.get('user-agent') || undefined;
-
-    const { sessionToken, csrfToken } = await createSeoSession(user.id, ipAddress, userAgent);
-
-    await logAudit({
-      actorId: user.id,
-      action: 'auth.login',
-      entityType: 'user',
-      entityId: user.id,
-      afterState: { email: user.email, ip: ipAddress },
-    });
-
-    const response = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.display_name,
-        roles: user.roles,
-        permissions: user.permissions,
-      },
-      csrfToken,
-    });
-
-    // Set secure HTTP-only session cookie
-    response.cookies.set('seo_session_token', sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    return response;
+    const session = await getMainAdminSeoSession();
+    if (session) {
+      await logAudit({
+        actorId: session.user.id,
+        action: 'auth.login',
+        entityType: 'user',
+        entityId: session.user.id,
+        afterState: { email, via: 'admin-sso' },
+      });
+    }
+    return NextResponse.json({ success: true, user: { email, roles: ['super_admin'] } });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: 'server_error', message: err.message || 'An unexpected error occurred.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'server_error', message: 'An unexpected error occurred.' }, { status: 500 });
   }
 }
