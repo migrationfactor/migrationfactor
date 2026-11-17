@@ -30,12 +30,12 @@ export default function SeoReportsPage() {
   );
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1100 }}>
       <PageHeader
         title="SEO Reports"
         subtitle="Orphan posts, broken or redirected internal links and 404 hits (last 90 days). These checks guide editors; they do not guarantee rankings."
       />
-      {error && <div style={{ padding: 12, background: '#fef2f2', color: '#b91c1c', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: 12, background: '#f1e4e4', color: '#a01b2b', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
       <Tabs
         active={tab}
         onChange={setTab}

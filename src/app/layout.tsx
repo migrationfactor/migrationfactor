@@ -17,6 +17,7 @@ import PageLoader from '@/components/shared/PageLoader';
 import FloatingWhatsApp from '@/components/shared/FloatingWhatsApp';
 import EmailEnquiryDialog from '@/components/shared/EmailEnquiryDialog';
 import JsonLd from '@/components/shared/JsonLd';
+import SiteJsonLdGate from '@/components/shared/SiteJsonLdGate';
 import { organization } from '@/lib/seo';
 import { SITE_URL } from '@/lib/constants';
 
@@ -42,8 +43,10 @@ export default function RootLayout({
       <body id="top">
         <PageLoader />
         <noscript><style>{'.page-loader{display:none}.hero-flights .flight-dot,.hero-flights .flight-plane{opacity:1}'}</style></noscript>
-        <JsonLd data={organization} />
-        <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'Migration Factor', publisher: { '@id': organization['@id'] } }} />
+        <SiteJsonLdGate>
+          <JsonLd data={organization} />
+          <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'Migration Factor', publisher: { '@id': organization['@id'] } }} />
+        </SiteJsonLdGate>
         <PublicOnly><Header /></PublicOnly>
         <main id="main">{children}</main>
         <PublicOnly><Footer /><FloatingWhatsApp /><EmailEnquiryDialog /></PublicOnly>

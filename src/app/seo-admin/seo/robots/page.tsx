@@ -62,13 +62,13 @@ export default function RobotsTxtAdminPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1000 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042628', margin: '0 0 4px' }}>
             Robots.txt Editor & Crawler Directives
           </h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: '#3d5557', fontSize: '0.875rem', margin: 0 }}>
             Direct search engine crawlers and AI bots per FR-TEC-007, 008 with version history.
           </p>
         </div>
@@ -91,13 +91,13 @@ export default function RobotsTxtAdminPage() {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 8, color: '#0f766e', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24 }}>
-        <form onSubmit={handleSave} style={{ background: '#ffffff', padding: 24, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <form onSubmit={handleSave} style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#042628', marginBottom: 8 }}>
             Robots.txt File Contents
           </label>
@@ -111,8 +111,8 @@ export default function RobotsTxtAdminPage() {
               fontFamily: 'monospace',
               fontSize: '0.9rem',
               borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              backgroundColor: '#f8fafc',
+              border: '1px solid #b9d3d4',
+              backgroundColor: '#f2f8f8',
               lineHeight: 1.5,
               outline: 'none',
               boxSizing: 'border-box',
@@ -120,7 +120,7 @@ export default function RobotsTxtAdminPage() {
           />
 
           <div style={{ marginTop: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
               Version Change Note
             </label>
             <input
@@ -128,7 +128,7 @@ export default function RobotsTxtAdminPage() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Added crawler directive for AI search engines"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -153,18 +153,18 @@ export default function RobotsTxtAdminPage() {
         </form>
 
         {/* Version History Sidebar */}
-        <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', height: 'fit-content' }}>
+        <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', height: 'fit-content' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#042628', margin: '0 0 14px' }}>
             Revision History
           </h2>
           {versions.length === 0 ? (
-            <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>No saved history yet.</div>
+            <div style={{ fontSize: '0.8125rem', color: '#6b8183' }}>No saved history yet.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {versions.map((v) => (
-                <div key={v.id} style={{ padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.8125rem' }}>
+                <div key={v.id} style={{ padding: 10, background: '#f2f8f8', borderRadius: 6, border: '1px solid #cfe3e3', fontSize: '0.8125rem' }}>
                   <div style={{ fontWeight: 600, color: '#042628' }}>{v.note || 'Edit'}</div>
-                  <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: 2 }}>
+                  <div style={{ color: '#3d5557', fontSize: '0.75rem', marginTop: 2 }}>
                     {new Date(v.created_at).toLocaleString('en-AU')}
                   </div>
                   {v.created_by_name && (

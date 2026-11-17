@@ -44,7 +44,7 @@ export default async function AuthorProfilePage(props: Props) {
   if (!author) notFound();
 
   const posts = await query<any>(
-    `SELECT p.id, p.title, p.slug, p.excerpt, p.published_at, p.reading_time_min,
+    `SELECT p.id, p.title, p.slug, p.legacy_path, p.excerpt, p.published_at, p.reading_time_min,
             m.url as featured_image_url, m.alt_text as featured_image_alt,
             c.name as category_name
      FROM public.seo_posts p
@@ -203,7 +203,7 @@ export default async function AuthorProfilePage(props: Props) {
               return (
                 <article key={post.id} className="blog-card">
                   {post.featured_image_url && (
-                    <Link href={`/blog/${post.slug}`}>
+                    <Link href={post.legacy_path || `/blog/${post.slug}`}>
                       <img
                         src={post.featured_image_url}
                         alt={post.featured_image_alt || post.title}
@@ -217,7 +217,7 @@ export default async function AuthorProfilePage(props: Props) {
                       <div className="blog-card-category">{post.category_name}</div>
                     )}
                     <h3 className="blog-card-title">
-                      <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                      <Link href={post.legacy_path || `/blog/${post.slug}`}>{post.title}</Link>
                     </h3>
                     <p className="blog-card-excerpt">{post.excerpt || ''}</p>
                     <div className="blog-card-footer">

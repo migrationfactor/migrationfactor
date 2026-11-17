@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const posts = await query<any>(
-    `SELECT p.id, p.title, p.slug, p.excerpt, p.published_at, p.body_html,
+    `SELECT p.id, p.title, p.slug, p.legacy_path, p.excerpt, p.published_at, p.body_html,
             s.meta_description_effective,
             a.display_name as author_name
      FROM public.seo_posts p
@@ -20,7 +20,8 @@ export async function GET() {
   );
 
   const items = posts.map(p => {
-    const link = `${SITE_URL}/blog/${p.slug}`;
+    // Migrated WordPress posts keep their original (root-level) permalink.
+    const link = p.legacy_path ? `${SITE_URL}${p.legacy_path}` : `${SITE_URL}/blog/${p.slug}`;
     const pubDate = new Date(p.published_at).toUTCString();
     const desc = escapeHtml(p.meta_description_effective || p.excerpt || '');
     return `    <item>

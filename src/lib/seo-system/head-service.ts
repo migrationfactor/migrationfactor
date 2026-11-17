@@ -1,4 +1,5 @@
 import { escapeAttr, escapeHtml } from './sanitizer';
+import { applyTitleTemplate, SeoSettings } from './settings-defaults';
 import { buildSchemaGraph, renderSchemaScriptTag, SchemaContext } from './schema-service';
 
 export interface HeadRenderInput {
@@ -13,6 +14,7 @@ export interface HeadRenderInput {
   category?: any;
   authors?: any[];
   isPreview?: boolean;
+  settings?: SeoSettings;
 }
 
 export interface RenderedHeadResult {
@@ -64,16 +66,30 @@ export function buildRobotsDirective(seo: any, isPreview: boolean = false): stri
  */
 export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
   const siteUrl = (input.siteUrl || 'https://migrationfactor.com').replace(/\/$/, '');
-  const siteName = input.siteName || 'Migration Factor';
+  const settings = input.settings;
+  const siteName = settings?.siteName || input.siteName || 'Migration Factor';
   const post = input.post;
   const seo = input.seo || post.seo || {};
   const social = input.social || post.social || {};
 
   // Title cascade (Section 6.2)
-  const title = seo.seo_title_raw || seo.seo_title_effective || `${post.title} - ${siteName}`;
+  // Manual values always win; the template is only a fallback (Principle 2, FR-FE-003).
+  const manualTitle = typeof seo.seo_title_raw === 'string' ? seo.seo_title_raw.trim() : '';
+  const title =
+    manualTitle ||
+    (settings
+      ? applyTitleTemplate(settings.titleTemplate, { title: post.title, siteName, separator: settings.titleSeparator })
+      : seo.seo_title_effective || `${post.title} - ${siteName}`);
 
   // Description cascade
-  const metaDescription = seo.meta_description_raw || seo.meta_description_effective || post.excerpt || '';
+  // No manual description and no template => no tag; the excerpt is never injected here (TC-03).
+  const manualDesc = typeof seo.meta_description_raw === 'string' ? seo.meta_description_raw.trim() : '';
+  const metaDescription =
+    manualDesc ||
+    (settings?.descriptionTemplate
+      ? settings.descriptionTemplate.replace(/%title%/g, post.title).replace(/%sitename%/g, siteName)
+      : '');
+  const socialFallbackDesc = metaDescription || post.excerpt || '';
 
   // Canonical cascade (Section 6.2, FR-SEO-004)
   const canonical = seo.canonical_url || `${siteUrl}/blog/${post.slug}`;
@@ -83,12 +99,14 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
 
   // Social tags
   const ogTitle = (social.use_seo_values === false && social.og_title) ? social.og_title : title;
-  const ogDesc = (social.use_seo_values === false && social.og_description) ? social.og_description : metaDescription;
+  const ogDesc = (social.use_seo_values === false && social.og_description) ? social.og_description : socialFallbackDesc;
 
   const featuredImg = input.featuredMedia || (post.featured_media_url ? { url: post.featured_media_url, alt: post.featured_media_alt } : null);
   const ogImgUrl = featuredImg?.url
     ? (featuredImg.url.startsWith('http') ? featuredImg.url : `${siteUrl}${featuredImg.url}`)
-    : `${siteUrl}/assets/img/logo.png`;
+    : (settings?.defaultSocialImage
+      ? (settings.defaultSocialImage.startsWith('http') ? settings.defaultSocialImage : `${siteUrl}${settings.defaultSocialImage}`)
+      : `${siteUrl}/assets/img/logo.png`);
   const ogImgAlt = featuredImg?.alt || title;
 
   const twTitle = (social.use_seo_values === false && social.twitter_title) ? social.twitter_title : ogTitle;
@@ -108,6 +126,8 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
       meta_description_effective: metaDescription,
       canonical_url: canonical,
     },
+    logoUrl: settings?.organization.logoUrl ? (settings.organization.logoUrl.startsWith('http') ? settings.organization.logoUrl : `${siteUrl}${settings.organization.logoUrl}`) : undefined,
+    socialUrls: settings?.organization.sameAs,
     schemaConfig: input.schemaConfig || post.schema,
     geoAeo: input.geoAeo || post.geo_aeo,
     featuredMedia: featuredImg,
@@ -146,6 +166,7 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
 
   // Twitter
   tagMap.set('twitter:card', `<meta name="twitter:card" content="${escapeAttr(social.twitter_card || 'summary_large_image')}">`);
+  if (settings?.twitterSite) tagMap.set('twitter:site', `<meta name="twitter:site" content="${escapeAttr(settings.twitterSite)}">`);
   tagMap.set('twitter:title', `<meta name="twitter:title" content="${escapeAttr(twTitle)}">`);
   if (twDesc) {
     tagMap.set('twitter:description', `<meta name="twitter:description" content="${escapeAttr(twDesc)}">`);
@@ -178,18 +199,19 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
  */
 export function generateNextMetadata(input: HeadRenderInput) {
   const rendered = renderSeoHead(input);
-  const siteName = input.siteName || 'Migration Factor';
+  const siteName = input.settings?.siteName || input.siteName || 'Migration Factor';
+  const socialDesc = rendered.metaDescription || input.post?.excerpt || undefined;
 
   return {
     title: rendered.title,
-    description: rendered.metaDescription,
+    description: rendered.metaDescription || undefined,
     alternates: {
       canonical: rendered.canonical,
     },
     robots: rendered.robots,
     openGraph: {
       title: rendered.title,
-      description: rendered.metaDescription,
+      description: socialDesc,
       url: rendered.canonical,
       siteName: siteName,
       locale: 'en_AU',
@@ -205,8 +227,9 @@ export function generateNextMetadata(input: HeadRenderInput) {
     },
     twitter: {
       card: 'summary_large_image',
+      site: input.settings?.twitterSite || undefined,
       title: rendered.title,
-      description: rendered.metaDescription,
+      description: socialDesc,
       images: [input.featuredMedia?.url || `${input.siteUrl || ''}/assets/img/logo.png`],
     },
   };

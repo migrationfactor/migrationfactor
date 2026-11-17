@@ -6,6 +6,11 @@ import path from 'path';
 import fs from 'fs/promises';
 import { query, queryOne, withTransaction } from './db';
 import { logAudit } from './audit';
+import { readImageMeta } from './image-meta';
+import { createServiceClient } from '@/lib/supabase/service';
+import { supabaseConfigured } from '@/lib/supabase/config';
+
+const BUCKET = 'blog-media';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 
@@ -132,31 +137,45 @@ export async function uploadMedia(input: MediaUploadInput) {
     throw new Error('File exceeds maximum upload size of 15 MB.');
   }
 
-  // Generate safe filename and public storage path
+  // SEC-06: trust the file bytes, not the extension or declared MIME type
+  const meta = readImageMeta(input.buffer);
+  if (!meta) throw new Error('The file is not a valid JPEG, PNG, WebP or AVIF image.');
+  if (meta.mime !== input.mimeType) {
+    throw new Error(`The file content is ${meta.mime} but was declared as ${input.mimeType}. Upload rejected.`);
+  }
+  const width = meta.width;
+  const height = meta.height;
+  if (!width || !height) throw new Error('Could not read the image dimensions.');
+
+  const EXT: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/avif': '.avif' };
   const sanitizedFilename = input.filename
     .toLowerCase()
-    .replace(/[^\w.-]/g, '-')
-    .replace(/--+/g, '-');
+    .replace(/\.[a-z0-9]+$/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'image';
 
   const now = new Date();
   const yearMonth = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const storageDir = path.join(process.cwd(), 'public', 'uploads', 'blog', yearMonth);
-  await fs.mkdir(storageDir, { recursive: true });
-
   const uniqueSuffix = Date.now().toString(36);
-  const ext = path.extname(sanitizedFilename) || '.jpg';
-  const baseName = path.basename(sanitizedFilename, ext);
+  const ext = EXT[meta.mime];
+  const baseName = sanitizedFilename;
   const finalFilename = `${baseName}-${uniqueSuffix}${ext}`;
-  const filePath = path.join(storageDir, finalFilename);
 
-  // Write file to public/uploads/blog/YYYY/MM
-  await fs.writeFile(filePath, input.buffer);
-
-  const publicUrl = `/uploads/blog/${yearMonth}/${finalFilename}`;
-
-  // Default width/height (standard 1200x800 if not extracted via sharp)
-  const width = 1200;
-  const height = 800;
+  let publicUrl: string;
+  if (supabaseConfigured()) {
+    // Production: durable public Supabase Storage bucket (serverless disks are read-only/ephemeral)
+    const supabase = createServiceClient();
+    await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => undefined); // exists already => fine
+    const objectPath = `${yearMonth}/${finalFilename}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(objectPath, input.buffer, { contentType: meta.mime, cacheControl: '31536000', upsert: false });
+    if (error) throw new Error(`Image storage failed: ${error.message}`);
+    publicUrl = supabase.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl;
+  } else {
+    const storageDir = path.join(process.cwd(), 'public', 'uploads', 'blog', yearMonth);
+    await fs.mkdir(storageDir, { recursive: true });
+    await fs.writeFile(path.join(storageDir, finalFilename), input.buffer);
+    publicUrl = `/uploads/blog/${yearMonth}/${finalFilename}`;
+  }
 
   const title = input.title || baseName.replace(/-/g, ' ');
   const alt = input.altText || '';
@@ -186,24 +205,6 @@ export async function uploadMedia(input: MediaUploadInput) {
       input.actorId,
     ]
   );
-
-  // Register social and schema crops (FR-MED-001)
-  const variants = [
-    { purpose: 'social_og', width: 1200, height: 630 },
-    { purpose: 'social_x', width: 1200, height: 600 },
-    { purpose: 'schema_16_9', width: 1200, height: 675 },
-    { purpose: 'schema_4_3', width: 1200, height: 900 },
-    { purpose: 'schema_1_1', width: 800, height: 800 },
-  ];
-
-  for (const v of variants) {
-    await query(
-      `INSERT INTO public.seo_media_variants (
-        media_id, purpose, storage_path, width, height, format, size_bytes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [media.id, v.purpose, publicUrl, v.width, v.height, input.mimeType.replace('image/', ''), input.buffer.length]
-    );
-  }
 
   await logAudit({
     actorId: input.actorId,
@@ -291,7 +292,13 @@ export async function deleteMedia(id: string, actorId: string) {
   }
 
   // Delete physical file if exists
-  if (current.storage_path) {
+  if (current.storage_path && /^https?:\/\//.test(current.storage_path)) {
+    const marker = `/${BUCKET}/`;
+    const idx = current.storage_path.indexOf(marker);
+    if (idx >= 0 && supabaseConfigured()) {
+      await createServiceClient().storage.from(BUCKET).remove([current.storage_path.slice(idx + marker.length)]).catch(() => undefined);
+    }
+  } else if (current.storage_path) {
     const relPath = current.storage_path.replace(/^\//, '');
     const fullPath = path.join(process.cwd(), 'public', relPath);
     try {

@@ -3,6 +3,8 @@ import { logAudit } from './audit';
 import { runContentAnalysis, calculateFleschScore } from './analysis';
 import { renderBlocksToHtml, ContentBlock, slugifyHeading } from './sanitizer';
 import { SITE_URL } from './technical-seo';
+import { getSeoSettings } from './settings-service';
+import { MIN_FEATURED_WIDTH } from './image-meta';
 
 export interface PostListFilters {
   status?: string;
@@ -317,7 +319,7 @@ export async function listPosts(filters: PostListFilters = {}) {
 export async function getPost(id: string) {
   const post = await queryOne<any>(
     `SELECT p.*, 
-            m.storage_path as featured_media_url, m.alt as featured_media_alt,
+            m.storage_path as featured_media_url, m.alt as featured_media_alt, m.width as featured_media_width, m.height as featured_media_height,
             u.name as creator_name
      FROM public.seo_posts p
      LEFT JOIN public.seo_media m ON m.id = p.featured_media_id
@@ -1064,8 +1066,18 @@ export async function runPrepublishChecks(post: any): Promise<{
   }
 
   // 5. Featured image
+  const settings = await getSeoSettings();
   if (!post.featured_media_id) {
-    blocking.push({ code: 'featured_image_missing', message: 'Featured image is required before publishing.' });
+    if (settings.requireFeaturedImage) {
+      blocking.push({ code: 'featured_image_missing', message: 'Featured image is required before publishing.' });
+    }
+  } else {
+    if ((post.featured_media_width || 0) < MIN_FEATURED_WIDTH) {
+      blocking.push({ code: 'featured_image_small', message: `The featured image is ${post.featured_media_width || 'unknown'} px wide. Use an image at least ${MIN_FEATURED_WIDTH} px wide.` });
+    }
+    if (!((post.featured_alt_override || post.featured_media_alt || '') as string).trim()) {
+      blocking.push({ code: 'featured_image_alt_missing', message: 'The featured image needs alt text.' });
+    }
   }
 
   // 6. Authors

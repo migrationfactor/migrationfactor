@@ -46,7 +46,7 @@ export async function generateSitemapIndex(): Promise<string> {
  */
 export async function generatePostSitemap(): Promise<string> {
   const posts = await query<any>(
-    `SELECT p.id, p.slug, p.modified_at, p.published_at, p.title,
+    `SELECT p.id, p.slug, p.wp_id, p.modified_at, p.published_at, p.title,
             s.canonical_url,
             m.url as image_url, m.title as image_title
      FROM public.seo_posts p
@@ -55,12 +55,13 @@ export async function generatePostSitemap(): Promise<string> {
      WHERE p.status = 'published'
        AND s.robots_index = true
        AND s.sitemap_include = true
-       AND (s.canonical_url IS NULL OR s.canonical_url = '' OR rtrim(s.canonical_url, '/') = '${SITE_URL}/blog/' || p.slug)
+       AND (p.wp_id IS NOT NULL OR s.canonical_url IS NULL OR s.canonical_url = '' OR rtrim(s.canonical_url, '/') = '${SITE_URL}/blog/' || p.slug)
      ORDER BY p.published_at DESC`
   );
 
   const urlEntries = posts.map(p => {
-    const loc = `${SITE_URL}/blog/${p.slug}`;
+    // Migrated WordPress posts keep their original canonical URL (root-level path).
+    const loc = p.wp_id && p.canonical_url ? p.canonical_url : `${SITE_URL}/blog/${p.slug}`;
     const lastmod = new Date(p.modified_at || p.published_at || new Date()).toISOString();
     let imageTag = '';
     if (p.image_url) {

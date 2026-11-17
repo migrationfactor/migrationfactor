@@ -47,14 +47,14 @@ export default async function AllPostsPage(props: Props) {
   const authors = await listAuthors();
 
   return (
-    <div style={{ maxWidth: 1300, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1300 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042628', margin: '0 0 4px' }}>
             All Blog Posts
           </h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: '#3d5557', fontSize: '0.875rem', margin: 0 }}>
             Manage articles, SEO snippet optimizations, schema and publication status.
           </p>
         </div>
@@ -78,7 +78,7 @@ export default async function AllPostsPage(props: Props) {
       </div>
 
       {/* Status Tabs (FR-BLG-013) */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #cbd5e1', marginBottom: 20, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #b9d3d4', marginBottom: 20, overflowX: 'auto' }}>
         {[
           { id: 'all', label: 'All', count: statusCounts.all },
           { id: 'published', label: 'Published', count: statusCounts.published },
@@ -97,7 +97,7 @@ export default async function AllPostsPage(props: Props) {
                 padding: '8px 14px',
                 fontSize: '0.875rem',
                 fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#0b666a' : '#64748b',
+                color: isActive ? '#0b666a' : '#3d5557',
                 borderBottom: isActive ? '3px solid #0b666a' : '3px solid transparent',
                 textDecoration: 'none',
                 display: 'inline-flex',
@@ -111,8 +111,8 @@ export default async function AllPostsPage(props: Props) {
                   fontSize: '0.75rem',
                   padding: '2px 6px',
                   borderRadius: 10,
-                  backgroundColor: isActive ? '#ccfbf1' : '#f1f5f9',
-                  color: isActive ? '#0f766e' : '#64748b',
+                  backgroundColor: isActive ? '#d4efec' : '#e9f3f3',
+                  color: isActive ? '#07484b' : '#3d5557',
                 }}
               >
                 {tab.count}
@@ -133,7 +133,7 @@ export default async function AllPostsPage(props: Props) {
           padding: 16,
           background: '#ffffff',
           borderRadius: 8,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          border: '1px solid #cfe3e3',
           marginBottom: 20,
           alignItems: 'center',
         }}
@@ -149,7 +149,7 @@ export default async function AllPostsPage(props: Props) {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #cbd5e1',
+            border: '1px solid #b9d3d4',
             fontSize: '0.875rem',
             width: 240,
           }}
@@ -162,7 +162,7 @@ export default async function AllPostsPage(props: Props) {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #cbd5e1',
+            border: '1px solid #b9d3d4',
             fontSize: '0.875rem',
             background: '#ffffff',
           }}
@@ -180,7 +180,7 @@ export default async function AllPostsPage(props: Props) {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #cbd5e1',
+            border: '1px solid #b9d3d4',
             fontSize: '0.875rem',
             background: '#ffffff',
           }}
@@ -199,7 +199,7 @@ export default async function AllPostsPage(props: Props) {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #cbd5e1',
+            border: '1px solid #b9d3d4',
             fontSize: '0.875rem',
             background: '#ffffff',
           }}
@@ -229,7 +229,7 @@ export default async function AllPostsPage(props: Props) {
         {(search || categoryId || scoreBand || missing) && (
           <Link
             href={`/seo-admin/blog?status=${currentStatus}`}
-            style={{ fontSize: '0.8125rem', color: '#dc2626', textDecoration: 'none', marginLeft: 8 }}
+            style={{ fontSize: '0.8125rem', color: '#a01b2b', textDecoration: 'none', marginLeft: 8 }}
           >
             Clear Filters
           </Link>
@@ -237,10 +237,10 @@ export default async function AllPostsPage(props: Props) {
       </form>
 
       {/* Posts Table */}
-      <div style={{ background: '#ffffff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', borderRadius: 8, border: '1px solid #cfe3e3', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
           <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569' }}>
+            <tr style={{ background: '#f2f8f8', borderBottom: '2px solid #cfe3e3', color: '#3d5557' }}>
               <th style={{ padding: '12px 16px' }}>Title & Slug</th>
               <th style={{ padding: '12px 14px' }}>Focus Keyword</th>
               <th style={{ padding: '12px 14px', textAlign: 'center' }}>SEO Score</th>
@@ -254,30 +254,30 @@ export default async function AllPostsPage(props: Props) {
           <tbody>
             {posts.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b8183' }}>
                   No posts match your filters.
                 </td>
               </tr>
             ) : (
               posts.map((post: any) => {
                 const seoScore = post.seo_score;
-                let badgeBg = '#f1f5f9';
-                let badgeColor = '#64748b';
+                let badgeBg = '#e9f3f3';
+                let badgeColor = '#3d5557';
                 if (seoScore !== null && seoScore !== undefined) {
                   if (seoScore >= 80) {
-                    badgeBg = '#dcfce7';
-                    badgeColor = '#15803d';
+                    badgeBg = '#d4efec';
+                    badgeColor = '#07484b';
                   } else if (seoScore >= 50) {
-                    badgeBg = '#fef3c7';
-                    badgeColor = '#b45309';
+                    badgeBg = '#f4ecd2';
+                    badgeColor = '#8a5a00';
                   } else {
-                    badgeBg = '#fee2e2';
-                    badgeColor = '#b91c1c';
+                    badgeBg = '#f1e4e4';
+                    badgeColor = '#a01b2b';
                   }
                 }
 
                 return (
-                  <tr key={post.id} style={{ borderBottom: '1px solid #f1f5f9', verticalAlign: 'middle' }}>
+                  <tr key={post.id} style={{ borderBottom: '1px solid #e9f3f3', verticalAlign: 'middle' }}>
                     {/* Title & Slug */}
                     <td style={{ padding: '14px 16px', maxWidth: 320 }}>
                       <Link
@@ -286,7 +286,7 @@ export default async function AllPostsPage(props: Props) {
                       >
                         {post.title}
                       </Link>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2, fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#6b8183', marginTop: 2, fontFamily: 'monospace' }}>
                         /blog/{post.slug}/
                       </div>
                     </td>
@@ -294,11 +294,11 @@ export default async function AllPostsPage(props: Props) {
                     {/* Focus Keyword */}
                     <td style={{ padding: '14px 14px' }}>
                       {post.focus_keyword ? (
-                        <span style={{ fontWeight: 600, color: '#0b666a', background: '#f0fdfa', padding: '2px 8px', borderRadius: 4, border: '1px solid #ccfbf1' }}>
+                        <span style={{ fontWeight: 600, color: '#0b666a', background: '#e9f3f3', padding: '2px 8px', borderRadius: 4, border: '1px solid #d4efec' }}>
                           {post.focus_keyword}
                         </span>
                       ) : (
-                        <span style={{ color: '#f87171', fontSize: '0.8rem', fontStyle: 'italic' }}>None</span>
+                        <span style={{ color: '#b4424f', fontSize: '0.8rem', fontStyle: 'italic' }}>None</span>
                       )}
                     </td>
 
@@ -318,22 +318,22 @@ export default async function AllPostsPage(props: Props) {
                           {seoScore}
                         </span>
                       ) : (
-                        <span style={{ color: '#cbd5e1' }}>—</span>
+                        <span style={{ color: '#b9d3d4' }}>—</span>
                       )}
                     </td>
 
                     {/* Readability */}
                     <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 600, color: '#334155' }}>
+                      <span style={{ fontWeight: 600, color: '#042628' }}>
                         {post.seo_readability || '—'}
                       </span>
                     </td>
 
                     {/* GEO / AEO */}
                     <td style={{ padding: '14px 14px', textAlign: 'center', fontSize: '0.8125rem' }}>
-                      <span style={{ color: '#7c3aed', fontWeight: 600 }}>G: {post.geo_score || '—'}</span>
+                      <span style={{ color: '#07484b', fontWeight: 600 }}>G: {post.geo_score || '—'}</span>
                       {' · '}
-                      <span style={{ color: '#059669', fontWeight: 600 }}>A: {post.aeo_score || '—'}</span>
+                      <span style={{ color: '#0b666a', fontWeight: 600 }}>A: {post.aeo_score || '—'}</span>
                     </td>
 
                     {/* Status */}
@@ -346,15 +346,15 @@ export default async function AllPostsPage(props: Props) {
                           fontWeight: 700,
                           textTransform: 'uppercase',
                           backgroundColor:
-                            post.status === 'published' ? '#dcfce7' :
+                            post.status === 'published' ? '#d4efec' :
                             post.status === 'scheduled' ? '#dbeafe' :
                             post.status === 'pending_review' ? '#ffedd5' :
-                            post.status === 'trashed' ? '#fee2e2' : '#f1f5f9',
+                            post.status === 'trashed' ? '#f1e4e4' : '#e9f3f3',
                           color:
-                            post.status === 'published' ? '#16a34a' :
-                            post.status === 'scheduled' ? '#2563eb' :
-                            post.status === 'pending_review' ? '#ea580c' :
-                            post.status === 'trashed' ? '#dc2626' : '#64748b',
+                            post.status === 'published' ? '#0b666a' :
+                            post.status === 'scheduled' ? '#0b666a' :
+                            post.status === 'pending_review' ? '#b4424f' :
+                            post.status === 'trashed' ? '#a01b2b' : '#3d5557',
                         }}
                       >
                         {post.status}
@@ -362,7 +362,7 @@ export default async function AllPostsPage(props: Props) {
                     </td>
 
                     {/* Date */}
-                    <td style={{ padding: '14px 14px', color: '#64748b', fontSize: '0.8125rem' }}>
+                    <td style={{ padding: '14px 14px', color: '#3d5557', fontSize: '0.8125rem' }}>
                       {post.published_at ? new Date(post.published_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : 'Unpublished'}
                     </td>
 
@@ -387,7 +387,7 @@ export default async function AllPostsPage(props: Props) {
                           <Link
                             href={`/blog/${post.slug}/`}
                             target="_blank"
-                            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.8125rem' }}
+                            style={{ color: '#3d5557', textDecoration: 'none', fontSize: '0.8125rem' }}
                           >
                             View ↗
                           </Link>
@@ -395,7 +395,7 @@ export default async function AllPostsPage(props: Props) {
                           <Link
                             href={`/preview/${post.id}`}
                             target="_blank"
-                            style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.8125rem' }}
+                            style={{ color: '#0b666a', textDecoration: 'none', fontSize: '0.8125rem' }}
                           >
                             Preview ↗
                           </Link>

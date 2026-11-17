@@ -262,7 +262,17 @@ export function renderBlocksToHtml(blocks: ContentBlock[]): SanitizationResult {
               `</div>`
             );
           }).join('');
-          parts.push(`<section class="content-faqs" aria-label="Frequently Asked Questions">${faqItemsHtml}</section>`);
+          // FR-AEO-006: the FAQ is an H2 section with H3 questions so it joins the heading outline / TOC
+          const faqTitle = String(block.data?.heading || 'Frequently Asked Questions').trim() || 'Frequently Asked Questions';
+          let faqId = slugifyHeading(faqTitle) || 'faq';
+          if (headingIdCounts[faqId]) {
+            headingIdCounts[faqId]++;
+            faqId = `${faqId}-${headingIdCounts[faqId]}`;
+          } else {
+            headingIdCounts[faqId] = 1;
+          }
+          headings.push({ level: 2, text: faqTitle, id: faqId });
+          parts.push(`<section class="content-faqs" aria-labelledby="${escapeAttr(faqId)}"><h2 id="${escapeAttr(faqId)}">${escapeHtml(faqTitle)}</h2>${faqItemsHtml}</section>`);
         }
         break;
       }

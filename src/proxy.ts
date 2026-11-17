@@ -8,6 +8,8 @@ import { createServerClient } from '@supabase/ssr';
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const migrated = await handleMigratedPost(request);
+  if (migrated) return migrated;
   if (pathname.startsWith('/blog')) return handleBlogPost(request);
   if (pathname.startsWith('/preview/')) {
     // FR-BLG-010: previews are never cached or indexed.
@@ -16,6 +18,9 @@ export async function proxy(request: NextRequest) {
     res.headers.set('Cache-Control', 'private, no-store');
     return res;
   }
+
+  // The matcher now covers the whole site (for migrated-post URLs); only admin areas need the session logic below.
+  if (!(pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/seo-admin' || pathname.startsWith('/seo-admin/'))) return NextResponse.next();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -51,6 +56,43 @@ export async function proxy(request: NextRequest) {
   response.headers.set('Cache-Control', 'private, no-store');
   response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   return response;
+}
+
+// ---- WordPress-migrated posts --------------------------------------------------------------------------
+// Migrated posts keep their original root-level WordPress URL (/slug/, with trailing slash). That needs
+// skipTrailingSlashRedirect (next.config.ts), so the default "strip the trailing slash" behaviour is
+// reproduced here for every other path to leave the rest of the site unchanged.
+let legacyCache: { at: number; map: Map<string, string> } | null = null;
+
+async function legacyPaths(): Promise<Map<string, string>> {
+  if (legacyCache && Date.now() - legacyCache.at < 60_000) return legacyCache.map;
+  try {
+    const { query } = await import('@/lib/seo-system/db');
+    const rows = await query<{ legacy_path: string; slug: string }>(
+      `SELECT legacy_path, slug FROM public.seo_posts WHERE legacy_path IS NOT NULL AND status = 'published'`);
+    legacyCache = { at: Date.now(), map: new Map(rows.map((r) => [r.legacy_path, r.slug])) };
+  } catch {
+    legacyCache = { at: Date.now() - 50_000, map: legacyCache?.map ?? new Map() }; // retry in 10s, keep last good list
+  }
+  return legacyCache.map;
+}
+
+async function handleMigratedPost(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname, search } = request.nextUrl;
+  if (pathname === '/') return null;
+  const withSlash = pathname.endsWith('/') ? pathname : `${pathname}/`;
+  const segments = withSlash.split('/').filter(Boolean);
+  const slug = segments.length === 1 ? (await legacyPaths()).get(withSlash.toLowerCase() === withSlash ? withSlash : withSlash.toLowerCase()) : undefined;
+  if (slug) {
+    if (withSlash.toLowerCase() !== withSlash || pathname !== withSlash) {
+      return NextResponse.redirect(new URL(`${withSlash.toLowerCase()}${search}`, request.url), 301);
+    }
+    return NextResponse.rewrite(new URL(`/blog/${slug}${search}`, request.url));
+  }
+  if (pathname.endsWith('/') && !/\.[^/]+\/$/.test(pathname)) {
+    return NextResponse.redirect(new URL(`${pathname.replace(/\/+$/, '')}${search}`, request.url), 308);
+  }
+  return null;
 }
 
 const GONE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>410 Gone - Migration Factor</title></head><body style="font-family:system-ui,sans-serif;text-align:center;padding:80px 20px;color:#042628"><h1>410 - This article has been removed</h1><p>Explore our latest guides in the <a href="/blog/" style="color:#0b666a">Migration Factor blog</a>.</p></body></html>`;
@@ -103,6 +145,9 @@ async function handleBlogPost(request: NextRequest) {
       [slug]
     );
     if (post) {
+      const legacy = await queryOne<{ legacy_path: string | null }>(`SELECT legacy_path FROM public.seo_posts WHERE slug = $1`, [slug]);
+      // A migrated post lives at its original WordPress URL; the /blog/ copy permanently redirects there.
+      if (legacy?.legacy_path) return NextResponse.redirect(new URL(legacy.legacy_path, request.url), 301);
       if (post.status === 'trashed') return gone();
       if (post.status === 'unpublished' && post.unpublish_behavior === '410') return gone();
       return NextResponse.next();
@@ -120,5 +165,6 @@ async function handleBlogPost(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin', '/admin/:path*', '/seo-admin', '/seo-admin/:path*', '/blog/:path*', '/preview/:path*'],
+  // Everything except Next internals, API routes and files with an extension.
+  matcher: ['/((?!_next/|api/|.*\\.[^/]+$).*)'],
 };

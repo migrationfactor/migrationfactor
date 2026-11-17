@@ -1,0 +1,84 @@
+/* SEO admin: shares the /admin design system (admin.css) and only adds what the SEO panel needs on top. */
+.seo-admin .admin-sidebar{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#0b666a transparent}
+.seo-admin .admin-nav{gap:2px}
+.seo-admin .admin-nav-group{display:flex;flex-direction:column;gap:2px}
+.seo-admin .admin-nav-group+.admin-nav-group{margin-top:14px}
+.seo-admin .admin-nav-title{margin:0 0 4px;padding:0 14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#35b5ac}
+.seo-admin .admin-nav a{padding:9px 14px;font-size:14px}
+.seo-admin .admin-account-role{color:#9cc7c7;font-size:12px;margin-top:-6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seo-admin .admin-account{padding-top:6px}
+
+/* Page content: same max width, headings and spacing as /admin pages. */
+.seo-admin .admin-content>*{max-width:1320px}
+.seo-admin .admin-content h1{font-size:clamp(24px,3vw,32px)!important;font-weight:800!important;margin:0 0 4px!important}
+.seo-admin .admin-content h1{color:#042628}
+.seo-admin .admin-content h2,.seo-admin .admin-content h3{color:#07484b}
+.seo-admin .admin-content a{color:#0b666a}
+
+/* Form controls inherit the admin look; keep non-text inputs native. */
+.seo-admin input[type=radio],.seo-admin input[type=range],.seo-admin input[type=color],.seo-admin input[type=file]{width:auto;min-height:0;padding:0;border:0;accent-color:#0b666a}
+.seo-admin input[type=checkbox]{accent-color:#0b666a}
+.seo-admin input[type=file]{padding:8px 0}
+.seo-admin input,.seo-admin select,.seo-admin textarea{font-family:inherit}
+.seo-admin input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),.seo-admin select,.seo-admin textarea{border-color:#a5c4c6!important;border-radius:8px!important;color:#042628;font-size:15px!important}
+.seo-admin input::placeholder,.seo-admin textarea::placeholder{color:#6b8183}
+.seo-admin textarea{min-height:88px;line-height:1.5}
+.seo-admin select{border-radius:12px!important;padding-right:44px!important}
+
+/* Native tables rendered by the SEO pages. */
+.seo-admin table{font-size:14px}
+.seo-admin table th{background:#e9f3f3;color:#07484b;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.seo-admin table td a{font-weight:600}
+
+/* Buttons without an admin class (inline-styled in the SEO pages) get the admin focus and motion treatment. */
+.seo-admin button{font-family:inherit;transition:background-color .15s,border-color .15s,opacity .15s}
+.seo-admin button:disabled{opacity:.7}
+.seo-admin .admin-link-button{padding:8px 12px}
+
+/* Dashboard blocks */
+.seo-admin .seo-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px}
+.seo-admin .seo-score-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seo-admin .seo-score{background:#f2f8f8;border:1px solid #e3eeee;border-radius:10px;padding:14px;text-align:center}
+.seo-admin .seo-score span{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#3d5557}
+.seo-admin .seo-score strong{display:block;margin-top:4px;font-size:28px;line-height:1.1;color:#07484b}
+.seo-admin .seo-score small{font-size:14px;color:#6b8183;font-weight:600}
+.seo-admin .seo-band{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:1px solid #cfe3e3;font-weight:700;font-size:14px;text-decoration:none;color:#042628!important;transition:background-color .15s,border-color .15s}
+.seo-admin .seo-band:hover{background:#f2f8f8;border-color:#0b666a}
+.seo-admin .seo-band-high{border-left:4px solid #0b666a}
+.seo-admin .seo-band-med{border-left:4px solid #35b5ac}
+.seo-admin .seo-band-low{border-left:4px solid #a01b2b}
+.seo-admin .seo-band-stack{display:flex;flex-direction:column;gap:10px}
+.seo-admin .seo-issue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.seo-admin .seo-issue{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid #cfe3e3;border-radius:10px;text-decoration:none;color:#042628!important;font-size:14px;font-weight:600;transition:background-color .15s,border-color .15s}
+.seo-admin .seo-issue:hover{background:#f2f8f8;border-color:#0b666a}
+.seo-admin .seo-pill{min-width:26px;padding:2px 10px;border-radius:999px;background:#e9f3f3;color:#3d5557;font-size:12px;font-weight:800;text-align:center}
+.seo-admin .seo-pill-warn{background:#f4ecd2;color:#6b4500}
+.seo-admin .seo-pill-danger{background:#f1e4e4;color:#7a1f2b}
+.seo-admin .seo-kv-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #e3eeee;font-size:14px}
+.seo-admin .seo-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.seo-admin .seo-metrics{display:flex;flex-wrap:wrap;justify-content:space-around;gap:12px;text-align:center;margin-bottom:16px}
+.seo-admin .seo-metrics span{display:block;font-size:12px;font-weight:700;color:#3d5557;text-transform:uppercase;letter-spacing:.03em}
+.seo-admin .seo-metrics strong{display:block;font-size:26px;color:#07484b;line-height:1.2}
+.seo-admin .seo-note{margin:0;padding-top:10px;border-top:1px solid #e3eeee;font-size:12px;color:#6b8183}
+.seo-admin .seo-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.seo-admin .seo-panel-head h2{margin:0!important}
+.seo-admin .admin-panel+.admin-panel,.seo-admin .admin-panels+.admin-panel,.seo-admin .admin-panel+.admin-panels{margin-top:0}
+.seo-admin .seo-section{margin-bottom:24px}
+.seo-admin .admin-header{justify-content:space-between}
+.seo-admin .admin-header>div{min-width:0}
+.seo-admin .admin-header>div>p{margin:4px 0 0}
+
+@media(max-width:820px){
+  .seo-admin .admin-sidebar{overflow:visible}
+  .seo-admin .admin-nav{flex-direction:column}
+  .seo-admin .admin-nav-group{flex-direction:row;flex-wrap:wrap}
+  .seo-admin .admin-nav-title{flex-basis:100%;padding:0 4px}
+  .seo-admin .admin-nav-group+.admin-nav-group{margin-top:8px}
+  .seo-admin .admin-account-role{display:none}
+}
+@media(max-width:520px){.seo-admin .seo-score-grid{grid-template-columns:1fr}}
+
+/* Client-side tabs (admin-tabs is styled for links; mirror it for buttons). */
+.seo-admin .seo-tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 16px;font:inherit;font-weight:700;color:#3d5557;cursor:pointer}
+.seo-admin .seo-tab:hover{color:#0b666a}
+.seo-admin .seo-tab.is-active{color:#0b666a;border-bottom-color:#0b666a}

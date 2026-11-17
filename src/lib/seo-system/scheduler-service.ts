@@ -1,6 +1,7 @@
 import { query, queryOne } from './db';
 import { publishPost } from './posts-service';
 import { logAudit } from './audit';
+import { notifyAfterChange } from './gsc-service';
 
 let lastRun = 0;
 
@@ -66,6 +67,7 @@ export async function publishDueScheduledPosts(): Promise<{ published: number; f
       );
     }
   }
+  if (published > 0) await notifyAfterChange();
   return { published, failed };
 }
 

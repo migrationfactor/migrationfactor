@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { runContentAnalysis, calculateFleschScore, calculatePixelWidth } from '@/lib/seo-system/analysis';
 import { renderBlocksToHtml } from '@/lib/seo-system/sanitizer';
+import IndexingPanel from './IndexingPanel';
 
 interface PostEditorProps {
   initialPost?: any;
@@ -316,7 +317,7 @@ export default function PostEditor({
           background: '#ffffff',
           padding: '14px 24px',
           borderRadius: 12,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          border: '1px solid #cfe3e3',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -330,13 +331,13 @@ export default function PostEditor({
               fontSize: '0.75rem',
               fontWeight: 800,
               textTransform: 'uppercase',
-              backgroundColor: status === 'published' ? '#dcfce7' : '#f1f5f9',
-              color: status === 'published' ? '#16a34a' : '#64748b',
+              backgroundColor: status === 'published' ? '#d4efec' : '#e9f3f3',
+              color: status === 'published' ? '#0b666a' : '#3d5557',
             }}
           >
             {status}
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{saveStatus}</span>
+          <span style={{ fontSize: '0.75rem', color: '#6b8183' }}>{saveStatus}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -347,8 +348,8 @@ export default function PostEditor({
               style={{
                 padding: '8px 14px',
                 borderRadius: 6,
-                border: '1px solid #cbd5e1',
-                color: '#334155',
+                border: '1px solid #b9d3d4',
+                color: '#042628',
                 textDecoration: 'none',
                 fontWeight: 600,
                 fontSize: '0.875rem',
@@ -364,9 +365,9 @@ export default function PostEditor({
             style={{
               padding: '8px 16px',
               borderRadius: 6,
-              background: '#f1f5f9',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
+              background: '#e9f3f3',
+              color: '#042628',
+              border: '1px solid #b9d3d4',
               fontWeight: 600,
               fontSize: '0.875rem',
               cursor: saving ? 'not-allowed' : 'pointer',
@@ -377,7 +378,7 @@ export default function PostEditor({
 
           {status === 'published' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label style={{ fontSize: '0.8rem', color: '#3d5557', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <input
                   type="checkbox"
                   checked={minorUpdate}
@@ -408,7 +409,7 @@ export default function PostEditor({
               style={{
                 padding: '8px 18px',
                 borderRadius: 6,
-                background: isNew ? '#94a3b8' : '#16a34a',
+                background: isNew ? '#6b8183' : '#0b666a',
                 color: '#ffffff',
                 fontWeight: 700,
                 fontSize: '0.875rem',
@@ -423,7 +424,7 @@ export default function PostEditor({
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '12px 16px', background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 8, color: '#0f766e', fontSize: '0.875rem' }}>
+        <div style={{ padding: '12px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
@@ -433,8 +434,8 @@ export default function PostEditor({
         {/* Main Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {/* Post Title Input */}
-          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase', marginBottom: 6 }}>
               Post Title (Main H1)
             </label>
             <input
@@ -448,7 +449,7 @@ export default function PostEditor({
                 fontWeight: 800,
                 color: '#042628',
                 padding: '10px 14px',
-                border: '1px solid #cbd5e1',
+                border: '1px solid #b9d3d4',
                 borderRadius: 8,
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -456,7 +457,7 @@ export default function PostEditor({
             />
 
             {/* Permalink Line */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: '0.8125rem', color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: '0.8125rem', color: '#3d5557' }}>
               <span style={{ fontWeight: 600 }}>Permalink:</span>
               <span>https://migrationfactor.com/blog/</span>
               <input
@@ -464,7 +465,7 @@ export default function PostEditor({
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #b9d3d4',
                   borderRadius: 4,
                   padding: '2px 6px',
                   fontFamily: 'monospace',
@@ -478,9 +479,9 @@ export default function PostEditor({
           </div>
 
           {/* Block Content Editor */}
-          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase' }}>
                 Article Body Content
               </label>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -497,8 +498,8 @@ export default function PostEditor({
                     style={{
                       padding: '4px 8px',
                       borderRadius: 4,
-                      border: '1px solid #e2e8f0',
-                      background: '#f8fafc',
+                      border: '1px solid #cfe3e3',
+                      background: '#f2f8f8',
                       fontSize: '0.75rem',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -521,7 +522,7 @@ export default function PostEditor({
                 fontSize: '1rem',
                 lineHeight: 1.7,
                 borderRadius: 8,
-                border: '1px solid #cbd5e1',
+                border: '1px solid #b9d3d4',
                 outline: 'none',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 boxSizing: 'border-box',
@@ -534,12 +535,12 @@ export default function PostEditor({
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '10px 14px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: '#f2f8f8',
+                border: '1px solid #cfe3e3',
                 borderTop: 'none',
                 borderRadius: '0 0 8px 8px',
                 fontSize: '0.8125rem',
-                color: '#64748b',
+                color: '#3d5557',
               }}
             >
               <span>Words: <strong style={{ color: '#042628' }}>{wordCount}</strong></span>
@@ -569,8 +570,8 @@ export default function PostEditor({
               onClick={() => setActiveTab('seo')}
               style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'seo' ? '#07484b' : 'transparent' }}
             >
-              <div style={{ fontSize: '0.6875rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>SEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: liveAnalysis.overallScore >= 80 ? '#4ade80' : liveAnalysis.overallScore >= 50 ? '#fde047' : '#f87171' }}>
+              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>SEO</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: liveAnalysis.overallScore >= 80 ? '#4ade80' : liveAnalysis.overallScore >= 50 ? '#fde047' : '#b4424f' }}>
                 {liveAnalysis.overallScore}
               </div>
             </div>
@@ -579,8 +580,8 @@ export default function PostEditor({
               onClick={() => setActiveTab('seo')}
               style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'seo' ? '#07484b' : 'transparent' }}
             >
-              <div style={{ fontSize: '0.6875rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Read</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#60a5fa' }}>
+              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>Read</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
                 {liveAnalysis.readabilityScore}
               </div>
             </div>
@@ -589,8 +590,8 @@ export default function PostEditor({
               onClick={() => setActiveTab('geo')}
               style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'geo' ? '#07484b' : 'transparent' }}
             >
-              <div style={{ fontSize: '0.6875rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>GEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#c084fc' }}>
+              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>GEO</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
                 {liveAnalysis.geoScore}
               </div>
             </div>
@@ -599,15 +600,15 @@ export default function PostEditor({
               onClick={() => setActiveTab('aeo')}
               style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'aeo' ? '#07484b' : 'transparent' }}
             >
-              <div style={{ fontSize: '0.6875rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>AEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399' }}>
+              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>AEO</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
                 {liveAnalysis.aeoScore}
               </div>
             </div>
           </div>
 
           {/* Sidebar Tab Buttons */}
-          <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: 8, padding: 3, gap: 2, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', background: '#cfe3e3', borderRadius: 8, padding: 3, gap: 2, overflowX: 'auto' }}>
             {[
               { id: 'post', label: 'Post' },
               { id: 'seo', label: 'SEO' },
@@ -629,7 +630,7 @@ export default function PostEditor({
                   fontSize: '0.75rem',
                   fontWeight: activeTab === t.id ? 700 : 500,
                   backgroundColor: activeTab === t.id ? '#ffffff' : 'transparent',
-                  color: activeTab === t.id ? '#0b666a' : '#475569',
+                  color: activeTab === t.id ? '#0b666a' : '#3d5557',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}
@@ -641,16 +642,16 @@ export default function PostEditor({
 
           {/* TAB 1: POST SETTINGS */}
           {activeTab === 'post' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Primary Category */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Primary Category *
                 </label>
                 <select
                   value={primaryCategoryId}
                   onChange={(e) => setPrimaryCategoryId(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem', background: '#ffffff' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}
                 >
                   <option value="">Select Category</option>
                   {categories.map((c) => (
@@ -661,7 +662,7 @@ export default function PostEditor({
 
               {/* Authors Multi-select */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Authors (Ordered) *
                 </label>
                 <select
@@ -671,7 +672,7 @@ export default function PostEditor({
                     const opts = Array.from(e.target.selectedOptions).map((o) => o.value);
                     setSelectedAuthorIds(opts);
                   }}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem', minHeight: 80, background: '#ffffff' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', minHeight: 80, background: '#ffffff' }}
                 >
                   {authors.map((a) => (
                     <option key={a.id} value={a.id}>{a.display_name} ({a.job_title || 'Specialist'})</option>
@@ -681,7 +682,7 @@ export default function PostEditor({
 
               {/* Featured Image */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Featured Image URL *
                 </label>
                 <input
@@ -689,7 +690,7 @@ export default function PostEditor({
                   value={featuredImageUrl}
                   onChange={(e) => setFeaturedImageUrl(e.target.value)}
                   placeholder="/uploads/blog/... or https://..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
                 {featuredImageUrl && (
                   <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', height: 120 }}>
@@ -697,7 +698,7 @@ export default function PostEditor({
                   </div>
                 )}
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 2 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
                     Featured Image Alt Text * (Required)
                   </label>
                   <input
@@ -705,14 +706,14 @@ export default function PostEditor({
                     value={featuredAlt}
                     onChange={(e) => setFeaturedAlt(e.target.value)}
                     placeholder="Descriptive alt text describing the image"
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               {/* Excerpt */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Excerpt (Summary)
                 </label>
                 <textarea
@@ -720,7 +721,7 @@ export default function PostEditor({
                   value={excerpt}
                   onChange={(e) => setExcerpt(e.target.value)}
                   placeholder="Short post summary for listings and fallback meta description..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -728,10 +729,10 @@ export default function PostEditor({
 
           {/* TAB 2: SEO (Rank Math inspired) */}
           {activeTab === 'seo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* Focus Keyword */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Focus Keyword *
                 </label>
                 <input
@@ -751,7 +752,7 @@ export default function PostEditor({
                   }}
                 />
                 <div style={{ marginTop: 6 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 2 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
                     Additional Keywords (Comma-separated)
                   </label>
                   <input
@@ -759,15 +760,15 @@ export default function PostEditor({
                     value={additionalKeywords}
                     onChange={(e) => setAdditionalKeywords(e.target.value)}
                     placeholder="e.g. skills in demand visa requirements, employer sponsorship australia"
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               {/* Live Google SERP Preview (Desktop / Mobile) */}
-              <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              <div style={{ background: '#f2f8f8', padding: 14, borderRadius: 8, border: '1px solid #cfe3e3' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase' }}>
                     Google SERP Snippet Preview
                   </span>
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -780,8 +781,8 @@ export default function PostEditor({
                         fontWeight: 600,
                         borderRadius: 4,
                         border: 'none',
-                        background: serpPreviewDevice === 'desktop' ? '#042628' : '#e2e8f0',
-                        color: serpPreviewDevice === 'desktop' ? '#ffffff' : '#475569',
+                        background: serpPreviewDevice === 'desktop' ? '#042628' : '#cfe3e3',
+                        color: serpPreviewDevice === 'desktop' ? '#ffffff' : '#3d5557',
                         cursor: 'pointer',
                       }}
                     >
@@ -796,8 +797,8 @@ export default function PostEditor({
                         fontWeight: 600,
                         borderRadius: 4,
                         border: 'none',
-                        background: serpPreviewDevice === 'mobile' ? '#042628' : '#e2e8f0',
-                        color: serpPreviewDevice === 'mobile' ? '#ffffff' : '#475569',
+                        background: serpPreviewDevice === 'mobile' ? '#042628' : '#cfe3e3',
+                        color: serpPreviewDevice === 'mobile' ? '#ffffff' : '#3d5557',
                         cursor: 'pointer',
                       }}
                     >
@@ -823,10 +824,10 @@ export default function PostEditor({
               {/* Edit SEO Snippet Inputs */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#374151' }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#042628' }}>
                     SEO Title Tag
                   </label>
-                  <span style={{ fontSize: '0.75rem', color: titleCharCount > 60 ? '#dc2626' : titleCharCount >= 30 ? '#16a34a' : '#d97706' }}>
+                  <span style={{ fontSize: '0.75rem', color: titleCharCount > 60 ? '#a01b2b' : titleCharCount >= 30 ? '#0b666a' : '#d97706' }}>
                     {titleCharCount} chars · ~{titlePixelWidth}px / 580px
                   </span>
                 </div>
@@ -835,16 +836,16 @@ export default function PostEditor({
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
                   placeholder="Defaults to Post Title - Migration Factor"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#374151' }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#042628' }}>
                     Meta Description
                   </label>
-                  <span style={{ fontSize: '0.75rem', color: descCharCount > 160 ? '#dc2626' : descCharCount >= 120 ? '#16a34a' : '#d97706' }}>
+                  <span style={{ fontSize: '0.75rem', color: descCharCount > 160 ? '#a01b2b' : descCharCount >= 120 ? '#0b666a' : '#d97706' }}>
                     {descCharCount} / 160 chars
                   </span>
                 </div>
@@ -853,7 +854,7 @@ export default function PostEditor({
                   value={metaDescription}
                   onChange={(e) => setMetaDescription(e.target.value)}
                   placeholder="Concise, compelling description containing focus keyword..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -864,7 +865,7 @@ export default function PostEditor({
                 </h3>
 
                 {/* Basic SEO Accordion */}
-                <details open style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
+                <details open style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
                     Basic SEO ({liveAnalysis.checks.basic.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.basic.length} passed)
                   </summary>
@@ -873,7 +874,7 @@ export default function PostEditor({
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
                         <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
                           {chk.status !== 'passed' && chk.fixAdvice && (
                             <div style={{ color: '#0b666a', marginTop: 2, fontStyle: 'italic' }}>Tip: {chk.fixAdvice}</div>
                           )}
@@ -884,7 +885,7 @@ export default function PostEditor({
                 </details>
 
                 {/* Additional SEO Accordion */}
-                <details style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
+                <details style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
                     Additional SEO ({liveAnalysis.checks.additional.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.additional.length} passed)
                   </summary>
@@ -893,7 +894,7 @@ export default function PostEditor({
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
                         <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}
@@ -901,7 +902,7 @@ export default function PostEditor({
                 </details>
 
                 {/* Readability Accordion */}
-                <details style={{ marginBottom: 10, border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
+                <details style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
                     Readability ({liveAnalysis.checks.readability.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.readability.length} passed)
                   </summary>
@@ -910,7 +911,7 @@ export default function PostEditor({
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
                         <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}
@@ -918,7 +919,7 @@ export default function PostEditor({
                 </details>
 
                 {/* Technical SEO Accordion */}
-                <details style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: 8 }}>
+                <details style={{ border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
                   <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
                     Technical SEO ({liveAnalysis.checks.technical.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.technical.length} passed)
                   </summary>
@@ -927,7 +928,7 @@ export default function PostEditor({
                       <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
                         <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
                         <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#475569' }}>{chk.message}</span>
+                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
                         </div>
                       </div>
                     ))}
@@ -936,8 +937,8 @@ export default function PostEditor({
               </div>
 
               {/* Advanced Directives Toggle */}
-              <details style={{ marginTop: 12, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
-                <summary style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+              <details style={{ marginTop: 12, borderTop: '1px solid #cfe3e3', paddingTop: 10 }}>
+                <summary style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#3d5557', cursor: 'pointer' }}>
                   Advanced Robots & Canonical Settings
                 </summary>
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -958,7 +959,7 @@ export default function PostEditor({
                     Mark as Cornerstone Content
                   </label>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 2 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
                       Canonical URL Override
                     </label>
                     <input
@@ -966,11 +967,11 @@ export default function PostEditor({
                       value={canonicalUrl}
                       onChange={(e) => setCanonicalUrl(e.target.value)}
                       placeholder="Leave blank for self-canonical"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 2 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
                       Custom H1 (if different from title)
                     </label>
                     <input
@@ -978,7 +979,7 @@ export default function PostEditor({
                       value={customH1}
                       onChange={(e) => setCustomH1(e.target.value)}
                       placeholder="Custom H1 heading"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -988,7 +989,7 @@ export default function PostEditor({
 
           {/* TAB 3: SOCIAL */}
           {activeTab === 'social' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600, color: '#042628' }}>
                 <input type="checkbox" checked={useSeoValues} onChange={(e) => setUseSeoValues(e.target.checked)} />
                 Use SEO Title and Meta Description for Social
@@ -996,7 +997,7 @@ export default function PostEditor({
 
               {!useSeoValues && (
                 <>
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                  <div style={{ borderTop: '1px solid #cfe3e3', paddingTop: 12 }}>
                     <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0b666a', margin: '0 0 8px' }}>
                       Facebook / Open Graph Custom Overrides
                     </h4>
@@ -1005,18 +1006,18 @@ export default function PostEditor({
                       value={ogTitle}
                       onChange={(e) => setOgTitle(e.target.value)}
                       placeholder="Custom OG Title"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
                     />
                     <textarea
                       rows={2}
                       value={ogDescription}
                       onChange={(e) => setOgDescription(e.target.value)}
                       placeholder="Custom OG Description"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                     />
                   </div>
 
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
+                  <div style={{ borderTop: '1px solid #cfe3e3', paddingTop: 12 }}>
                     <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0b666a', margin: '0 0 8px' }}>
                       X / Twitter Custom Overrides
                     </h4>
@@ -1025,32 +1026,32 @@ export default function PostEditor({
                       value={twitterTitle}
                       onChange={(e) => setTwitterTitle(e.target.value)}
                       placeholder="Custom Twitter Title"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
                     />
                     <textarea
                       rows={2}
                       value={twitterDescription}
                       onChange={(e) => setTwitterDescription(e.target.value)}
                       placeholder="Custom Twitter Description"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                     />
                   </div>
                 </>
               )}
 
               {/* Social Preview Representation */}
-              <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, overflow: 'hidden', marginTop: 10 }}>
+              <div style={{ border: '1px solid #b9d3d4', borderRadius: 8, overflow: 'hidden', marginTop: 10 }}>
                 {featuredImageUrl && (
-                  <div style={{ height: 140, backgroundColor: '#f1f5f9' }}>
+                  <div style={{ height: 140, backgroundColor: '#e9f3f3' }}>
                     <img src={featuredImageUrl} alt="Social Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
-                <div style={{ padding: 12, background: '#f8fafc' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>migrationfactor.com</div>
+                <div style={{ padding: 12, background: '#f2f8f8' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#3d5557', textTransform: 'uppercase' }}>migrationfactor.com</div>
                   <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#042628', marginTop: 2 }}>
                     {(!useSeoValues && ogTitle) ? ogTitle : effectiveTitle}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.75rem', color: '#3d5557', marginTop: 2 }}>
                     {(!useSeoValues && ogDescription) ? ogDescription : effectiveDesc}
                   </div>
                 </div>
@@ -1060,15 +1061,15 @@ export default function PostEditor({
 
           {/* TAB 4: SCHEMA */}
           {activeTab === 'schema' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Article Schema Type
                 </label>
                 <select
                   value={articleType}
                   onChange={(e) => setArticleType(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem', background: '#ffffff' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}
                 >
                   <option value="BlogPosting">BlogPosting (Recommended)</option>
                   <option value="Article">Article</option>
@@ -1087,7 +1088,7 @@ export default function PostEditor({
               </label>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Custom Schema JSON-LD (Advanced)
                 </label>
                 <textarea
@@ -1095,7 +1096,7 @@ export default function PostEditor({
                   value={customJsonLd}
                   onChange={(e) => setCustomJsonLd(e.target.value)}
                   placeholder="{ '@type': 'SpecialItem', ... }"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontFamily: 'monospace', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontFamily: 'monospace', fontSize: '0.8rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -1103,13 +1104,13 @@ export default function PostEditor({
 
           {/* TAB 5: GEO */}
           {activeTab === 'geo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#5b21b6' }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: '#e9f3f3', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#07484b' }}>
                 <strong>Generative Engine Optimization (GEO):</strong> Optimizes for AI overview engines (ChatGPT Search, Perplexity, Google SGE) by asserting structured entities and factual references.
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Primary Question Targeted
                 </label>
                 <input
@@ -1117,12 +1118,12 @@ export default function PostEditor({
                   value={primaryQuestion}
                   onChange={(e) => setPrimaryQuestion(e.target.value)}
                   placeholder="e.g. What are the requirements for Skills in Demand visa?"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Concise Answer Summary (40–60 words)
                 </label>
                 <textarea
@@ -1130,12 +1131,12 @@ export default function PostEditor({
                   value={answerSummary}
                   onChange={(e) => setAnswerSummary(e.target.value)}
                   placeholder="Direct, factual answer for AI summary snippets..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Primary Entity Name
                 </label>
                 <input
@@ -1143,12 +1144,12 @@ export default function PostEditor({
                   value={primaryEntityName}
                   onChange={(e) => setPrimaryEntityName(e.target.value)}
                   placeholder="e.g. Skills in Demand visa"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Official Entity Authority URL (sameAs)
                 </label>
                 <input
@@ -1156,7 +1157,7 @@ export default function PostEditor({
                   value={primaryEntityUrl}
                   onChange={(e) => setPrimaryEntityUrl(e.target.value)}
                   placeholder="https://immi.homeaffairs.gov.au/..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -1164,8 +1165,8 @@ export default function PostEditor({
 
           {/* TAB 6: AEO */}
           {activeTab === 'aeo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#065f46' }}>
+            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: '#e9f3f3', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#07484b' }}>
                 <strong>Answer Engine Optimization (AEO):</strong> Evaluates answer structure, question-based H2/H3 headings, and direct answer speed.
               </div>
 
@@ -1175,7 +1176,7 @@ export default function PostEditor({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {headings.map((h, i) => (
-                    <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f8fafc', borderRadius: 4 }}>
+                    <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f2f8f8', borderRadius: 4 }}>
                       <span style={{ fontWeight: 700, color: '#0b666a' }}>H{h.level}:</span> {h.text}
                     </div>
                   ))}
@@ -1185,46 +1186,7 @@ export default function PostEditor({
           )}
 
           {/* TAB 7: INDEXING */}
-          {activeTab === 'indexing' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#042628' }}>
-                Honest Indexing Status
-              </div>
-              <div style={{ padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                <div>Current Stage: <strong style={{ color: '#0b666a' }}>{status === 'published' ? 'Accepted' : 'Draft'}</strong></div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
-                  Stages: Submitted → Accepted → Crawled → Indexed (Only reported with verified server evidence).
-                </div>
-              </div>
-
-              {postId && status === 'published' && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`/api/v1/posts/${postId}/indexing/request`, { method: 'POST' });
-                      const d = await res.json();
-                      alert(d.success ? 'Submitted to IndexNow successfully!' : 'Submission response: ' + d.responseExcerpt);
-                    } catch (err: any) {
-                      alert('Submission failed: ' + err.message);
-                    }
-                  }}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: 6,
-                    backgroundColor: '#042628',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '0.8125rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ⚡ Trigger IndexNow Fast Submission
-                </button>
-              )}
-            </div>
-          )}
+          {activeTab === 'indexing' && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
         </div>
       </div>
 
@@ -1259,10 +1221,10 @@ export default function PostEditor({
             {/* Blocking Errors */}
             {prepublishResult.blocking?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#b91c1c', fontSize: '0.875rem', marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, color: '#a01b2b', fontSize: '0.875rem', marginBottom: 6 }}>
                   ❌ Blocking Errors (Must fix before publishing):
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#991b1b' }}>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#7a1f2b' }}>
                   {prepublishResult.blocking.map((b: any, i: number) => (
                     <li key={i}>{b.message}</li>
                   ))}
@@ -1273,10 +1235,10 @@ export default function PostEditor({
             {/* Warnings */}
             {prepublishResult.warnings?.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, color: '#b45309', fontSize: '0.875rem', marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, color: '#8a5a00', fontSize: '0.875rem', marginBottom: 6 }}>
                   ⚠️ Warnings (Recommended to review):
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#92400e' }}>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#6b4500' }}>
                   {prepublishResult.warnings.map((w: any, i: number) => (
                     <li key={i}>{w.message}</li>
                   ))}
@@ -1284,14 +1246,14 @@ export default function PostEditor({
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, borderTop: '1px solid #cfe3e3', paddingTop: 16 }}>
               <button
                 type="button"
                 onClick={() => setPublishModalOpen(false)}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 6,
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #b9d3d4',
                   background: '#ffffff',
                   fontWeight: 600,
                   fontSize: '0.875rem',

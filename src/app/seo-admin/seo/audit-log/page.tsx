@@ -23,9 +23,9 @@ export default function AuditLogPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1100 }}>
       <PageHeader title="Audit Log" subtitle="Append-only record of content, SEO, redirect, robots and login changes (SEC-09)." />
-      {error && <div style={{ padding: 12, background: '#fef2f2', color: '#b91c1c', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: 12, background: '#f1e4e4', color: '#a01b2b', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -37,7 +37,7 @@ export default function AuditLogPage() {
           value={action}
           onChange={(e) => setAction(e.target.value)}
           placeholder="Filter by action, e.g. post.publish"
-          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem' }}
         />
         <button type="submit" style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0b666a', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
           Filter

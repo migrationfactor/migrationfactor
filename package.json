@@ -10,7 +10,13 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
     "admin:create": "node scripts/create-admin.mjs",
-    "db:migrate": "node scripts/migrate-leads.mjs"
+    "db:migrate": "node scripts/migrate-leads.mjs",
+    "migrate:wp:inspect": "tsx scripts/wordpress-migration/fetch-posts.ts inspect",
+    "migrate:wp:export": "tsx scripts/wordpress-migration/fetch-posts.ts export",
+    "migrate:wp:media": "tsx scripts/wordpress-migration/localize-media.ts",
+    "migrate:wp:dry-run": "tsx scripts/wordpress-migration/import-posts.ts --dry-run",
+    "migrate:wp:import": "tsx scripts/wordpress-migration/import-posts.ts",
+    "migrate:wp:verify": "tsx scripts/wordpress-migration/verify-migration.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

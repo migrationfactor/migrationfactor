@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { publishDueScheduledPosts } from '@/lib/seo-system/scheduler-service';
+import { runGscMaintenance } from '@/lib/seo-system/gsc-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,5 +12,7 @@ export async function GET(req: NextRequest) {
   const expected = `Bearer ${secret}`;
   const ok = secret.length >= 16 && given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
   if (!ok) return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
-  return NextResponse.json(await publishDueScheduledPosts());
+  const publishing = await publishDueScheduledPosts();
+  const searchConsole = await runGscMaintenance();
+  return NextResponse.json({ publishing, searchConsole });
 }

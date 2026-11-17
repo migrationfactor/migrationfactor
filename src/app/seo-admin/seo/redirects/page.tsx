@@ -73,31 +73,31 @@ export default function RedirectsAdminPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042628', margin: '0 0 4px' }}>
           URL Redirects (301 Single Hop)
         </h1>
-        <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
+        <p style={{ color: '#3d5557', fontSize: '0.875rem', margin: 0 }}>
           Manage redirects per FR-TEC-010 with automatic chain/loop prevention and hit tracking.
         </p>
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 8, color: '#0f766e', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 32 }}>
         {/* Add Redirect Form */}
-        <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', height: 'fit-content' }}>
+        <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3', height: 'fit-content' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#042628', margin: '0 0 16px' }}>
             Add New Redirect Rule
           </h2>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
                 Source Path (Relative) *
               </label>
               <input
@@ -106,12 +106,12 @@ export default function RedirectsAdminPage() {
                 value={sourcePath}
                 onChange={(e) => setSourcePath(e.target.value)}
                 placeholder="/blog/old-slug/"
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
                 Target URL (Relative or Absolute) *
               </label>
               <input
@@ -120,18 +120,18 @@ export default function RedirectsAdminPage() {
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
                 placeholder="/blog/new-slug/ or https://..."
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
                 HTTP Status Code
               </label>
               <select
                 value={httpCode}
                 onChange={(e) => setHttpCode(Number(e.target.value))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem', background: '#ffffff' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}
               >
                 <option value={301}>301 Permanent Redirect (Default)</option>
                 <option value={302}>302 Temporary Redirect</option>
@@ -142,7 +142,7 @@ export default function RedirectsAdminPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
                 Note / Reason
               </label>
               <input
@@ -150,7 +150,7 @@ export default function RedirectsAdminPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Updated article URL for better keyword relevance"
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem' }}
               />
             </div>
 
@@ -174,10 +174,10 @@ export default function RedirectsAdminPage() {
         </div>
 
         {/* Existing Redirects */}
-        <div style={{ background: '#ffffff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #cfe3e3', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569' }}>
+              <tr style={{ background: '#f2f8f8', borderBottom: '2px solid #cfe3e3', color: '#3d5557' }}>
                 <th style={{ padding: '12px 16px' }}>Source Path</th>
                 <th style={{ padding: '12px 14px' }}>Target URL</th>
                 <th style={{ padding: '12px 14px', textAlign: 'center' }}>Type</th>
@@ -189,26 +189,26 @@ export default function RedirectsAdminPage() {
               {loading ? (
                 <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center' }}>Loading redirects...</td></tr>
               ) : redirects.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>No redirects configured yet.</td></tr>
+                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: '#6b8183' }}>No redirects configured yet.</td></tr>
               ) : (
                 redirects.map((r) => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#b91c1c', fontWeight: 600 }}>
+                  <tr key={r.id} style={{ borderBottom: '1px solid #e9f3f3' }}>
+                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#a01b2b', fontWeight: 600 }}>
                       {r.source_path}
                     </td>
                     <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#0b666a' }}>
                       {r.target_url}
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#3d5557' }}>
                       {r.http_code}
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#334155' }}>
+                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#042628' }}>
                       {r.hits || 0}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <button
                         onClick={() => handleDelete(r.id, r.source_path)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}
+                        style={{ background: 'none', border: 'none', color: '#b4424f', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}
                       >
                         Delete
                       </button>

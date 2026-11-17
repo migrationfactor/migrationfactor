@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function SeoAdminLoginPage() {
@@ -38,134 +39,25 @@ export default function SeoAdminLoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #042628 0%, #07484b 50%, #0b666a 100%)',
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 420,
-          background: '#ffffff',
-          borderRadius: 16,
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
-          padding: 40,
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 12,
-              background: '#0b666a',
-              color: '#35b5ac',
-              fontSize: '1.75rem',
-              fontWeight: 800,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16,
-            }}
-          >
-            MF
-          </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#042628', margin: '0 0 6px' }}>
-            SEO Specialist Portal
-          </h1>
-          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-            SEO, GEO & AEO Blog Management System
-          </p>
-        </div>
-
-        {error && (
-          <div
-            style={{
-              background: '#fef2f2',
-              color: '#991b1b',
-              border: '1px solid #fecaca',
-              borderRadius: 8,
-              padding: '10px 14px',
-              fontSize: '0.875rem',
-              marginBottom: 20,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 8,
-                border: '1px solid #d1d5db',
-                fontSize: '0.95rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: 8,
-                border: '1px solid #d1d5db',
-                fontSize: '0.95rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 8,
-              padding: '12px 16px',
-              borderRadius: 8,
-              background: '#0b666a',
-              color: '#ffffff',
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              border: 'none',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.15s ease',
-            }}
-          >
-            {loading ? 'Authenticating...' : 'Sign In to SEO Panel'}
+    <div className="admin-login">
+      <div className="admin-login-card">
+        <Image src="/brand/mark.webp" width={72} height={72} alt="Migration Factor" priority />
+        <h1>SEO admin sign in</h1>
+        <p>SEO, GEO &amp; AEO blog management. Authorised Migration Factor staff only.</p>
+        {error && <p className="admin-message error" role="alert">{error}</p>}
+        <form className="admin-login-form" onSubmit={handleSubmit}>
+          <label>
+            Email
+            <input type="email" autoComplete="username" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label>
+            Password
+            <input type="password" autoComplete="current-password" required maxLength={200} value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          <button type="submit" className="admin-button" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <p style={{ marginTop: 24, fontSize: '0.75rem', color: '#64748b', textAlign: 'center' }}>
-          Use your Migration Factor admin email and password. The SEO panel uses the same login as /admin.
-        </p>
       </div>
     </div>
   );

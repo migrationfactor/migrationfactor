@@ -8,7 +8,7 @@ import { legacyVisaPaths, visaPath } from './src/lib/visa-path';
 const supabaseOrigin = (() => { try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').origin; } catch { return ''; } })();
 const contentSecurityPolicy = [
   "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:", "font-src 'self' data:", "media-src 'self'", `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`,
+  `img-src 'self' data: blob:${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`, "font-src 'self' data:", "media-src 'self'", `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`,
   "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'",
 ].join('; ');
 const productionOnly = process.env.NODE_ENV === 'production' ? [
@@ -18,11 +18,26 @@ const productionOnly = process.env.NODE_ENV === 'production' ? [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  images: { formats: ['image/avif', 'image/webp'] },
+  // WordPress-migrated posts keep their trailing-slash URLs; src/proxy.ts restores the default behaviour elsewhere.
+  skipTrailingSlashRedirect: true,
+  // Always send <title>/meta/canonical inside <head> in the first HTML response (never streamed into <body>), for every crawler.
+  htmlLimitedBots: /.*/,
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    // Blog images live in the public Supabase Storage bucket `blog-media`.
+    remotePatterns: supabaseOrigin
+      ? [{ protocol: 'https', hostname: new URL(supabaseOrigin).hostname, pathname: '/storage/v1/object/public/blog-media/**' }]
+      : [],
+  },
   async redirects() {
     // Redirect legacy subclass aliases; keep main service URLs separate from their guides.
     const contributory = visaPath('contributory-parent-visa-143-173-864-884');
     return [
+      // WordPress upload URLs (already indexed by image search) now resolve to the self-hosted copies.
+      { source: '/wp-content/uploads/:path*', destination: '/media/blog/:path*', permanent: true },
+      // Service URLs that blog posts linked to on WordPress, now served at the subclass guide paths.
+      { source: '/services/student-visa/student-visa-subclass-500', destination: '/services/student/subclass-visa-500', permanent: true },
+      { source: '/services/gsm-skilled-visa/skilled-independent-visa-subclass-189', destination: '/services/skilled-independent/subclass-visa-189', permanent: true },
       { source: '/services/contributory-parent-visa', destination: contributory, permanent: true },
       ...visaSubclasses.flatMap(({ slug }) => legacyVisaPaths(slug).map(source => ({ source, destination: visaPath(slug), permanent: true }))),
     ];

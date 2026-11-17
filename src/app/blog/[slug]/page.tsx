@@ -1,10 +1,14 @@
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
+import { getSeoSettings } from '@/lib/seo-system/settings-service';
+import { renderArticleBody, isOptimizableSrc } from '@/lib/seo-system/article-render';
 import { queryOne, query } from '@/lib/seo-system/db';
 import { renderSeoHead, generateNextMetadata } from '@/lib/seo-system/head-service';
 import { publishDueScheduledPostsThrottled } from '@/lib/seo-system/scheduler-service';
 import { SITE_URL, resolveRedirect, checkTombstoneOrRecord404 } from '@/lib/seo-system/technical-seo';
+import { getWpSource, buildWpMetadata, jsonLdString } from '@/lib/seo-system/wp-source';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,8 +68,12 @@ async function getPostData(slug: string) {
     [post.id]
   );
 
+  // Posts migrated from WordPress keep their Rank Math head and JSON-LD verbatim (no regenerated duplicate schema).
+  const wpSource = post.wp_id ? await getWpSource(post.id) : null;
+
   return {
     post,
+    wpSource,
     seo,
     social,
     schemaConfig,
@@ -74,6 +82,19 @@ async function getPostData(slug: string) {
     references,
     category: post.category_name ? { name: post.category_name, slug: post.category_slug } : undefined,
   };
+}
+
+/** Server-rendered related articles (FR-LNK-003): same category or shared tags, newest first. */
+async function getRelatedPosts(postId: string, categoryId: string | null) {
+  return query<any>(
+    `SELECT DISTINCT p.id, p.slug, p.title, p.published_at FROM public.seo_posts p
+     LEFT JOIN public.seo_post_tags pt ON pt.post_id = p.id
+     WHERE p.status = 'published' AND p.id <> $1 AND (
+       ($2::uuid IS NOT NULL AND p.primary_category_id = $2::uuid)
+       OR pt.tag_id IN (SELECT tag_id FROM public.seo_post_tags WHERE post_id = $1))
+     ORDER BY p.published_at DESC LIMIT 4`,
+    [postId, categoryId]
+  );
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -86,9 +107,13 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     };
   }
 
+  if (data.wpSource) return buildWpMetadata(data.wpSource);
+
+  const settings = await getSeoSettings();
   return generateNextMetadata({
     siteUrl: SITE_URL,
-    siteName: 'Migration Factor',
+    siteName: settings.siteName,
+    settings,
     post: data.post,
     seo: data.seo,
     social: data.social,
@@ -123,6 +148,10 @@ export default async function BlogPostPage(props: Props) {
   }
 
   const { post, seo, authors, category, references } = data;
+  const settings = await getSeoSettings();
+  const related = await getRelatedPosts(post.id, post.primary_category_id);
+  const bodyHtml = renderArticleBody(post.body_html, { autoTocMinH2: settings.autoTocMinH2 });
+  const quickAnswer = (data.geoAeo?.answer_summary || '').trim();
 
   const h1Title = seo?.custom_h1 || post.title;
   const breadcrumbTitle = seo?.breadcrumb_title || post.title;
@@ -140,7 +169,8 @@ export default async function BlogPostPage(props: Props) {
   // Build rendered head for JSON-LD schema inclusion in the page
   const headData = renderSeoHead({
     siteUrl: SITE_URL,
-    siteName: 'Migration Factor',
+    siteName: settings.siteName,
+    settings,
     post,
     seo,
     social: data.social,
@@ -160,10 +190,18 @@ export default async function BlogPostPage(props: Props) {
   return (
     <div className="blog-page-container">
       {/* Schema.org single @graph JSON-LD (FR-SCH-001) */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(headData.schemaGraph) }}
-      />
+      {data.wpSource
+        ? data.wpSource.rankmath.jsonld.map((block, i) => (
+            <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(block) }} />
+          ))
+        : (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(headData.schemaGraph) }}
+          />
+        )}
+      {/* Rank Math emits og:updated_time, which the Metadata API cannot express; React hoists this into <head>. */}
+      {data.wpSource?.rankmath.og['og:updated_time']?.map((v) => <meta key={v} property="og:updated_time" content={v} />)}
 
       <article className="blog-article">
         {/* Breadcrumbs Nav (FR-FE-006, Section 13.4) */}
@@ -214,15 +252,29 @@ export default async function BlogPostPage(props: Props) {
         {/* Featured Image Figure (FR-MED-001, FR-MED-002) */}
         {post.featured_media_url && (
           <figure className="blog-featured-figure">
-            <img
-              src={post.featured_media_url}
-              alt={post.featured_alt_override || post.featured_media_alt || post.title}
-              width={post.featured_media_width || 1200}
-              height={post.featured_media_height || 800}
-              className="blog-featured-image"
-              loading="eager"
-              decoding="async"
-            />
+            {isOptimizableSrc(post.featured_media_url) ? (
+              // Served as AVIF/WebP with a responsive srcset; priority = eager + fetchpriority high (LCP image)
+              <Image
+                src={post.featured_media_url}
+                alt={post.featured_alt_override || post.featured_media_alt || post.title}
+                width={post.featured_media_width || 1200}
+                height={post.featured_media_height || 800}
+                className="blog-featured-image"
+                sizes="(max-width: 768px) 100vw, 768px"
+                priority
+              />
+            ) : (
+              <img
+                src={post.featured_media_url}
+                alt={post.featured_alt_override || post.featured_media_alt || post.title}
+                width={post.featured_media_width || 1200}
+                height={post.featured_media_height || 800}
+                className="blog-featured-image"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
+            )}
             {(post.featured_caption_override || post.featured_media_caption) && (
               <figcaption className="blog-featured-caption">
                 {post.featured_caption_override || post.featured_media_caption}
@@ -232,18 +284,26 @@ export default async function BlogPostPage(props: Props) {
         )}
 
         {/* Body Content with semantic rendered HTML (FR-EDT-001/002/003/004/005) */}
+        {quickAnswer && (
+          <aside className="blog-quick-answer" aria-label="Quick answer">
+            <p>
+              <strong>Quick answer:</strong> {quickAnswer}
+            </p>
+          </aside>
+        )}
+
         <div
           className="blog-content"
-          dangerouslySetInnerHTML={{ __html: post.body_html }}
+          dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
 
         {/* References and Sources List (FR-GEO-002) */}
         {references && references.length > 0 && (
-          <section className="blog-references" style={{ marginTop: 48, paddingTop: 24, borderTop: '2px solid #e5e7eb' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#042628', marginBottom: 16 }}>
-              References and Official Sources
-            </h3>
-            <ol style={{ paddingLeft: 20, color: '#4b5563', fontSize: '0.95rem' }}>
+          <section className="blog-references" aria-labelledby="sources" style={{ marginTop: 48, paddingTop: 24, borderTop: '2px solid #e5e7eb' }}>
+            <h2 id="sources" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#042628', marginBottom: 16 }}>
+              Sources
+            </h2>
+            <ol aria-label="Sources" style={{ paddingLeft: 20, color: '#4b5563', fontSize: '0.95rem' }}>
               {references.map((ref: any, idx: number) => (
                 <li key={idx} style={{ marginBottom: 10 }}>
                   <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0b666a', fontWeight: 600 }}>
@@ -291,6 +351,20 @@ export default async function BlogPostPage(props: Props) {
               </div>
             ))}
           </div>
+        )}
+        {related.length > 0 && (
+          <section className="blog-related" aria-labelledby="related-articles" style={{ marginTop: 48 }}>
+            <h2 id="related-articles" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#042628', marginBottom: 16 }}>
+              Related articles
+            </h2>
+            <ul style={{ paddingLeft: 20 }}>
+              {related.map((r: any) => (
+                <li key={r.id} style={{ marginBottom: 8 }}>
+                  <Link href={`/blog/${r.slug}`} style={{ color: '#0b666a', fontWeight: 600 }}>{r.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </article>
     </div>
