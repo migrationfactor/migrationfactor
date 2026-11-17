@@ -5,6 +5,9 @@ import { renderBlocksToHtml, ContentBlock, slugifyHeading } from './sanitizer';
 import { SITE_URL } from './technical-seo';
 import { getSeoSettings } from './settings-service';
 import { MIN_FEATURED_WIDTH } from './image-meta';
+import { reindexPostLinks } from './link-service';
+import { validateSchemaGraph, validateCustomJsonLd } from './schema-service';
+import { renderSeoHead } from './head-service';
 
 export interface PostListFilters {
   status?: string;
@@ -14,6 +17,7 @@ export interface PostListFilters {
   scoreBand?: '0-49' | '50-79' | '80-100' | 'not_analyzed';
   robotsIndex?: boolean;
   sitemapInclude?: boolean;
+  orphans?: boolean;
   missing?: 'meta_description' | 'focus_keyword' | 'featured_image';
   search?: string;
   limit?: number;
@@ -67,6 +71,7 @@ export interface CreatePostInput {
   customMode?: string;
   disableAuto?: boolean;
   // GEO / AEO
+  reviewedBy?: string | null;
   primaryQuestion?: string | null;
   relatedQuestions?: string[];
   answerSummary?: string | null;
@@ -158,6 +163,7 @@ export async function listPosts(filters: PostListFilters = {}) {
     scoreBand,
     robotsIndex,
     sitemapInclude,
+    orphans,
     missing,
     search,
     limit = 20,
@@ -181,6 +187,10 @@ export async function listPosts(filters: PostListFilters = {}) {
   if (categoryId) {
     whereClauses.push(`EXISTS (SELECT 1 FROM public.seo_post_categories pc WHERE pc.post_id = p.id AND pc.category_id = $${paramIdx++})`);
     params.push(categoryId);
+  }
+
+  if (orphans) {
+    whereClauses.push(`p.status = 'published' AND NOT EXISTS (SELECT 1 FROM public.seo_links l WHERE l.target_post_id = p.id AND l.source_post_id <> p.id)`);
   }
 
   if (tagId) {
@@ -261,7 +271,7 @@ export async function listPosts(filters: PostListFilters = {}) {
   const listSql = `
     SELECT 
       p.id, p.status, p.title, p.slug, p.excerpt, p.version, p.word_count, p.reading_time_min,
-      p.published_at, p.modified_at, p.scheduled_at, p.created_at, p.featured_media_id,
+      p.published_at, p.modified_at, p.scheduled_at, p.created_at, p.featured_media_id, p.legacy_path,
       m.storage_path as featured_image_url, m.alt as featured_image_alt,
       s.focus_keyword, s.seo_title_effective, s.meta_description_effective,
       s.robots_index, s.sitemap_include, s.canonical_url,
@@ -391,7 +401,7 @@ export async function getPost(id: string) {
 /**
  * Creates a new draft blog post (FR-BLG-001)
  */
-export async function createDraft(actorId: string, input: CreatePostInput) {
+async function createDraftCore(actorId: string, input: CreatePostInput) {
   if (!input.title || input.title.trim().length === 0) {
     throw new Error('Add a post title before saving.');
   }
@@ -630,7 +640,7 @@ export async function createDraft(actorId: string, input: CreatePostInput) {
 /**
  * Updates a post with optimistic locking and recalculates authoritative analysis (FR-BLG-002, FR-BLG-003, Section 7)
  */
-export async function updatePost(
+async function updatePostCore(
   id: string,
   actorId: string,
   input: Partial<CreatePostInput>,
@@ -833,6 +843,12 @@ export async function updatePost(
     }
 
     // 5. Update GEO / AEO
+    if (input.reviewedBy !== undefined) {
+      await client.query(
+        `UPDATE public.seo_post_geo_aeo SET reviewed_by = $1, reviewed_at = CASE WHEN $1::uuid IS NULL THEN NULL ELSE now() END WHERE post_id = $2`,
+        [input.reviewedBy || null, id]
+      );
+    }
     if (input.primaryQuestion !== undefined || input.answerSummary !== undefined || input.primaryEntity !== undefined) {
       await client.query(
         `UPDATE public.seo_post_geo_aeo SET
@@ -1171,6 +1187,26 @@ export async function runPrepublishChecks(post: any): Promise<{
     warnings.push({ code: 'nofollow_warning', message: 'Links on this post will not be followed by search engines.' });
   }
 
+  // 10. Structured data (FR-SCH-005): errors block publishing, warnings are shown
+  try {
+    const settings2 = await getSeoSettings();
+    const rendered = renderSeoHead({
+      siteUrl: SITE_URL, siteName: settings2.siteName, settings: settings2, post,
+      seo: post.seo, social: post.social, schemaConfig: post.schema, geoAeo: post.geo_aeo,
+      featuredMedia: post.featured_media_url
+        ? { url: post.featured_media_url, alt: post.featured_alt_override || post.featured_media_alt, width: post.featured_media_width, height: post.featured_media_height }
+        : undefined,
+      category: post.categories?.[0], authors: post.authors,
+    });
+    if (rendered.schemaGraph) {
+      const v = validateSchemaGraph(rendered.schemaGraph);
+      for (const m of v.errors) blocking.push({ code: 'schema_error', message: m });
+      for (const m of v.warnings) warnings.push({ code: 'schema_warning', message: m });
+    }
+  } catch (e: any) {
+    blocking.push({ code: 'schema_error', message: 'Structured data could not be generated: ' + e.message });
+  }
+
   // Warnings
   const analysis = post.analysis || {};
   if (analysis.overall !== undefined && analysis.overall < 50) {
@@ -1203,7 +1239,7 @@ export async function runPrepublishChecks(post: any): Promise<{
 /**
  * Publish post immediately (FR-BLG-005, Section 17)
  */
-export async function publishPost(id: string, actorId: string, acknowledgeWarnings: boolean = false) {
+async function publishPostCore(id: string, actorId: string, acknowledgeWarnings: boolean = false) {
   const post = await getPost(id);
   if (!post) throw new Error('Post not found');
 
@@ -1331,6 +1367,27 @@ export async function schedulePost(id: string, actorId: string, publishAtIso: st
 /**
  * Unpublish post with 404, 410 or 301 behavior (FR-BLG-007)
  */
+/** FR-BLG-007: a 301 target must be a different, live page (no self-redirect, no loop, no chain). */
+async function assertRedirectTarget(slug: string, target: string) {
+  let path: string;
+  try {
+    const u = new URL(target, SITE_URL);
+    if (u.host.replace(/^www\./, '') !== new URL(SITE_URL).host.replace(/^www\./, '')) return; // external targets are allowed
+    path = u.pathname.toLowerCase().replace(/\/+$/, '');
+  } catch {
+    throw new Error('The redirect target is not a valid URL.');
+  }
+  if (path === `/blog/${slug}`) throw new Error('A post cannot redirect to itself.');
+  const m = /^\/blog\/([^/]+)$/.exec(path) || /^\/([^/]+)$/.exec(path);
+  if (m) {
+    const t = await queryOne<{ status: string }>(`SELECT status FROM public.seo_posts WHERE slug = $1 OR legacy_path = $2`, [m[1], path + '/']);
+    if (!t) return;
+    if (t.status !== 'published') throw new Error('The redirect target must be a published page.');
+  }
+  const chain = await queryOne(`SELECT 1 FROM public.seo_redirects WHERE active = true AND rtrim(source_path, '/') = $1`, [path]);
+  if (chain) throw new Error('The redirect target itself redirects. Point to the final URL to avoid a redirect chain.');
+}
+
 export async function unpublishPost(
   id: string,
   actorId: string,
@@ -1345,6 +1402,7 @@ export async function unpublishPost(
       throw new Error('Redirect target is required when choosing a 301 redirect.');
     }
   }
+  if (behavior === '301' && redirectTarget) await assertRedirectTarget(post.slug, redirectTarget);
 
   return await withTransaction(async (client) => {
     await client.query(
@@ -1533,4 +1591,50 @@ export async function permanentDeletePost(id: string, actorId: string, confirmTe
 
     return { success: true };
   });
+}
+
+
+/** Custom JSON-LD must be valid before it is saved (FR-SCH-004). */
+function assertCustomSchema(input: Partial<CreatePostInput>) {
+  if (input.customJsonld === undefined || input.customJsonld === null || input.customJsonld === '') return;
+  const text = typeof input.customJsonld === 'string' ? input.customJsonld : JSON.stringify(input.customJsonld);
+  const res = validateCustomJsonLd(text);
+  if (res.errors.length) {
+    const err: any = new Error(res.errors.join(' '));
+    err.status = 422;
+    throw err;
+  }
+  if (typeof input.customJsonld === 'string') input.customJsonld = res.value;
+}
+
+/** noindex posts are never listed in the sitemap (auto-fixed, Section 17.3 "Robots conflicts"). */
+function resolveRobotsConflict<T extends Partial<CreatePostInput>>(input: T): T {
+  return input.robotsIndex === false ? { ...input, sitemapInclude: false } : input;
+}
+
+export async function createDraft(actorId: string, input: CreatePostInput) {
+  assertCustomSchema(input);
+  const result: any = await createDraftCore(actorId, resolveRobotsConflict(input));
+  const id = result?.id ?? result?.post?.id;
+  if (id) await reindexPostLinks(id).catch(() => undefined);
+  return result;
+}
+
+export async function updatePost(
+  id: string,
+  actorId: string,
+  input: Partial<CreatePostInput>,
+  expectedVersion?: number,
+  isMinorUpdate: boolean = false
+) {
+  assertCustomSchema(input);
+  const result = await updatePostCore(id, actorId, resolveRobotsConflict(input), expectedVersion, isMinorUpdate);
+  await reindexPostLinks(id).catch(() => undefined);
+  return result;
+}
+
+export async function publishPost(id: string, actorId: string, acknowledgeWarnings: boolean = false) {
+  const result = await publishPostCore(id, actorId, acknowledgeWarnings);
+  await reindexPostLinks(id).catch(() => undefined);
+  return result;
 }

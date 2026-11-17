@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Preview / staging deployments must never be indexed (NFR-SEO-01, TC-26).
+      { source: '/:path*', has: [{ type: 'host', value: '(?<h>.*\\.vercel\\.app)' }], headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
       { source: '/:path*', headers: [
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'X-Frame-Options', value: 'DENY' },

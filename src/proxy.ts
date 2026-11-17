@@ -8,6 +8,15 @@ import { createServerClient } from '@supabase/ssr';
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // One canonical host (FR-TEC-006): www.migrationfactor.com -> migrationfactor.com with a permanent redirect.
+  const host = (request.headers.get('host') || '').toLowerCase();
+  if (host.startsWith('www.migrationfactor.com')) {
+    const target = new URL(request.url);
+    target.host = 'migrationfactor.com';
+    target.protocol = 'https:';
+    target.port = '';
+    return NextResponse.redirect(target, 301);
+  }
   const migrated = await handleMigratedPost(request);
   if (migrated) return migrated;
   if (pathname.startsWith('/blog')) return handleBlogPost(request);

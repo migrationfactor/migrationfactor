@@ -318,6 +318,35 @@ export function renderBlocksToHtml(blocks: ContentBlock[]): SanitizationResult {
         break;
       }
 
+      case 'gallery': {
+        const imgs = (Array.isArray(block.data?.images) ? block.data.images : []).filter((g: any) => g?.url && isValidUrl(g.url));
+        if (imgs.length) {
+          const figures = imgs
+            .map((g: any) => `<figure class="content-figure"><img src="${escapeAttr(g.url)}" alt="${escapeAttr(g.alt || '')}"${g.width ? ` width="${Number(g.width)}"` : ''}${g.height ? ` height="${Number(g.height)}"` : ''} loading="lazy" decoding="async" class="content-image" /></figure>`)
+            .join('');
+          parts.push(`<div class="content-gallery">${figures}</div>`);
+        }
+        break;
+      }
+
+      case 'video': {
+        const url = String(block.data?.url || '');
+        if (/^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\//i.test(url)) {
+          const label = escapeHtml(block.data?.title || 'Watch the video');
+          parts.push(`<p class="content-video"><a href="${escapeAttr(url)}" target="_blank" rel="noopener">${label}</a></p>`);
+        }
+        break;
+      }
+
+      case 'button': {
+        const url = String(block.data?.url || '').trim();
+        const label = escapeHtml(block.data?.text || '');
+        if (label && /^(https?:\/\/|\/|mailto:|tel:)/i.test(url)) {
+          parts.push(`<p class="content-button"><a class="button" href="${escapeAttr(url)}">${label}</a></p>`);
+        }
+        break;
+      }
+
       case 'raw_html': {
         // Sanitize arbitrary raw HTML
         const clean = sanitizeRawHtml(block.data?.html || '');
@@ -367,36 +396,35 @@ export function renderBlocksToHtml(blocks: ContentBlock[]): SanitizationResult {
 /**
  * Sanitizes inline formatted text (bold, italic, code, links)
  */
+const INLINE_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'code', 'sup', 'sub', 'br', 'a', 'mark', 'small', 'abbr']);
+const REL_OK = new Set(['noopener', 'noreferrer', 'nofollow', 'sponsored', 'ugc']);
+
+function attrValue(attrs: string, name: string): string | null {
+  const m = new RegExp('(?:^|\\s)' + name + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s"\'>]+))', 'i').exec(attrs);
+  return m ? (m[1] ?? m[2] ?? m[3] ?? '') : null;
+}
+
+/** Allowlist-based inline sanitizer: only simple formatting tags and safe links survive; everything else is dropped. */
 export function sanitizeInline(text: string): string {
   if (!text) return '';
-  // Convert any <h1> or </h1> into <h2>/</h2>
-  let sanitized = text
-    .replace(/<h1(\s[^>]*)?>/gi, '<h2$1>')
-    .replace(/<\/h1>/gi, '</h2>');
-
-  // Strip dangerous tags completely
-  sanitized = sanitized.replace(/<(script|style|iframe|object|embed|form|input|button|svg)[\s\S]*?<\/\1>/gi, '');
-  sanitized = sanitized.replace(/<script[^>]*>/gi, '');
-
-  // Strip event handlers (e.g. onload, onclick, onerror)
-  sanitized = sanitized.replace(/\son\w+\s*=\s*(['"]).*?\1/gi, '');
-  sanitized = sanitized.replace(/\son\w+\s*=\s*[^>\s]+/gi, '');
-
-  // Strip javascript: / data: protocols
-  sanitized = sanitized.replace(/href\s*=\s*(['"])\s*(javascript|data|vbscript):.*?\1/gi, 'href="#"');
-
-  // Ensure rel="noopener" for target="_blank"
-  sanitized = sanitized.replace(/<a\s+([^>]*target=['"]_blank['"][^>]*)>/gi, (match, attrs) => {
-    if (!attrs.includes('rel=')) {
-      return `<a ${attrs} rel="noopener">`;
-    }
-    if (!attrs.includes('noopener')) {
-      return `<a ${attrs.replace(/rel=(['"])/, 'rel=$1noopener ')}>`;
-    }
-    return match;
+  const src = text
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript|textarea|select)\b[\s\S]*?<\/\1\s*>/gi, '');
+  return src.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>|</g, (m: string, close: string, tag: string, attrs: string) => {
+    if (!tag) return '&lt;';
+    const t = tag.toLowerCase();
+    if (!INLINE_TAGS.has(t)) return '';
+    if (close) return t === 'br' ? '' : `</${t}>`;
+    if (t === 'br') return '<br>';
+    if (t !== 'a') return `<${t}>`;
+    const href = (attrValue(attrs, 'href') || '').replace(/&amp;/g, '&').trim();
+    if (!href || !/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(href)) return '<a>';
+    const blank = (attrValue(attrs, 'target') || '').toLowerCase() === '_blank';
+    const rel = new Set((attrValue(attrs, 'rel') || '').toLowerCase().split(/\s+/).filter((x) => REL_OK.has(x)));
+    if (blank) rel.add('noopener');
+    const title = attrValue(attrs, 'title');
+    return `<a href="${escapeAttr(href)}"${blank ? ' target="_blank"' : ''}${rel.size ? ` rel="${[...rel].join(' ')}"` : ''}${title ? ` title="${escapeAttr(title)}"` : ''}>`;
   });
-
-  return sanitized;
 }
 
 /**

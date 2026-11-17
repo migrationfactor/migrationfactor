@@ -55,3 +55,51 @@ export function buildWpMetadata(src: WpSource): Metadata {
 
 /** Escapes `<` so JSON-LD can never close its own script tag. */
 export const jsonLdString = (data: unknown) => JSON.stringify(data).replace(/</g, '\\u003c');
+
+const norm = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
+/**
+ * Principle 1/2: what the admin saves is what Google crawls. A migrated post starts from the frozen
+ * Rank Math head, but the editable SEO / social / schema fields (seeded from that head at import)
+ * are authoritative: any value saved in the panel replaces the snapshot value, and the regenerated
+ * JSON-LD graph takes over as soon as a value that appears in it has changed.
+ */
+export function applyAdminOverrides(
+  base: Metadata,
+  src: WpSource,
+  seo: any,
+  social: any,
+  schemaConfig: any,
+  robots: string | null,
+): { metadata: Metadata; schemaStale: boolean } {
+  const rm = src.rankmath;
+  const title = norm(seo?.seo_title_raw) || norm(rm.title);
+  const description = seo ? norm(seo.meta_description_raw) : norm(rm.description);
+  const canonical = norm(seo?.canonical_url) || norm(rm.canonical);
+
+  const rmOgTitle = rm.og['og:title']?.[0];
+  const rmOgDesc = rm.og['og:description']?.[0];
+  const manualSocial = social && social.use_seo_values === false;
+  const ogTitle = (manualSocial && norm(social.og_title)) || (rmOgTitle && rmOgTitle === rm.title ? title : rmOgTitle) || title;
+  const ogDesc = (manualSocial && norm(social.og_description)) || (rmOgDesc && rmOgDesc === rm.description ? description : rmOgDesc) || description;
+  const twTitle = (manualSocial && norm(social.twitter_title)) || ogTitle;
+  const twDesc = (manualSocial && norm(social.twitter_description)) || ogDesc;
+
+  const metadata: Metadata = {
+    ...base,
+    title: { absolute: title },
+    description: description || undefined,
+    alternates: canonical ? { canonical } : undefined,
+    robots: robots ?? base.robots,
+    openGraph: { ...(base.openGraph as any), title: ogTitle, description: ogDesc || undefined, url: canonical || (base.openGraph as any)?.url },
+    twitter: { ...(base.twitter as any), title: twTitle, description: twDesc || undefined },
+  };
+
+  const schemaStale =
+    title !== norm(rm.title) ||
+    description !== norm(rm.description) ||
+    (canonical !== '' && canonical !== norm(rm.canonical)) ||
+    Boolean(schemaConfig?.disable_auto) ||
+    (schemaConfig?.custom_jsonld != null && Object.keys(schemaConfig.custom_jsonld).length > 0);
+  return { metadata, schemaStale };
+}

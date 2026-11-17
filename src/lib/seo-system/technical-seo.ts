@@ -1,5 +1,6 @@
 import { query, queryOne, withTransaction } from './db';
 import { logAudit } from './audit';
+import { isProductionHost, BLOCK_ALL_ROBOTS } from './robots-service';
 
 export const SITE_URL = 'https://migrationfactor.com';
 
@@ -178,7 +179,9 @@ ${urlEntries.join('\n')}
 /**
  * Fetches active robots.txt content (FR-TEC-007, 008)
  */
-export async function getActiveRobotsTxt(): Promise<string> {
+export async function getActiveRobotsTxt(host?: string | null): Promise<string> {
+  // Staging, preview and unknown hosts never serve the production file (NFR-SEO-01).
+  if (host && !isProductionHost(host)) return BLOCK_ALL_ROBOTS;
   const activeVersion = await queryOne<{ content: string }>(
     `SELECT content FROM public.seo_robots_txt_versions WHERE active = true ORDER BY created_at DESC LIMIT 1`
   );

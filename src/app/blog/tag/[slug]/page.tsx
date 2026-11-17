@@ -8,10 +8,14 @@ export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
+
+const PAGE_SIZE = 12;
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { slug } = await props.params;
+  const pageNo = Math.max(1, parseInt((await props.searchParams).page || '1', 10) || 1);
   const tag = await queryOne<any>(`SELECT * FROM public.seo_tags WHERE slug = $1`, [slug]);
   if (!tag) return { title: 'Tag Not Found' };
 
@@ -31,7 +35,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: { canonical: pageNo > 1 ? canonical + '?page=' + pageNo : canonical },
     robots,
     openGraph: {
       title,
@@ -44,6 +48,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function TagArchivePage(props: Props) {
   const { slug } = await props.params;
+  const page = Math.max(1, parseInt((await props.searchParams).page || '1', 10) || 1);
 
   const redirectMatch = await resolveRedirect(`/blog/tag/${slug}`);
   if (redirectMatch) redirect(redirectMatch.target);
@@ -61,9 +66,17 @@ export default async function TagArchivePage(props: Props) {
      LEFT JOIN public.seo_post_authors pa ON pa.post_id = p.id AND pa.position = 1
      LEFT JOIN public.seo_authors a ON a.id = pa.author_id
      WHERE pt.tag_id = $1 AND p.status = 'published'
-     ORDER BY p.published_at DESC`,
+     ORDER BY p.published_at DESC
+     LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`,
     [tag.id]
   );
+  const totalRow = await queryOne<{ n: string }>(
+    'SELECT count(*) AS n FROM public.seo_posts p JOIN public.seo_post_tags pt ON pt.post_id = p.id WHERE pt.tag_id = $1 AND p.status = ' + "'published'" + '',
+    [tag.id]
+  );
+  const total = parseInt(totalRow?.n || '0', 10);
+  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page > lastPage) notFound();
 
   return (
     <div className="blog-page-container">
@@ -122,6 +135,17 @@ export default async function TagArchivePage(props: Props) {
           })}
         </div>
       )}
+      {lastPage > 1 && (
+        <nav aria-label="Pagination" style={{ display: 'flex', gap: 16, justifyContent: 'center', margin: '32px 0' }}>
+          {page > 1 && <Link href={page - 1 === 1 ? '/blog/tag/' + slug : '/blog/tag/' + slug + '?page=' + (page - 1)} rel="prev">← Newer</Link>}
+          <span>Page {page} of {lastPage}</span>
+          {page < lastPage && <Link href={'/blog/tag/' + slug + '?page=' + (page + 1)} rel="next">Older →</Link>}
+        </nav>
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'CollectionPage', name: tag.name, url: SITE_URL + '/blog/tag/' + slug, isPartOf: { '@type': 'WebSite', url: SITE_URL } }).replace(/</g, String.fromCharCode(92) + 'u003c') }}
+      />
     </div>
   );
 }

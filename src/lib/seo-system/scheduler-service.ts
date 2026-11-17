@@ -2,6 +2,9 @@ import { query, queryOne } from './db';
 import { publishPost } from './posts-service';
 import { logAudit } from './audit';
 import { notifyAfterChange } from './gsc-service';
+import { onPostPublishedOrUpdated } from './events-service';
+import { getSeoSettings } from './settings-service';
+import { permanentDeletePost } from './posts-service';
 
 let lastRun = 0;
 
@@ -57,6 +60,7 @@ export async function publishDueScheduledPosts(): Promise<{ published: number; f
         });
       }
       published++;
+      await onPostPublishedOrUpdated(job.aggregate_id, post.created_by ?? undefined);
     } catch (err: any) {
       failed++;
       const final = job.attempts >= 3;
@@ -80,4 +84,24 @@ export async function publishDueScheduledPostsThrottled(): Promise<void> {
   } catch {
     // never break a public page because the scheduler failed
   }
+}
+
+/** Daily purge of trash older than the retention period (FR-BLG-008). Media files are never touched. */
+export async function purgeExpiredTrash(): Promise<{ deleted: number }> {
+  const settings = await getSeoSettings();
+  const due = await query<{ id: string; actor: string | null }>(
+    `SELECT id, COALESCE(trashed_by, created_by) AS actor FROM public.seo_posts
+     WHERE status = 'trashed' AND trashed_at < now() - ($1 || ' days')::interval LIMIT 50`,
+    [String(settings.trashRetentionDays)]
+  );
+  let deleted = 0;
+  for (const p of due) {
+    try {
+      await permanentDeletePost(p.id, p.actor as string, 'DELETE');
+      deleted++;
+    } catch {
+      /* leave it for the next run */
+    }
+  }
+  return { deleted };
 }

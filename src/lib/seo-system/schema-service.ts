@@ -61,7 +61,9 @@ export interface SchemaContext {
 export function buildSchemaGraph(ctx: SchemaContext) {
   const siteUrl = (ctx.siteUrl || 'https://migrationfactor.com').replace(/\/$/, '');
   const siteName = ctx.siteName || 'Migration Factor';
-  const pageUrl = `${siteUrl}/blog/${ctx.post.slug}`;
+  // The canonical URL is the @id base (FR-SCH-002); migrated posts keep their original root URL.
+  const canonicalUrl = ctx.seo?.canonical_url as string | undefined;
+  const pageUrl = canonicalUrl && canonicalUrl.startsWith(siteUrl) ? canonicalUrl : `${siteUrl}/blog/${ctx.post.slug}`;
 
   // Check if auto schema disabled
   if (ctx.schemaConfig?.disable_auto) {
@@ -300,8 +302,14 @@ export function buildSchemaGraph(ctx: SchemaContext) {
   };
 }
 
+const ARTICLE_TYPES = ['BlogPosting', 'Article', 'NewsArticle', 'TechArticle'];
+const ISO_WITH_TZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+const isAbsUrl = (v: unknown) => typeof v === 'string' && /^https?:\/\//i.test(v);
+const nodeTypes = (n: any): string[] => (Array.isArray(n?.['@type']) ? n['@type'] : n?.['@type'] ? [n['@type']] : []);
+
 /**
- * Validates a schema graph against required properties (FR-SCH-005)
+ * Internal structured-data validator (FR-SCH-005 / T6 / T7). Errors block publishing, warnings do not.
+ * It checks the generated graph, not Google's eligibility: valid markup never guarantees rich results.
  */
 export function validateSchemaGraph(graph: any): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
@@ -311,38 +319,128 @@ export function validateSchemaGraph(graph: any): { errors: string[]; warnings: s
     errors.push('Schema must be a valid JSON object.');
     return { errors, warnings };
   }
-
-  const nodes = Array.isArray(graph['@graph']) ? graph['@graph'] : [graph];
-
-  let hasArticle = false;
-  let hasWebPage = false;
-  let hasWebSite = false;
-
-  for (const node of nodes) {
-    if (!node['@type']) {
-      errors.push('Schema node missing @type.');
-      continue;
-    }
-
-    if (['BlogPosting', 'Article', 'NewsArticle'].includes(node['@type'])) {
-      hasArticle = true;
-      if (!node.headline) errors.push(`${node['@type']} node missing required 'headline'.`);
-      if (!node.author || (Array.isArray(node.author) && node.author.length === 0)) {
-        errors.push(`${node['@type']} node missing required 'author'.`);
-      }
-      if (!node.datePublished) errors.push(`${node['@type']} node missing 'datePublished'.`);
-      if (!node.image) warnings.push(`${node['@type']} node has no image (recommended for Discover).`);
-    }
-
-    if (node['@type'] === 'WebPage') hasWebPage = true;
-    if (node['@type'] === 'WebSite') hasWebSite = true;
+  const ctx = graph['@context'];
+  if (!ctx || !/^https?:\/\/schema\.org$/.test(String(Array.isArray(ctx) ? ctx[0] : ctx).replace(/\/$/, ''))) {
+    errors.push('Schema @context must be https://schema.org.');
   }
 
-  if (!hasArticle) warnings.push('Schema graph contains no Article or BlogPosting node.');
+  const nodes: any[] = Array.isArray(graph['@graph']) ? graph['@graph'] : [graph];
+  let articles = 0;
+  let hasWebPage = false;
+  let hasWebSite = false;
+  const ids = new Set<string>();
+
+  for (const node of nodes) {
+    const types = nodeTypes(node);
+    if (types.length === 0) {
+      errors.push('A schema node is missing @type.');
+      continue;
+    }
+    if (node['@id']) {
+      if (ids.has(node['@id'])) errors.push(`Duplicate schema node @id: ${node['@id']}.`);
+      ids.add(node['@id']);
+      if (!isAbsUrl(node['@id'])) errors.push(`@id must be an absolute URL (${node['@id']}).`);
+    }
+    for (const dateKey of ['datePublished', 'dateModified']) {
+      if (node[dateKey] && !ISO_WITH_TZ.test(String(node[dateKey]))) {
+        warnings.push(`${dateKey} should be ISO 8601 with a timezone (for example 2026-11-03T10:00:00+11:00).`);
+      }
+    }
+
+    if (types.some((t) => ARTICLE_TYPES.includes(t))) {
+      articles++;
+      if (!node.headline) errors.push('Article node is missing required "headline".');
+      else if (String(node.headline).length > 110) warnings.push('Article headline is longer than 110 characters.');
+      if (!node.author || (Array.isArray(node.author) && node.author.length === 0)) errors.push('Article node is missing "author".');
+      if (!node.datePublished) errors.push('Article node is missing "datePublished".');
+      if (!node.dateModified) warnings.push('Article node has no "dateModified".');
+      if (!node.image || (Array.isArray(node.image) && node.image.length === 0)) errors.push('Article node is missing "image".');
+      else {
+        const imgs = Array.isArray(node.image) ? node.image : [node.image];
+        for (const i of imgs) if (typeof i === 'string' && !isAbsUrl(i)) errors.push('Article image URLs must be absolute.');
+        if (imgs.length < 3) warnings.push('Google recommends 3 image crops (16:9, 4:3, 1:1) for Article markup.');
+      }
+      if (!node.publisher) warnings.push('Article node has no "publisher".');
+      if (!node.mainEntityOfPage) warnings.push('Article node has no "mainEntityOfPage".');
+    }
+    if (types.includes('WebPage')) {
+      hasWebPage = true;
+      if (!isAbsUrl(node.url)) errors.push('WebPage node needs an absolute "url".');
+    }
+    if (types.includes('WebSite')) hasWebSite = true;
+    if (types.includes('ImageObject') && !isAbsUrl(node.url)) errors.push('ImageObject needs an absolute "url".');
+    if (types.includes('Organization')) {
+      const logo = node.logo;
+      if (!logo) warnings.push('Organization has no logo (minimum 112x112 px recommended).');
+      else if (typeof logo === 'object' && logo.url && !isAbsUrl(logo.url)) errors.push('Organization logo URL must be absolute.');
+    }
+    if (types.includes('Person') && !node.name) errors.push('Person node is missing "name".');
+    if (types.includes('BreadcrumbList')) {
+      const items = Array.isArray(node.itemListElement) ? node.itemListElement : [];
+      if (items.length < 2) errors.push('BreadcrumbList needs at least two items.');
+      items.forEach((it: any, idx: number) => {
+        if (it.position !== idx + 1) errors.push('BreadcrumbList positions must run 1..n.');
+        if (!it.name) errors.push('BreadcrumbList item is missing "name".');
+        if (idx < items.length - 1 && !isAbsUrl(it.item)) errors.push('BreadcrumbList items (except the last) need an absolute "item" URL.');
+      });
+    }
+    if (types.includes('FAQPage')) {
+      const qs = Array.isArray(node.mainEntity) ? node.mainEntity : [];
+      if (qs.length < 2) errors.push('FAQPage needs at least 2 questions.');
+      if (qs.some((q: any) => !q?.name || !q?.acceptedAnswer?.text)) errors.push('Every FAQ question needs a name and an answer text.');
+    }
+    if (types.includes('HowTo')) {
+      const steps = Array.isArray(node.step) ? node.step : [];
+      if (steps.length < 3) warnings.push('HowTo should have at least 3 steps.');
+    }
+  }
+
+  if (articles > 1) errors.push('The page outputs more than one Article-type node (duplicate schema).');
+  if (articles === 0) warnings.push('Schema graph contains no Article or BlogPosting node.');
   if (!hasWebPage) warnings.push('Schema graph contains no WebPage node.');
   if (!hasWebSite) warnings.push('Schema graph contains no WebSite node.');
 
   return { errors, warnings };
+}
+
+/**
+ * Validates hand-written JSON-LD (FR-SCH-004). Returns the parsed value or plain-language errors with
+ * line and column for syntax problems.
+ */
+export function validateCustomJsonLd(text: string): { errors: string[]; warnings: string[]; value: any | null } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const source = (text || '').trim();
+  if (!source) return { errors, warnings, value: null };
+  if (source.length > 50 * 1024) errors.push('Custom JSON-LD is larger than 50 KB.');
+  if (/<\s*\/?\s*script/i.test(source)) errors.push('Custom JSON-LD must not contain <script> or HTML.');
+  let value: any = null;
+  try {
+    value = JSON.parse(source);
+  } catch (e: any) {
+    const m = /position (\d+)/.exec(String(e.message));
+    let where = '';
+    if (m) {
+      const before = source.slice(0, Number(m[1]));
+      const line = before.split('\n').length;
+      where = ` (line ${line}, column ${before.length - before.lastIndexOf('\n')})`;
+    }
+    errors.push(`Invalid JSON${where}: ${String(e.message).split('\n')[0]}`);
+    return { errors, warnings, value: null };
+  }
+  const nodes: any[] = Array.isArray(value) ? value : value['@graph'] ? value['@graph'] : [value];
+  const ctx = Array.isArray(value) ? 'https://schema.org' : value['@context'];
+  if (!Array.isArray(value) && !/^https?:\/\/schema\.org\/?$/.test(String(ctx || ''))) errors.push('@context must be https://schema.org.');
+  const allow = new Set([...ARTICLE_TYPES, 'Event', 'Course', 'VideoObject', 'Product', 'FAQPage', 'HowTo', 'Review', 'Recipe', 'Organization', 'Person', 'WebPage', 'BreadcrumbList', 'ImageObject', 'Thing', 'GovernmentService']);
+  for (const n of nodes) {
+    if (!n || typeof n !== 'object' || !n['@type']) {
+      errors.push('Every custom node needs an @type.');
+      continue;
+    }
+    for (const t of nodeTypes(n)) if (!allow.has(t)) warnings.push(`Unsupported type for Google rich results: ${t}.`);
+    if (n['@id'] && !isAbsUrl(n['@id'])) errors.push('Custom @id values must be absolute URLs.');
+  }
+  return { errors, warnings, value };
 }
 
 /**

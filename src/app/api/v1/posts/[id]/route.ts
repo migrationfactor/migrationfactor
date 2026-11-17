@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiRequest } from '@/lib/seo-system/api-auth';
 import { getPost, updatePost, permanentDeletePost } from '@/lib/seo-system/posts-service';
 import { canEditPost, hasPermission } from '@/lib/seo-system/rbac';
+import { onPostPublishedOrUpdated } from '@/lib/seo-system/events-service';
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -70,6 +71,7 @@ export async function PATCH(req: NextRequest, context: Context) {
     const expectedVersion = ifMatch ? parseInt(ifMatch.replace(/"/g, ''), 10) : body.version;
 
     const result = await updatePost(id, auth!.userId, body, expectedVersion, Boolean(body.minor_update));
+    if (current.status === 'published' && !body.minor_update) await onPostPublishedOrUpdated(id, auth!.userId);
     return NextResponse.json(result);
   } catch (err: any) {
     if (err.status === 409) {

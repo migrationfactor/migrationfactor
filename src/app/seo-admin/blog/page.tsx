@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { listPosts } from '@/lib/seo-system/posts-service';
 import { listCategories, listAuthors } from '@/lib/seo-system/taxonomies-service';
+import BulkToolbar from '@/components/seo-admin/BulkToolbar';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ interface Props {
     score_band?: string;
     missing?: string;
     robots_index?: string;
+    orphans?: string;
     q?: string;
     page?: string;
   }>;
@@ -27,7 +29,7 @@ export default async function AllPostsPage(props: Props) {
   const missing = params.missing as any;
   const robotsIndex = params.robots_index !== undefined ? params.robots_index === 'true' : undefined;
   const search = params.q;
-  const page = parseInt(params.page || '1', 10);
+  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
   const limit = 20;
   const offset = (page - 1) * limit;
 
@@ -38,6 +40,7 @@ export default async function AllPostsPage(props: Props) {
     scoreBand,
     missing,
     robotsIndex,
+    orphans: params.orphans === 'true',
     search,
     limit,
     offset,
@@ -210,6 +213,19 @@ export default async function AllPostsPage(props: Props) {
           <option value="featured_image">Missing Featured Image</option>
         </select>
 
+        <select name="author_id" defaultValue={authorId || ''} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
+          <option value="">All Authors</option>
+          {authors.map((a: any) => (
+            <option key={a.id} value={a.id}>{a.display_name}</option>
+          ))}
+        </select>
+
+        <select name="robots_index" defaultValue={params.robots_index || ''} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
+          <option value="">Index + noindex</option>
+          <option value="true">Indexable only</option>
+          <option value="false">Noindex only</option>
+        </select>
+
         <button
           type="submit"
           style={{
@@ -226,7 +242,7 @@ export default async function AllPostsPage(props: Props) {
           Apply Filters
         </button>
 
-        {(search || categoryId || scoreBand || missing) && (
+        {(search || categoryId || authorId || scoreBand || missing || params.robots_index) && (
           <Link
             href={`/seo-admin/blog?status=${currentStatus}`}
             style={{ fontSize: '0.8125rem', color: '#a01b2b', textDecoration: 'none', marginLeft: 8 }}
@@ -236,11 +252,17 @@ export default async function AllPostsPage(props: Props) {
         )}
       </form>
 
+      <div style={{ textAlign: 'right', marginBottom: 8 }}>
+        <a href={'/api/v1/posts/export?' + new URLSearchParams(Object.entries(params).filter(([k, v]) => v && k !== 'page') as [string, string][]).toString()} style={{ fontSize: '0.8125rem', color: '#0b666a', fontWeight: 600 }}>Export CSV ↓</a>
+      </div>
+      <BulkToolbar />
+
       {/* Posts Table */}
       <div style={{ background: '#ffffff', borderRadius: 8, border: '1px solid #cfe3e3', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: '#f2f8f8', borderBottom: '2px solid #cfe3e3', color: '#3d5557' }}>
+              <th style={{ padding: '12px 10px', width: 28 }} aria-label="Select"></th>
               <th style={{ padding: '12px 16px' }}>Title & Slug</th>
               <th style={{ padding: '12px 14px' }}>Focus Keyword</th>
               <th style={{ padding: '12px 14px', textAlign: 'center' }}>SEO Score</th>
@@ -254,7 +276,7 @@ export default async function AllPostsPage(props: Props) {
           <tbody>
             {posts.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b8183' }}>
+                <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b8183' }}>
                   No posts match your filters.
                 </td>
               </tr>
@@ -278,6 +300,9 @@ export default async function AllPostsPage(props: Props) {
 
                 return (
                   <tr key={post.id} style={{ borderBottom: '1px solid #e9f3f3', verticalAlign: 'middle' }}>
+                    <td style={{ padding: '14px 10px' }}>
+                      <input type="checkbox" name="sel" value={post.id} aria-label={`Select ${post.title}`} />
+                    </td>
                     {/* Title & Slug */}
                     <td style={{ padding: '14px 16px', maxWidth: 320 }}>
                       <Link
@@ -287,7 +312,7 @@ export default async function AllPostsPage(props: Props) {
                         {post.title}
                       </Link>
                       <div style={{ fontSize: '0.75rem', color: '#6b8183', marginTop: 2, fontFamily: 'monospace' }}>
-                        /blog/{post.slug}/
+                        {post.legacy_path || `/blog/${post.slug}/`}
                       </div>
                     </td>
 
@@ -385,7 +410,7 @@ export default async function AllPostsPage(props: Props) {
                         </Link>
                         {post.status === 'published' ? (
                           <Link
-                            href={`/blog/${post.slug}/`}
+                            href={post.legacy_path || `/blog/${post.slug}/`}
                             target="_blank"
                             style={{ color: '#3d5557', textDecoration: 'none', fontSize: '0.8125rem' }}
                           >
@@ -409,6 +434,18 @@ export default async function AllPostsPage(props: Props) {
           </tbody>
         </table>
       </div>
+      {total > limit && (() => {
+        const last = Math.ceil(total / limit);
+        const qs = new URLSearchParams(Object.entries(params).filter(([k, v]) => v && k !== 'page') as [string, string][]);
+        const href = (n: number) => `/seo-admin/blog?${qs.toString()}${qs.toString() ? '&' : ''}page=${n}`;
+        return (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', marginTop: 16, fontSize: '0.85rem' }}>
+            {page > 1 ? <Link href={href(page - 1)}>← Previous</Link> : <span style={{ color: '#9db8b9' }}>← Previous</span>}
+            <span>Page {page} of {last} · {total} posts</span>
+            {page < last ? <Link href={href(page + 1)}>Next →</Link> : <span style={{ color: '#9db8b9' }}>Next →</span>}
+          </div>
+        );
+      })()}
     </div>
   );
 }

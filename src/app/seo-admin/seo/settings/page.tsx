@@ -128,6 +128,18 @@ export default function SeoSettingsPage() {
         <Field label="Insert a table of contents automatically when a post has at least this many H2 headings" help="0 turns it off. Posts with their own TOC block are never changed.">
           <input style={{ ...input, maxWidth: 120 }} type="number" min={0} max={20} value={s.autoTocMinH2} onChange={(e) => set({ autoTocMinH2: Number(e.target.value) })} />
         </Field>
+        <Field label="Days to keep trashed posts" help="After this many days the daily job deletes them permanently (7 to 365). Media files are never deleted.">
+          <input style={{ ...input, maxWidth: 120 }} type="number" min={7} max={365} value={s.trashRetentionDays} onChange={(e) => set({ trashRetentionDays: Number(e.target.value) })} />
+        </Field>
+        <Field label="Minimum words before a post counts as thin content" help="Posts below this are flagged in the quality checks (50 to 5000).">
+          <input style={{ ...input, maxWidth: 120 }} type="number" min={50} max={5000} value={s.minWords} onChange={(e) => set({ minWords: Number(e.target.value) })} />
+        </Field>
+        <Field label="Trusted source domains" help="One per line. Links to these count as authoritative sources in the GEO and link-quality checks.">
+          <textarea style={{ ...input, minHeight: 90 }} value={(s.trustedDomains || []).join(String.fromCharCode(10))} onChange={(e) => set({ trustedDomains: e.target.value.split(String.fromCharCode(10)) })} />
+        </Field>
+        <Field label="Brand name variants" help="One per line. Spellings that should always be written the same way (for example Migration Factor, MigrationFactor).">
+          <textarea style={{ ...input, minHeight: 70 }} value={(s.brandAliases || []).join(String.fromCharCode(10))} onChange={(e) => set({ brandAliases: e.target.value.split(String.fromCharCode(10)) })} />
+        </Field>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.875rem' }}>
           <input type="checkbox" checked={s.requireFeaturedImage} onChange={(e) => set({ requireFeaturedImage: e.target.checked })} />
           Require a featured image before publishing

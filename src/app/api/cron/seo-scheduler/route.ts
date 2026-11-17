@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
-import { publishDueScheduledPosts } from '@/lib/seo-system/scheduler-service';
+import { publishDueScheduledPosts, purgeExpiredTrash } from '@/lib/seo-system/scheduler-service';
+import { runDueVerifications } from '@/lib/seo-system/verify-service';
+import { checkExternalLinks } from '@/lib/seo-system/link-service';
 import { runGscMaintenance } from '@/lib/seo-system/gsc-service';
 
 export const dynamic = 'force-dynamic';
@@ -14,5 +16,7 @@ export async function GET(req: NextRequest) {
   if (!ok) return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 });
   const publishing = await publishDueScheduledPosts();
   const searchConsole = await runGscMaintenance();
-  return NextResponse.json({ publishing, searchConsole });
+  const safe = async <T,>(fn: () => Promise<T>) => { try { return await fn(); } catch (e: any) { return { error: e?.message || 'failed' }; } };
+  const [verification, links, trash] = [await safe(runDueVerifications), await safe(() => checkExternalLinks(60)), await safe(purgeExpiredTrash)];
+  return NextResponse.json({ publishing, searchConsole, verification, links, trash });
 }

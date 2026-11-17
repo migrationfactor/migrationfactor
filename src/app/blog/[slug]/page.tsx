@@ -5,10 +5,10 @@ import Image from 'next/image';
 import { getSeoSettings } from '@/lib/seo-system/settings-service';
 import { renderArticleBody, isOptimizableSrc } from '@/lib/seo-system/article-render';
 import { queryOne, query } from '@/lib/seo-system/db';
-import { renderSeoHead, generateNextMetadata } from '@/lib/seo-system/head-service';
+import { renderSeoHead, generateNextMetadata, buildRobotsDirective } from '@/lib/seo-system/head-service';
 import { publishDueScheduledPostsThrottled } from '@/lib/seo-system/scheduler-service';
 import { SITE_URL, resolveRedirect, checkTombstoneOrRecord404 } from '@/lib/seo-system/technical-seo';
-import { getWpSource, buildWpMetadata, jsonLdString } from '@/lib/seo-system/wp-source';
+import { getWpSource, buildWpMetadata, applyAdminOverrides, jsonLdString } from '@/lib/seo-system/wp-source';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +107,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     };
   }
 
-  if (data.wpSource) return buildWpMetadata(data.wpSource);
+  if (data.wpSource) {
+    const robots = buildRobotsDirective(data.seo);
+    return applyAdminOverrides(buildWpMetadata(data.wpSource), data.wpSource, data.seo, data.social, data.schemaConfig, robots).metadata;
+  }
 
   const settings = await getSeoSettings();
   return generateNextMetadata({
@@ -187,17 +190,21 @@ export default async function BlogPostPage(props: Props) {
     authors,
   });
 
+  const wpSchemaStale = data.wpSource
+    ? applyAdminOverrides({}, data.wpSource, seo, data.social, data.schemaConfig, null).schemaStale
+    : false;
+
   return (
     <div className="blog-page-container">
       {/* Schema.org single @graph JSON-LD (FR-SCH-001) */}
-      {data.wpSource
+      {data.wpSource && !wpSchemaStale
         ? data.wpSource.rankmath.jsonld.map((block, i) => (
             <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(block) }} />
           ))
         : (
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(headData.schemaGraph) }}
+            dangerouslySetInnerHTML={{ __html: jsonLdString(headData.schemaGraph) }}
           />
         )}
       {/* Rank Math emits og:updated_time, which the Metadata API cannot express; React hoists this into <head>. */}

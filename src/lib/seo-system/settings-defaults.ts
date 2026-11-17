@@ -29,6 +29,14 @@ export interface SeoSettings {
   requireFeaturedImage: boolean;
   /** Insert a table of contents automatically when a post has at least this many H2s (0 = off). */
   autoTocMinH2: number;
+  /** Days a trashed post is kept before the daily job deletes it permanently (7-365). */
+  trashRetentionDays: number;
+  /** Posts under this many words are flagged as thin content (B10, FR-QLT-005). */
+  minWords: number;
+  /** Domains treated as trusted sources by the GEO checks (G2) and external-link quality (A4). */
+  trustedDomains: string[];
+  /** Brand name variants that should be written one consistent way (G8). */
+  brandAliases: string[];
 }
 
 export const DEFAULT_SETTINGS: SeoSettings = {
@@ -42,6 +50,10 @@ export const DEFAULT_SETTINGS: SeoSettings = {
   twitterSite: '',
   requireFeaturedImage: true,
   autoTocMinH2: 0,
+  trashRetentionDays: 30,
+  minWords: 300,
+  trustedDomains: ['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au'],
+  brandAliases: [],
 };
 
 /** Replaces %title%, %sep%, %sitename% in a template. Manual SEO titles are never passed through this. */
@@ -55,6 +67,8 @@ export function applyTitleTemplate(template: string, vars: { title: string; site
 }
 
 const str = (v: unknown, max: number, fallback = '') => (typeof v === 'string' ? v.trim().slice(0, max) : fallback);
+
+const list = (v: unknown, max: number): string[] => (Array.isArray(v) ? v : String(v ?? '').split('\n')).map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, max);
 
 function url(v: unknown, label: string, allowRelative = false): string {
   const s = str(v, 2048);
@@ -106,5 +120,17 @@ export function normalizeSettings(input: any, base: SeoSettings = DEFAULT_SETTIN
     twitterSite: handle,
     requireFeaturedImage: Boolean(input?.requireFeaturedImage ?? base.requireFeaturedImage),
     autoTocMinH2: toc,
+    trashRetentionDays: (() => {
+      const d = Number(input?.trashRetentionDays ?? base.trashRetentionDays);
+      if (!Number.isInteger(d) || d < 7 || d > 365) throw Object.assign(new Error('Trash retention must be 7 to 365 days.'), { status: 422 });
+      return d;
+    })(),
+    minWords: (() => {
+      const d = Number(input?.minWords ?? base.minWords);
+      if (!Number.isInteger(d) || d < 50 || d > 5000) throw Object.assign(new Error('Minimum words must be 50 to 5000.'), { status: 422 });
+      return d;
+    })(),
+    trustedDomains: list(input?.trustedDomains ?? base.trustedDomains, 50),
+    brandAliases: list(input?.brandAliases ?? base.brandAliases, 20),
   };
 }

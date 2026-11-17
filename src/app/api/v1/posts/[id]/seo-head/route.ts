@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiRequest } from '@/lib/seo-system/api-auth';
 import { getPost } from '@/lib/seo-system/posts-service';
+import { validateSchemaGraph } from '@/lib/seo-system/schema-service';
 import { renderSeoHead } from '@/lib/seo-system/head-service';
 import { SITE_URL } from '@/lib/seo-system/technical-seo';
 
@@ -37,5 +38,7 @@ export async function GET(
     authors: post.authors,
   });
 
-  return NextResponse.json(result);
+  let schemaValidation: any = { errors: [], warnings: [] };
+  try { schemaValidation = validateSchemaGraph((result as any).schemaGraph); } catch { /* keep empty */ }
+  return NextResponse.json({ ...result, schemaValidation });
 }

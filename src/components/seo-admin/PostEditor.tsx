@@ -6,11 +6,15 @@ import Link from 'next/link';
 import { runContentAnalysis, calculateFleschScore, calculatePixelWidth } from '@/lib/seo-system/analysis';
 import { renderBlocksToHtml } from '@/lib/seo-system/sanitizer';
 import IndexingPanel from './IndexingPanel';
+import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
+import MediaPicker from './MediaPicker';
+import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel } from './PostWorkflow';
 
 interface PostEditorProps {
   initialPost?: any;
   categories: any[];
   authors: any[];
+  tags?: any[];
   currentUser: any;
 }
 
@@ -18,6 +22,7 @@ export default function PostEditor({
   initialPost,
   categories,
   authors,
+  tags = [],
   currentUser,
 }: PostEditorProps) {
   const router = useRouter();
@@ -28,20 +33,12 @@ export default function PostEditor({
   const [title, setTitle] = useState(initialPost?.title || '');
   const [slug, setSlug] = useState(initialPost?.slug || '');
   const [status, setStatus] = useState(initialPost?.status || 'draft');
-  const [contentMarkdown, setContentMarkdown] = useState(() => {
-    if (initialPost?.body_json?.blocks) {
-      // Reconstitute from blocks
-      return initialPost.body_json.blocks
-        .map((b: any) => {
-          if (b.type === 'heading') return `${'#'.repeat(b.data?.level || 2)} ${b.data?.text || ''}`;
-          if (b.type === 'paragraph') return b.data?.text || '';
-          if (b.type === 'quote') return `> ${b.data?.text || ''}`;
-          return b.data?.text || '';
-        })
-        .join('\n\n');
-    }
-    return '';
-  });
+  const [blocks, setBlocks] = useState<Block[]>(() => (Array.isArray(initialPost?.body_json?.blocks) ? initialPost.body_json.blocks : []));
+  const [editorKey, setEditorKey] = useState(0);
+  const [mediaPicker, setMediaPicker] = useState<null | ((m: PickedMedia | null) => void)>(null);
+  const pickMedia = () => new Promise<PickedMedia | null>((resolve) => setMediaPicker(() => resolve));
+  const roles: string[] = currentUser?.roles || [];
+  const canRawHtml = roles.some((r) => ['super_admin', 'admin', 'seo_manager'].includes(r));
 
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt || '');
   const [featuredMediaId, setFeaturedMediaId] = useState(initialPost?.featured_media_id || '');
@@ -54,6 +51,10 @@ export default function PostEditor({
     if (authors.length) return [authors[0].id];
     return [];
   });
+
+  const [tagIds, setTagIds] = useState<string[]>(() => (initialPost?.tags || []).map((t: any) => t.id));
+  const [reviewedBy, setReviewedBy] = useState<string>(initialPost?.geo_aeo?.reviewed_by || '');
+  const [lockedBy, setLockedBy] = useState<null | { name: string; canTakeOver: boolean }>(null);
 
   // SEO fields (Section 5.2)
   const [focusKeyword, setFocusKeyword] = useState(initialPost?.seo?.focus_keyword || '');
@@ -95,7 +96,7 @@ export default function PostEditor({
   const [references, setReferences] = useState<any[]>(initialPost?.references || []);
 
   // Editor states
-  const [activeTab, setActiveTab] = useState<'post' | 'seo' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing'>('seo');
+  const [activeTab, setActiveTab] = useState<'post' | 'seo' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing' | 'links' | 'history'>('seo');
   const [serpPreviewDevice, setSerpPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -112,33 +113,7 @@ export default function PostEditor({
     }
   }, [title, isNew, slug]);
 
-  // Convert markdown-like content to blocks for rendering and analysis
-  const currentBlocks = useMemo(() => {
-    const lines = contentMarkdown.split('\n\n');
-    const blocks: any[] = [];
-
-    for (const paragraph of lines) {
-      const trimmed = paragraph.trim();
-      if (!trimmed) continue;
-
-      if (trimmed.startsWith('# ')) {
-        // Enforce FR-EDT-002: H1 converted to H2!
-        blocks.push({ type: 'heading', data: { level: 2, text: trimmed.replace(/^#\s+/, '') } });
-      } else if (trimmed.startsWith('## ')) {
-        blocks.push({ type: 'heading', data: { level: 2, text: trimmed.replace(/^##\s+/, '') } });
-      } else if (trimmed.startsWith('### ')) {
-        blocks.push({ type: 'heading', data: { level: 3, text: trimmed.replace(/^###\s+/, '') } });
-      } else if (trimmed.startsWith('#### ')) {
-        blocks.push({ type: 'heading', data: { level: 4, text: trimmed.replace(/^####\s+/, '') } });
-      } else if (trimmed.startsWith('> ')) {
-        blocks.push({ type: 'quote', data: { text: trimmed.replace(/^>\s+/, '') } });
-      } else {
-        blocks.push({ type: 'paragraph', data: { text: trimmed } });
-      }
-    }
-
-    return blocks;
-  }, [contentMarkdown]);
+  const currentBlocks = blocks;
 
   const { html: renderedHtml, wordCount, readingTimeMin, headings } = useMemo(() => {
     return renderBlocksToHtml(currentBlocks);
@@ -183,11 +158,7 @@ export default function PostEditor({
   const descCharCount = metaDescription.length;
 
   // Handle Save Draft / Update
-  const handleSaveDraft = async () => {
-    setSaving(true);
-    setStatusMessage('');
-
-    const payload = {
+  const buildPayload = () => ({
       title,
       slug,
       bodyJson: { blocks: currentBlocks },
@@ -197,6 +168,8 @@ export default function PostEditor({
       featuredCaptionOverride: featuredCaption || null,
       primaryCategoryId: primaryCategoryId || null,
       authorIds: selectedAuthorIds,
+      tagIds,
+      reviewedBy: reviewedBy || null,
       focusKeyword: focusKeyword || null,
       additionalKeywords: additionalKeywords.split(',').map(k => k.trim()).filter(Boolean),
       seoTitleRaw: seoTitle || null,
@@ -222,8 +195,102 @@ export default function PostEditor({
       primaryEntity: primaryEntityName ? { name: primaryEntityName, sameAs: primaryEntityUrl } : null,
       references,
       minor_update: minorUpdate,
-    };
+  });
 
+  // Track unsaved changes, autosave drafts and offer to restore one (FR-BLG-002).
+  const [version, setVersion] = useState<number | undefined>(initialPost?.version);
+  const [conflict, setConflict] = useState<null | number>(null);
+  const [restoreOffer, setRestoreOffer] = useState<any>(null);
+  const payloadKey = JSON.stringify({ ...buildPayload(), minor_update: undefined });
+  const savedKey = useRef(payloadKey);
+  const dirty = payloadKey !== savedKey.current;
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  const latestKey = useRef(payloadKey);
+  latestKey.current = payloadKey;
+  useEffect(() => {
+    if (isNew) return;
+    const t = setInterval(async () => {
+      if (latestKey.current === savedKey.current) return;
+      try {
+        await fetch(`/api/v1/posts/${postId}/autosave`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: latestKey.current });
+        setSaveStatus('Autosaved at ' + new Date().toLocaleTimeString());
+      } catch { /* retry next tick */ }
+    }, 30000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId, isNew]);
+
+  useEffect(() => {
+    if (isNew) return;
+    fetch(`/api/v1/posts/${postId}/autosave`).then((r) => r.json()).then((d) => {
+      if (d?.snapshot && JSON.stringify({ ...d.snapshot, minor_update: undefined }) !== savedKey.current) setRestoreOffer(d);
+    }).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  const applyPayload = (p: any) => {
+    if (p.title !== undefined) setTitle(p.title || '');
+    if (p.slug !== undefined && isNew) setSlug(p.slug || '');
+    if (p.excerpt !== undefined) setExcerpt(p.excerpt || '');
+    if (p.bodyJson?.blocks) { setBlocks(p.bodyJson.blocks); setEditorKey((k) => k + 1); }
+    if (p.featuredMediaId !== undefined) setFeaturedMediaId(p.featuredMediaId || '');
+    if (p.primaryCategoryId !== undefined) setPrimaryCategoryId(p.primaryCategoryId || '');
+    if (Array.isArray(p.authorIds)) setSelectedAuthorIds(p.authorIds);
+    if (Array.isArray(p.tagIds)) setTagIds(p.tagIds);
+    if (p.focusKeyword !== undefined) setFocusKeyword(p.focusKeyword || '');
+    if (Array.isArray(p.additionalKeywords)) setAdditionalKeywords(p.additionalKeywords.join(', '));
+    if (p.seoTitleRaw !== undefined) setSeoTitle(p.seoTitleRaw || '');
+    if (p.metaDescriptionRaw !== undefined) setMetaDescription(p.metaDescriptionRaw || '');
+    if (p.canonicalUrl !== undefined) setCanonicalUrl(p.canonicalUrl || '');
+    if (p.robotsIndex !== undefined) setRobotsIndex(p.robotsIndex !== false);
+    if (p.robotsFollow !== undefined) setRobotsFollow(p.robotsFollow !== false);
+    if (p.breadcrumbTitle !== undefined) setBreadcrumbTitle(p.breadcrumbTitle || '');
+    if (p.customH1 !== undefined) setCustomH1(p.customH1 || '');
+    if (p.sitemapInclude !== undefined) setSitemapInclude(p.sitemapInclude !== false);
+    if (p.ogTitle !== undefined) setOgTitle(p.ogTitle || '');
+    if (p.ogDescription !== undefined) setOgDescription(p.ogDescription || '');
+    if (p.twitterTitle !== undefined) setTwitterTitle(p.twitterTitle || '');
+    if (p.twitterDescription !== undefined) setTwitterDescription(p.twitterDescription || '');
+    if (p.articleType) setArticleType(p.articleType);
+    if (p.faqEnabled !== undefined) setFaqEnabled(Boolean(p.faqEnabled));
+    if (p.howtoEnabled !== undefined) setHowtoEnabled(Boolean(p.howtoEnabled));
+    if (p.primaryQuestion !== undefined) setPrimaryQuestion(p.primaryQuestion || '');
+    if (p.answerSummary !== undefined) setAnswerSummary(p.answerSummary || '');
+    if (p.primaryEntity !== undefined) { setPrimaryEntityName(p.primaryEntity?.name || ''); setPrimaryEntityUrl(p.primaryEntity?.sameAs || ''); }
+    if (Array.isArray(p.references)) setReferences(p.references);
+  };
+
+  const acquireLock = async (takeover = false) => {
+    try {
+      const res = await fetch('/api/v1/posts/' + postId + '/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ takeover }) });
+      const d = await res.json();
+      setLockedBy(d.locked ? { name: d.lockedBy, canTakeOver: Boolean(d.canTakeOver) } : null);
+    } catch { /* offline: do not block editing */ }
+  };
+  useEffect(() => {
+    if (isNew) return;
+    acquireLock();
+    const t = setInterval(() => acquireLock(), 45000);
+    const release = () => { try { fetch('/api/v1/posts/' + postId + '/lock', { method: 'DELETE', keepalive: true }); } catch { /* ignore */ } };
+    window.addEventListener('pagehide', release);
+    return () => { clearInterval(t); window.removeEventListener('pagehide', release); release(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  const handleSaveDraft = async (force = false): Promise<boolean> => {
+    if (lockedBy) { setStatusMessage('Saving is disabled: ' + lockedBy.name + ' is editing this post.'); return false; }
+    setSaving(true);
+    setStatusMessage('');
+    const payload: any = buildPayload();
+    if (!force && version !== undefined) payload.version = version;
+    let ok = false;
     try {
       if (isNew) {
         const res = await fetch('/api/v1/posts', {
@@ -233,6 +300,7 @@ export default function PostEditor({
         });
         const data = await res.json();
         if (res.ok) {
+          savedKey.current = payloadKey;
           router.push(`/seo-admin/blog/${data.post.id}`);
         } else {
           setStatusMessage(`Error: ${data.message || 'Failed to save'}`);
@@ -247,6 +315,11 @@ export default function PostEditor({
         if (res.ok) {
           setSaveStatus('Saved at ' + new Date().toLocaleTimeString());
           setStatusMessage('Post saved successfully.');
+          if (typeof data.version === 'number') setVersion(data.version);
+          savedKey.current = payloadKey;
+          ok = true;
+        } else if (res.status === 409) {
+          setConflict(data.current_version ?? null);
         } else {
           setStatusMessage(`Error: ${data.message || 'Failed to update'}`);
         }
@@ -256,6 +329,7 @@ export default function PostEditor({
     } finally {
       setSaving(false);
     }
+    return ok;
   };
 
   // Open Publish Modal and Run Pre-Publish Checks
@@ -360,7 +434,7 @@ export default function PostEditor({
           )}
 
           <button
-            onClick={handleSaveDraft}
+            onClick={() => handleSaveDraft()}
             disabled={saving}
             style={{
               padding: '8px 16px',
@@ -387,7 +461,7 @@ export default function PostEditor({
                 Minor update
               </label>
               <button
-                onClick={handleSaveDraft}
+                onClick={() => handleSaveDraft()}
                 style={{
                   padding: '8px 18px',
                   borderRadius: 6,
@@ -423,6 +497,26 @@ export default function PostEditor({
         </div>
       </div>
 
+      {lockedBy && (
+        <div role="alert" style={{ padding: '12px 16px', background: '#fdecee', border: '1px solid #e8b4ba', borderRadius: 8, fontSize: '0.875rem', color: '#6b1020', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {lockedBy.name} is editing this post right now, so saving is turned off for you.
+          {lockedBy.canTakeOver && <button type="button" onClick={() => acquireLock(true)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #a01b2b', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Take over</button>}
+        </div>
+      )}
+      {restoreOffer && (
+        <div style={{ padding: '12px 16px', background: '#fff8e1', border: '1px solid #f0d890', borderRadius: 8, fontSize: '0.875rem', color: '#5c4400', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          An unsaved autosaved version from {new Date(restoreOffer.saved_at || restoreOffer.updated_at || Date.now()).toLocaleString()} was found.
+          <button type="button" onClick={() => { applyPayload(restoreOffer.snapshot); setRestoreOffer(null); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #0b666a', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Restore it</button>
+          <button type="button" onClick={() => setRestoreOffer(null)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Discard</button>
+        </div>
+      )}
+      {conflict !== null && (
+        <div role="alertdialog" style={{ padding: '12px 16px', background: '#fdecee', border: '1px solid #e8b4ba', borderRadius: 8, fontSize: '0.875rem', color: '#6b1020', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          Someone else saved a newer version of this post. Overwrite it with yours, or reload their version?
+          <button type="button" onClick={() => { setConflict(null); handleSaveDraft(true); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #a01b2b', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Overwrite with mine</button>
+          <button type="button" onClick={() => { savedKey.current = payloadKey; window.location.reload(); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Reload theirs</button>
+        </div>
+      )}
       {statusMessage && (
         <div style={{ padding: '12px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', fontSize: '0.875rem' }}>
           {statusMessage}
@@ -480,69 +574,19 @@ export default function PostEditor({
 
           {/* Block Content Editor */}
           <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase' }}>
-                Article Body Content
-              </label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['## H2', '### H3', 'Quote', 'List'].map((btn) => (
-                  <button
-                    key={btn}
-                    type="button"
-                    onClick={() => {
-                      if (btn === '## H2') setContentMarkdown((prev: string) => prev + '\n\n## Section Title\n\n');
-                      if (btn === '### H3') setContentMarkdown((prev: string) => prev + '\n\n### Sub-heading\n\n');
-                      if (btn === 'Quote') setContentMarkdown((prev: string) => prev + '\n\n> Key quote or citation here\n\n');
-                      if (btn === 'List') setContentMarkdown((prev: string) => prev + '\n\n- Item 1\n- Item 2\n- Item 3\n\n');
-                    }}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      border: '1px solid #cfe3e3',
-                      background: '#f2f8f8',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +{btn}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <textarea
-              rows={22}
-              value={contentMarkdown}
-              onChange={(e) => setContentMarkdown(e.target.value)}
-              placeholder="Write your article using structured headings (## H2, ### H3), paragraphs, and bullet points..."
-              style={{
-                width: '100%',
-                padding: 16,
-                fontSize: '1rem',
-                lineHeight: 1.7,
-                borderRadius: 8,
-                border: '1px solid #b9d3d4',
-                outline: 'none',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                boxSizing: 'border-box',
-              }}
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase', marginBottom: 12 }}>
+              Article Body Content
+            </label>
+            <BlockEditor
+              value={blocks}
+              onChange={setBlocks}
+              resetKey={`${postId || 'new'}-${editorKey}`}
+              canRawHtml={canRawHtml}
+              focusKeyword={focusKeyword}
+              pickMedia={pickMedia}
+              notify={setStatusMessage}
             />
-
-            {/* Editor Status Bar (FR-EDT-001) */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                background: '#f2f8f8',
-                border: '1px solid #cfe3e3',
-                borderTop: 'none',
-                borderRadius: '0 0 8px 8px',
-                fontSize: '0.8125rem',
-                color: '#3d5557',
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginTop: 12, background: '#f2f8f8', border: '1px solid #cfe3e3', borderRadius: 8, fontSize: '0.8125rem', color: '#3d5557' }}>
               <span>Words: <strong style={{ color: '#042628' }}>{wordCount}</strong></span>
               <span>Reading time: <strong style={{ color: '#042628' }}>~{readingTimeMin} min</strong></span>
               <span>Headings: <strong style={{ color: '#042628' }}>{headings.length}</strong></span>
@@ -617,6 +661,8 @@ export default function PostEditor({
               { id: 'geo', label: 'GEO' },
               { id: 'aeo', label: 'AEO' },
               { id: 'indexing', label: 'Indexing' },
+              { id: 'links', label: 'Links' },
+              { id: 'history', label: 'History' },
             ].map((t) => (
               <button
                 key={t.id}
@@ -643,6 +689,17 @@ export default function PostEditor({
           {/* TAB 1: POST SETTINGS */}
           {activeTab === 'post' && (
             <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {postId && (
+                <WorkflowActions
+                  postId={postId}
+                  status={status}
+                  canPublish={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
+                  canDelete={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
+                  onMessage={setStatusMessage}
+                  onStatus={setStatus}
+                  ensureSaved={async () => (dirty ? handleSaveDraft() : true)}
+                />
+              )}
               {/* Primary Category */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
@@ -680,18 +737,38 @@ export default function PostEditor({
                 </select>
               </div>
 
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>Tags</label>
+                <select multiple value={tagIds} onChange={(e) => setTagIds(Array.from(e.target.selectedOptions).map((o) => o.value))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', minHeight: 80, background: '#ffffff' }}>
+                  {tags.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>Reviewed by (expert reviewer)</label>
+                <select value={reviewedBy} onChange={(e) => setReviewedBy(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
+                  <option value="">Not reviewed</option>
+                  {authors.filter((a: any) => a.is_reviewer).map((a: any) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
+                </select>
+              </div>
+
               {/* Featured Image */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Featured Image URL *
                 </label>
-                <input
-                  type="text"
-                  value={featuredImageUrl}
-                  onChange={(e) => setFeaturedImageUrl(e.target.value)}
-                  placeholder="/uploads/blog/... or https://..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #0b666a', background: '#fff', color: '#0b666a', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {featuredImageUrl ? 'Replace image' : 'Choose / upload image'}
+                  </button>
+                  {featuredImageUrl && (
+                    <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Remove</button>
+                  )}
+                </div>
                 {featuredImageUrl && (
                   <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', height: 120 }}>
                     <img src={featuredImageUrl} alt="Featured preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1062,6 +1139,7 @@ export default function PostEditor({
           {/* TAB 4: SCHEMA */}
           {activeTab === 'schema' && (
             <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {postId && <SchemaPanel postId={postId} refreshKey={saveStatus} />}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
                   Article Schema Type
@@ -1185,6 +1263,9 @@ export default function PostEditor({
             </div>
           )}
 
+          {activeTab === 'links' && (postId ? <LinksPanel postId={postId} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
+          {activeTab === 'history' && (postId ? <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Save to keep it.'); setActiveTab('post'); }} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
+
           {/* TAB 7: INDEXING */}
           {activeTab === 'indexing' && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
         </div>
@@ -1284,6 +1365,12 @@ export default function PostEditor({
             </div>
           </div>
         </div>
+      )}
+      {mediaPicker && (
+        <MediaPicker
+          onPick={(m) => { mediaPicker(m); setMediaPicker(null); }}
+          onClose={() => { mediaPicker(null); setMediaPicker(null); }}
+        />
       )}
     </div>
   );
