@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { publishDueScheduledPosts, purgeExpiredTrash } from '@/lib/seo-system/scheduler-service';
 import { runDueVerifications } from '@/lib/seo-system/verify-service';
 import { checkExternalLinks } from '@/lib/seo-system/link-service';
+import { retryFailedSubmissions } from '@/lib/seo-system/indexing-service';
 import { runGscMaintenance } from '@/lib/seo-system/gsc-service';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,6 @@ export async function GET(req: NextRequest) {
   const publishing = await publishDueScheduledPosts();
   const searchConsole = await runGscMaintenance();
   const safe = async <T,>(fn: () => Promise<T>) => { try { return await fn(); } catch (e: any) { return { error: e?.message || 'failed' }; } };
-  const [verification, links, trash] = [await safe(runDueVerifications), await safe(() => checkExternalLinks(60)), await safe(purgeExpiredTrash)];
-  return NextResponse.json({ publishing, searchConsole, verification, links, trash });
+  const [verification, links, trash, indexingRetry] = [await safe(runDueVerifications), await safe(() => checkExternalLinks(60)), await safe(purgeExpiredTrash), await safe(() => retryFailedSubmissions())];
+  return NextResponse.json({ publishing, searchConsole, verification, links, trash, indexingRetry });
 }

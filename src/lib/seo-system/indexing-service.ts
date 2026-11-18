@@ -204,3 +204,30 @@ export async function setIndexNowEnabled(enabled: boolean, actorId: string) {
   );
   await logAudit({ actorId, action: 'integration.indexnow_toggle', entityType: 'integration', afterState: { enabled } });
 }
+
+/**
+ * Retries failed IndexNow submissions (FR-IDX-006): up to 3 attempts per URL within 24 hours,
+ * and only while IndexNow is enabled. A URL that was accepted later is not retried.
+ */
+export async function retryFailedSubmissions(limit = 20): Promise<{ retried: number; recovered: number }> {
+  if (!(await isIndexNowEnabled())) return { retried: 0, recovered: 0 };
+  const rows = await query<{ id: number; post_id: string | null; url: string; attempts: number }>(
+    `SELECT s.id, s.post_id, s.url, s.attempts FROM public.seo_indexing_submissions s
+     WHERE s.channel = 'indexnow' AND s.status = 'failed' AND s.attempts < 3
+       AND s.requested_at > now() - interval '24 hours'
+       AND (s.next_retry_at IS NULL OR s.next_retry_at <= now())
+       AND NOT EXISTS (SELECT 1 FROM public.seo_indexing_submissions n WHERE n.url = s.url AND n.channel = 'indexnow' AND n.status = 'accepted' AND n.requested_at > s.requested_at)
+     ORDER BY s.requested_at LIMIT $1`,
+    [limit]
+  );
+  let recovered = 0;
+  for (const r of rows) {
+    const res = await submitToIndexNow([r.url], r.post_id || undefined);
+    if (res.success) recovered++;
+    await query(
+      `UPDATE public.seo_indexing_submissions SET attempts = attempts + 1, next_retry_at = now() + interval '15 minutes' * power(2, attempts) WHERE id = $1`,
+      [r.id]
+    );
+  }
+  return { retried: rows.length, recovered };
+}

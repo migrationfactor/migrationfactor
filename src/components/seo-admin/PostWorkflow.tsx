@@ -197,3 +197,42 @@ export function SchemaPanel({ postId, refreshKey }: { postId: string; refreshKey
     </div>
   );
 }
+
+/** Citation manager (FR-GEO-005): sources with title, https URL, publisher and date; order is kept. */
+export function ReferencesPanel({ value, onChange, trusted }: { value: any[]; onChange: (v: any[]) => void; trusted: string[] }) {
+  const set = (i: number, patch: any) => onChange(value.map((r, k) => (k === i ? { ...r, ...patch } : r)));
+  const move = (i: number, d: number) => { const j = i + d; if (j < 0 || j >= value.length) return; const n = [...value]; [n[i], n[j]] = [n[j], n[i]]; onChange(n); };
+  const urls = value.map((r) => (r.url || '').trim().toLowerCase());
+  return (
+    <div>
+      <div style={{ fontWeight: 700, fontSize: '0.8125rem', marginBottom: 6 }}>Sources and citations</div>
+      {value.map((r, i) => {
+        const url = (r.url || '').trim();
+        const bad = url && !/^https:\/\/[^\s/]+\.[^\s]+$/i.test(url);
+        const dup = url && urls.indexOf(url.toLowerCase()) !== i;
+        let host = '';
+        try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* invalid */ }
+        const isTrusted = host && trusted.some((t) => host === t || host.endsWith('.' + t));
+        return (
+          <div key={i} style={{ border: '1px solid ' + line, borderRadius: 8, padding: 8, marginBottom: 8 }}>
+            <input style={{ ...input, marginBottom: 4 }} placeholder="Title of the source" value={r.title || ''} onChange={(e) => set(i, { title: e.target.value })} />
+            <input style={{ ...input, marginBottom: 4, borderColor: bad || dup ? '#a01b2b' : '#b9d3d4' }} placeholder="https://…" value={r.url || ''} onChange={(e) => set(i, { url: e.target.value })} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={input} placeholder="Publisher" value={r.publisher || ''} onChange={(e) => set(i, { publisher: e.target.value })} />
+              <input style={input} placeholder="Date (YYYY-MM-DD)" value={r.publishedDate || ''} onChange={(e) => set(i, { publishedDate: e.target.value })} />
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, fontSize: '0.75rem' }}>
+              <button type="button" style={btn} onClick={() => move(i, -1)} aria-label="Move up">↑</button>
+              <button type="button" style={btn} onClick={() => move(i, 1)} aria-label="Move down">↓</button>
+              <button type="button" style={btn} onClick={() => onChange(value.filter((_, k) => k !== i))}>Remove</button>
+              {bad && <span style={{ color: '#a01b2b' }}>Use a full https:// link.</span>}
+              {dup && <span style={{ color: '#a01b2b' }}>Duplicate source.</span>}
+              {isTrusted && <span style={{ color: '#0b666a' }}>✓ Trusted source</span>}
+            </div>
+          </div>
+        );
+      })}
+      <button type="button" style={btn} onClick={() => onChange([...value, { title: '', url: '', publisher: '', publishedDate: '' }])}>+ Add source</button>
+    </div>
+  );
+}

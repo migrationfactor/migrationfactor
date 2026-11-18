@@ -8,7 +8,9 @@ import { renderBlocksToHtml } from '@/lib/seo-system/sanitizer';
 import IndexingPanel from './IndexingPanel';
 import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
-import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel } from './PostWorkflow';
+import ClassicEditor from './ClassicEditor';
+import { htmlToBlocks } from './paste-clean';
+import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel, ReferencesPanel } from './PostWorkflow';
 
 interface PostEditorProps {
   initialPost?: any;
@@ -33,7 +35,29 @@ export default function PostEditor({
   const [title, setTitle] = useState(initialPost?.title || '');
   const [slug, setSlug] = useState(initialPost?.slug || '');
   const [status, setStatus] = useState(initialPost?.status || 'draft');
-  const [blocks, setBlocks] = useState<Block[]>(() => (Array.isArray(initialPost?.body_json?.blocks) ? initialPost.body_json.blocks : []));
+  const initialBlocks: Block[] = Array.isArray(initialPost?.body_json?.blocks) ? initialPost.body_json.blocks : [];
+  const startsClassic = initialBlocks.length === 0 || (initialBlocks.length === 1 && initialBlocks[0].type === 'raw_html');
+  const [editorMode, setEditorMode] = useState<'classic' | 'blocks'>(startsClassic ? 'classic' : 'blocks');
+  const [blocks, setBlocks] = useState<Block[]>(startsClassic ? [] : initialBlocks);
+  const [classicHtml, setClassicHtml] = useState<string>(startsClassic ? (initialBlocks[0]?.data?.html || '') : '');
+  const [slugEditing, setSlugEditing] = useState(false);
+  const setBody = (bs: Block[]) => {
+    if (bs.length === 0 || (bs.length === 1 && bs[0].type === 'raw_html')) { setEditorMode('classic'); setClassicHtml(bs[0]?.data?.html || ''); setBlocks([]); }
+    else { setEditorMode('blocks'); setBlocks(bs); }
+    setEditorKey((k) => k + 1);
+  };
+  const switchMode = () => {
+    if (editorMode === 'classic') {
+      if (classicHtml.trim() && !confirm('Switch to the block editor? Your HTML is converted into blocks; unsupported markup (such as custom styling) may be simplified.')) return;
+      setBlocks(classicHtml.trim() ? htmlToBlocks(classicHtml).blocks : []);
+      setEditorMode('blocks');
+    } else {
+      if (!confirm('Switch to the classic (Visual / Code) editor? Blocks are converted to plain HTML.')) return;
+      setClassicHtml(renderBlocksToHtml(blocks).html.replace('<!-- TOC_PLACEHOLDER -->', ''));
+      setEditorMode('classic');
+    }
+    setEditorKey((k) => k + 1);
+  };
   const [editorKey, setEditorKey] = useState(0);
   const [mediaPicker, setMediaPicker] = useState<null | ((m: PickedMedia | null) => void)>(null);
   const pickMedia = () => new Promise<PickedMedia | null>((resolve) => setMediaPicker(() => resolve));
@@ -93,7 +117,7 @@ export default function PostEditor({
   const [primaryEntityUrl, setPrimaryEntityUrl] = useState(initialPost?.geo_aeo?.primary_entity?.sameAs || '');
 
   // References list
-  const [references, setReferences] = useState<any[]>(initialPost?.references || []);
+  const [references, setReferences] = useState<any[]>((initialPost?.references || []).map((r: any) => ({ title: r.title, url: r.url, publisher: r.publisher || '', publishedDate: r.publishedDate || r.published_date || '', note: r.note })));
 
   // Editor states
   const [activeTab, setActiveTab] = useState<'post' | 'seo' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing' | 'links' | 'history'>('seo');
@@ -113,7 +137,7 @@ export default function PostEditor({
     }
   }, [title, isNew, slug]);
 
-  const currentBlocks = blocks;
+  const currentBlocks: Block[] = editorMode === 'classic' ? (classicHtml.trim() ? [{ type: 'raw_html', data: { html: classicHtml } }] : []) : blocks;
 
   const { html: renderedHtml, wordCount, readingTimeMin, headings } = useMemo(() => {
     return renderBlocksToHtml(currentBlocks);
@@ -239,7 +263,7 @@ export default function PostEditor({
     if (p.title !== undefined) setTitle(p.title || '');
     if (p.slug !== undefined && isNew) setSlug(p.slug || '');
     if (p.excerpt !== undefined) setExcerpt(p.excerpt || '');
-    if (p.bodyJson?.blocks) { setBlocks(p.bodyJson.blocks); setEditorKey((k) => k + 1); }
+    if (p.bodyJson?.blocks) setBody(p.bodyJson.blocks);
     if (p.featuredMediaId !== undefined) setFeaturedMediaId(p.featuredMediaId || '');
     if (p.primaryCategoryId !== undefined) setPrimaryCategoryId(p.primaryCategoryId || '');
     if (Array.isArray(p.authorIds)) setSelectedAuthorIds(p.authorIds);
@@ -527,69 +551,59 @@ export default function PostEditor({
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: 24, alignItems: 'start' }}>
         {/* Main Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Post Title Input */}
-          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase', marginBottom: 6 }}>
-              Post Title (Main H1)
-            </label>
+          {/* Title, permalink and editor (WordPress classic layout) */}
+          <div>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Skills in Demand Visa Australia: Complete Guide to Requirements and Process"
-              style={{
-                width: '100%',
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                color: '#042628',
-                padding: '10px 14px',
-                border: '1px solid #b9d3d4',
-                borderRadius: 8,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              placeholder="Add title"
+              aria-label="Post title"
+              style={{ width: '100%', fontSize: '1.7rem', padding: '3px 10px', lineHeight: 1.9, border: '1px solid #8c8f94', borderRadius: 4, outline: 'none', boxSizing: 'border-box', color: '#1d2327', background: '#fff' }}
             />
-
-            {/* Permalink Line */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: '0.8125rem', color: '#3d5557' }}>
-              <span style={{ fontWeight: 600 }}>Permalink:</span>
-              <span>https://migrationfactor.com/blog/</span>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                style={{
-                  border: '1px solid #b9d3d4',
-                  borderRadius: 4,
-                  padding: '2px 6px',
-                  fontFamily: 'monospace',
-                  color: '#0b666a',
-                  fontWeight: 600,
-                  fontSize: '0.8125rem',
-                }}
-              />
-              <span>/</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: '0.8125rem', color: '#50575e', flexWrap: 'wrap', minHeight: 28 }}>
+              <strong>Permalink:</strong>
+              {initialPost?.legacy_path ? (
+                <span style={{ color: '#2271b1' }}>https://migrationfactor.com{initialPost.legacy_path}</span>
+              ) : slugEditing ? (
+                <>
+                  <span>https://migrationfactor.com/blog/</span>
+                  <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', borderRadius: 3, padding: '2px 6px', fontFamily: 'monospace' }} />
+                  <span>/</span>
+                  <button type="button" onClick={() => setSlugEditing(false)} style={{ padding: '2px 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer' }}>OK</button>
+                </>
+              ) : (
+                <>
+                  <a style={{ color: '#2271b1' }}>https://migrationfactor.com/blog/<strong>{slug || 'your-post-title'}</strong>/</a>
+                  <button type="button" onClick={() => setSlugEditing(true)} style={{ padding: '1px 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}>Edit</button>
+                </>
+              )}
+              <button type="button" onClick={switchMode} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8125rem' }}>
+                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
+              </button>
             </div>
           </div>
 
-          {/* Block Content Editor */}
-          <div style={{ background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3' }}>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase', marginBottom: 12 }}>
-              Article Body Content
-            </label>
-            <BlockEditor
-              value={blocks}
-              onChange={setBlocks}
-              resetKey={`${postId || 'new'}-${editorKey}`}
-              canRawHtml={canRawHtml}
-              focusKeyword={focusKeyword}
-              pickMedia={pickMedia}
-              notify={setStatusMessage}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginTop: 12, background: '#f2f8f8', border: '1px solid #cfe3e3', borderRadius: 8, fontSize: '0.8125rem', color: '#3d5557' }}>
-              <span>Words: <strong style={{ color: '#042628' }}>{wordCount}</strong></span>
-              <span>Reading time: <strong style={{ color: '#042628' }}>~{readingTimeMin} min</strong></span>
-              <span>Headings: <strong style={{ color: '#042628' }}>{headings.length}</strong></span>
+          <div>
+            {editorMode === 'classic' ? (
+              <ClassicEditor value={classicHtml} onChange={setClassicHtml} resetKey={`${postId || 'new'}-${editorKey}`} pickMedia={pickMedia} notify={setStatusMessage} />
+            ) : (
+              <div style={{ background: '#ffffff', padding: 16, borderRadius: 4, border: '1px solid #c3c4c7' }}>
+                <BlockEditor
+                  value={blocks}
+                  onChange={setBlocks}
+                  resetKey={`${postId || 'new'}-${editorKey}`}
+                  canRawHtml={canRawHtml}
+                  focusKeyword={focusKeyword}
+                  pickMedia={pickMedia}
+                  notify={setStatusMessage}
+                />
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', marginTop: 8, background: '#f6f7f7', border: '1px solid #c3c4c7', fontSize: '0.8125rem', color: '#50575e' }}>
+              <span>Words: <strong>{wordCount}</strong></span>
+              <span>Reading time: <strong>~{readingTimeMin} min</strong></span>
+              <span>Headings: <strong>{headings.length}</strong></span>
             </div>
           </div>
         </div>
@@ -1183,6 +1197,7 @@ export default function PostEditor({
           {/* TAB 5: GEO */}
           {activeTab === 'geo' && (
             <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <ReferencesPanel value={references} onChange={setReferences} trusted={['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au']} />
               <div style={{ background: '#e9f3f3', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#07484b' }}>
                 <strong>Generative Engine Optimization (GEO):</strong> Optimizes for AI overview engines (ChatGPT Search, Perplexity, Google SGE) by asserting structured entities and factual references.
               </div>
