@@ -1,6 +1,9 @@
 import { queryOne } from './db';
 import { scoreSeo, type SeoScore } from './seo-score';
 
+/** Bump when the scoring rules change; older stored scores are then recomputed automatically. */
+export const SCORE_VERSION = 2;
+
 export interface SheetScoreSource {
   postId: string;
   focusKeyword: string;

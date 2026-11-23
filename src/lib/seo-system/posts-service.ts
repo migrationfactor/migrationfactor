@@ -7,7 +7,7 @@ import { getSeoSettings } from './settings-service';
 import { MIN_FEATURED_WIDTH } from './image-meta';
 import { reindexPostLinks } from './link-service';
 import { validateSchemaGraph, validateCustomJsonLd } from './schema-service';
-import { computeSheetScore, analysisColumns } from './sheet-score-service';
+import { computeSheetScore, analysisColumns, SCORE_VERSION } from './sheet-score-service';
 import { SITE_URL as CFG_URL } from './site-config';
 import { applyTitleTemplate } from './settings-defaults';
 import { renderSeoHead } from './head-service';
@@ -998,8 +998,9 @@ async function updatePostCore(
       `INSERT INTO public.seo_analysis (
         post_id, config_version, overall, basic, additional, readability, technical,
         geo, aeo, checks, analyzed_at
-      ) VALUES ($1, 1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+      ) VALUES ($1, ${SCORE_VERSION}, $2, $3, $4, $5, $6, $7, $8, $9, now())
       ON CONFLICT (post_id) DO UPDATE SET
+        config_version = EXCLUDED.config_version,
         overall = EXCLUDED.overall,
         basic = EXCLUDED.basic,
         additional = EXCLUDED.additional,

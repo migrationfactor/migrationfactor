@@ -76,9 +76,8 @@ export default async function AllPostsPage(props: Props) {
     offset: (page - 1) * limit,
   } as Parameters<typeof listPosts>[0];
   let data = await listPosts(listArgs);
-  // Posts that were imported or created before they were ever saved in the editor have no stored score or link graph yet.
-  const unscored = data.posts.filter((p: any) => p.seo_score === null || p.seo_score === undefined || Number(p.links_internal) + Number(p.links_external) === 0).map((p: any) => p.id);
-  if (unscored.length && (await backfillMissing(unscored))) data = await listPosts(listArgs);
+  // Scores and link counts made before the current scoring rules (or never made) are refreshed here, so the list always shows the same numbers as the editor.
+  if (await backfillMissing(data.posts.map((p: any) => p.id))) data = await listPosts(listArgs);
   const { posts, total, statusCounts, mineCount, pillarCount, months } = data;
   const categories = await listCategories();
   const lastPage = Math.max(1, Math.ceil(total / limit));

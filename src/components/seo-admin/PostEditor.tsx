@@ -7,6 +7,7 @@ import { runContentAnalysis, calculateFleschScore, calculatePixelWidth } from '@
 import { renderBlocksToHtml } from '@/lib/seo-system/sanitizer';
 import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
+import SnippetEditor from './SnippetEditor';
 import ClassicEditor from './ClassicEditor';
 import { htmlToBlocks } from './paste-clean';
 import { SITE_URL, SITE_HOST } from '@/lib/seo-system/site-config';
@@ -23,6 +24,8 @@ interface PostEditorProps {
   currentUser: any;
   /** Title template and name from Settings, used for the live search-result preview. */
   site?: { name: string; titleTemplate: string; titleSeparator: string };
+  /** Links in this post whose last check returned an error (same number the saved score uses). */
+  brokenLinks?: number;
 }
 
 export default function PostEditor({
@@ -32,6 +35,7 @@ export default function PostEditor({
   tags = [],
   currentUser,
   site,
+  brokenLinks = 0,
 }: PostEditorProps) {
   const router = useRouter();
   const postId = initialPost?.id;
@@ -197,7 +201,8 @@ export default function PostEditor({
   }, [currentBlocks]);
 
   // Live SEO, Readability, Technical, GEO and AEO calculation
-  const effectiveTitle = seoTitle || (site ? applyTitleTemplate(site.titleTemplate, { title, siteName: site.name, separator: site.titleSeparator as any }) : title);
+  const expandVars = (v: string) => (site && v.includes('%') ? applyTitleTemplate(v, { title, siteName: site.name, separator: site.titleSeparator as any }) : v);
+  const effectiveTitle = seoTitle ? expandVars(seoTitle) : (site ? applyTitleTemplate(site.titleTemplate, { title, siteName: site.name, separator: site.titleSeparator as any }) : title);
   const effectiveDesc = metaDescription || excerpt || '';
 
   const liveAnalysis = useMemo(() => {
@@ -230,9 +235,10 @@ export default function PostEditor({
   ]);
 
   // Pixel and character counters for SERP
-  const titleCharCount = seoTitle.length;
+  const titleCharCount = effectiveTitle.length;
   const titlePixelWidth = useMemo(() => calculatePixelWidth(effectiveTitle), [effectiveTitle]);
-  const descCharCount = metaDescription.length;
+  const descCharCount = effectiveDesc.length;
+  const descPixelWidth = useMemo(() => Math.round(calculatePixelWidth(effectiveDesc) * 0.7), [effectiveDesc]);
 
   // Handle Save Draft / Update
   const buildPayload = () => ({
@@ -250,7 +256,7 @@ export default function PostEditor({
       reviewedBy: reviewedBy || null,
       focusKeyword: focusKeyword || null,
       additionalKeywords: additionalKeywords.split(',').map(k => k.trim()).filter(Boolean),
-      seoTitleRaw: seoTitle || null,
+      seoTitleRaw: seoTitle ? expandVars(seoTitle) : null,
       metaDescriptionRaw: metaDescription || null,
       canonicalUrl: canonicalUrl || null,
       robotsIndex,
@@ -576,7 +582,8 @@ export default function PostEditor({
     keywordUsedBefore: kwUsedBefore,
     robotsIndex,
     canonicalUrl,
-    articleSchema: true,
+    articleSchema: !initialPost?.schema?.disable_auto,
+    brokenLinks,
   });
   const seoScore = sheetScore.total;
   const scoreTip = sheetScore.grade + ': ' + sheetScore.categories.map((c) => c.name + ' ' + c.earned + '/' + c.max).join(', ');
@@ -590,6 +597,22 @@ export default function PostEditor({
     const parts = text.split(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, String.fromCharCode(92) + '$&') + ')', 'i'));
     return parts.map((p, i) => (p.toLowerCase() === kw.toLowerCase() ? <strong key={i}>{p}</strong> : <React.Fragment key={i}>{p}</React.Fragment>));
   };
+  const trunc = (t: string, n: number) => (t.length > n ? t.slice(0, n).trimEnd() + '...' : t);
+  const slugKw = focusKeyword.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const urlShown = trunc(pubUrl, 74);
+  const urlNodes = slugKw
+    ? urlShown.split(new RegExp('(' + slugKw.replace(/[.*+?^${}()|[\]\\]/g, '') + ')', 'i')).map((part, i) => (part.toLowerCase() === slugKw ? <strong key={i}>{part}</strong> : <React.Fragment key={i}>{part}</React.Fragment>))
+    : urlShown;
+  const serpPreview = (
+    <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 380 : 700 }}>
+      <div style={{ fontSize: 16, color: '#202124', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span>{urlNodes}</span>
+        <span aria-hidden style={{ color: '#70757a', fontSize: 16 }}>⋮</span>
+      </div>
+      <div style={{ color: '#1a0dab', fontSize: 22, lineHeight: 1.3, margin: '6px 0 4px' }}>{hl(trunc(effectiveTitle, 60))}</div>
+      <div style={{ color: '#4d5156', fontSize: 15, lineHeight: 1.55 }}>{effectiveDesc ? hl(trunc(effectiveDesc, 160)) : 'Please provide a meta description by editing the snippet below. If you don’t, Google will use the most relevant part of your post’s content.'}</div>
+    </div>
+  );
   const publishLabel = status === 'published' || status === 'scheduled' ? 'Update' : 'Publish';
   const snippetUrlParts = pubUrl.slice(SITE_URL.length);
   const mv = (col: 'main' | 'side', id: string, dir: -1 | 1) => setOrder((o) => {
@@ -785,27 +808,8 @@ export default function PostEditor({
         <div>
           <div style={{ padding: '24px 26px 28px' }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#50575e', marginBottom: 14 }}>Preview</div>
-            <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 380 : 700 }}>
-              <div style={{ fontSize: 16, color: '#202124', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span>{SITE_URL}{hl(snippetUrlParts)}</span>
-                <button type="button" aria-label="Toggle desktop / mobile preview" title={serpPreviewDevice === 'desktop' ? 'Show mobile preview' : 'Show desktop preview'} onClick={() => setSerpPreviewDevice(serpPreviewDevice === 'desktop' ? 'mobile' : 'desktop')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#70757a', fontSize: 16, padding: 0 }}>⋮</button>
-              </div>
-              <div style={{ color: '#1a0dab', fontSize: 22, lineHeight: 1.3, margin: '6px 0 4px' }}>{hl(effectiveTitle)}</div>
-              <div style={{ color: '#4d5156', fontSize: 15, lineHeight: 1.55 }}>{effectiveDesc ? hl(effectiveDesc) : 'Please provide a meta description by editing the snippet below. If you don’t, Google will use the most relevant part of your post’s content.'}</div>
-            </div>
-            <button type="button" onClick={() => setSnippetEdit((v) => !v)} style={{ marginTop: 20, padding: '0 16px', lineHeight: '38px', background: '#0f9fe0', color: '#fff', border: 'none', borderRadius: 3, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Edit Snippet</button>
-            {snippetEdit && (
-              <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Title <span style={{ fontWeight: 400, fontSize: 13, color: titleCharCount > 60 ? '#d63638' : '#646970' }}>{titleCharCount} / 60 · ~{titlePixelWidth}px</span></label>
-                  <input type="text" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder={effectiveTitle} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
-                </div>
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Description <span style={{ fontWeight: 400, fontSize: 13, color: descCharCount > 160 ? '#d63638' : '#646970' }}>{descCharCount} / 160</span></label>
-                  <textarea rows={3} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
-                </div>
-              </div>
-            )}
+            {serpPreview}
+            <button type="button" onClick={() => setSnippetEdit(true)} style={{ marginTop: 20, padding: '0 16px', lineHeight: '38px', background: '#0f9fe0', color: '#fff', border: 'none', borderRadius: 3, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Edit Snippet</button>
           </div>
 
           <div style={{ borderTop: '1px solid #dcdcde', padding: '24px 26px 20px' }}>
@@ -997,6 +1001,27 @@ export default function PostEditor({
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1e1e1e' }}>
+      {snippetEdit && (
+        <SnippetEditor
+          onClose={() => setSnippetEdit(false)}
+          preview={serpPreview}
+          device={serpPreviewDevice}
+          setDevice={setSerpPreviewDevice}
+          titleValue={seoTitle || site?.titleTemplate || ''}
+          onTitleChange={(v) => setSeoTitle(site && v === site.titleTemplate ? '' : v)}
+          titleChars={titleCharCount}
+          titlePx={titlePixelWidth}
+          permalinkValue={initialPost?.legacy_path ? String(initialPost.legacy_path).replace(/^\/|\/$/g, '') : slug}
+          permalinkEditable={!initialPost?.legacy_path}
+          onPermalinkChange={(v) => setSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+          permalinkLength={pubUrl.length}
+          descValue={metaDescription}
+          onDescChange={setMetaDescription}
+          descChars={descCharCount}
+          descPx={descPixelWidth}
+          descPlaceholder={excerpt}
+        />
+      )}
       <style>{`.mf-scroll::-webkit-scrollbar{width:16px}.mf-scroll::-webkit-scrollbar-thumb{background:#8e8e8e;border-radius:10px;border:4px solid #fff}.mf-scroll::-webkit-scrollbar-track{background:#fff}`}</style>
       <h1 style={{ fontSize: 23, fontWeight: 400, margin: '0 0 16px', padding: '9px 0 4px', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 12 }}>
         {isNew ? 'Add Post' : 'Edit Post'}
