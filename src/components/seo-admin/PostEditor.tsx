@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { runContentAnalysis, calculateFleschScore, calculatePixelWidth } from '@/lib/seo-system/analysis';
 import { renderBlocksToHtml } from '@/lib/seo-system/sanitizer';
-import IndexingPanel from './IndexingPanel';
 import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
 import ClassicEditor from './ClassicEditor';
@@ -163,7 +162,7 @@ export default function PostEditor({
     return () => clearTimeout(t);
   }, [focusKeyword, postId]);
   const [openSec, setOpenSec] = useState<Record<string, boolean>>({ 'Basic SEO': true });
-  const DEFAULT_ORDER = { main: ['rankmath', 'revisions', 'excerpt', 'geo', 'indexing'], side: ['publish', 'format', 'categories', 'tags', 'author', 'links', 'featured'] };
+  const DEFAULT_ORDER = { main: ['rankmath', 'revisions'], side: ['publish', 'format', 'categories', 'tags', 'author', 'links', 'featured'] };
   const [order, setOrder] = useState<{ main: string[]; side: string[] }>(DEFAULT_ORDER);
   useEffect(() => {
     try {
@@ -575,27 +574,6 @@ export default function PostEditor({
     articleSchema: true,
   });
   const seoScore = sheetScore.total;
-  // Live pre-publish readiness: the same rules the server enforces on Publish, shown while you write.
-  const readiness = (() => {
-    const blocking: string[] = [];
-    const warn: string[] = [];
-    if (!title.trim() && !customH1.trim()) blocking.push('Post title (or custom H1) cannot be empty.');
-    if (canonicalUrl.trim() && !/^https:\/\/[^\s]+$/i.test(canonicalUrl.trim())) blocking.push('Canonical URL must be a full https:// address.');
-    if (!renderedHtml.replace(/<[^>]*>/g, '').trim() && !/<img\b/i.test(renderedHtml)) warn.push('The article has no content yet.');
-    if (!(featuredImageUrl || featuredMediaId)) warn.push('No featured image set. Social cards and search results look better with one.');
-    else {
-      if (featuredWidth && featuredWidth < 1200) warn.push('The featured image is ' + featuredWidth + ' px wide. Use an image at least 1200 px wide.');
-      if (!featuredAlt.trim()) warn.push('The featured image needs alt text.');
-    }
-    if (selectedAuthorIds.length === 0) warn.push('No author assigned.');
-    if (/<img\b(?![^>]*\balt\s*=\s*["'][^"']+["'])[^>]*>/i.test(renderedHtml)) warn.push('Some images have no alt text.');
-    if (!focusKeyword.trim()) warn.push('No focus keyword set.');
-    if (!metaDescription.trim()) warn.push('Meta description is empty (Google will generate a snippet).');
-    if (!robotsIndex) warn.push('This post is set to noindex and will not be indexed by search engines.');
-    if (!robotsFollow) warn.push('Links on this post will not be followed by search engines.');
-    if (sheetScore.total < 60) warn.push('SEO score is ' + sheetScore.total + ' (Poor). Review the checklist.');
-    return { blocking, warn };
-  })();
   const scoreTip = sheetScore.grade + ': ' + sheetScore.categories.map((c) => c.name + ' ' + c.earned + '/' + c.max).join(', ');
   const scoreColor = seoScore >= 80 ? '#2e9b4e' : seoScore >= 60 ? '#b7791f' : '#c53030';
   const scoreBg = seoScore >= 80 ? '#e8f5ea' : seoScore >= 60 ? '#fcf3d8' : '#fcebea';
@@ -673,13 +651,6 @@ export default function PostEditor({
           <IconBars /> SEO: {seoScore} / 100
         </div>
       )}
-      <div role="status" aria-live="polite" style={{ borderTop: '1px solid #dcdcde', padding: '12px 16px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {readiness.blocking.length === 0 && readiness.warn.length === 0 && <span style={{ color: '#2e9b4e', fontWeight: 600 }}>✓ Ready to publish</span>}
-        {readiness.blocking.length > 0 && <strong style={{ color: '#b32d2e' }}>✕ Fix before publishing:</strong>}
-        {readiness.blocking.map((m) => <div key={m} style={{ color: '#8a1f1f', paddingLeft: 14 }}>• {m}</div>)}
-        {readiness.warn.length > 0 && <strong style={{ color: '#996800', marginTop: readiness.blocking.length ? 6 : 0 }}>⚠ Worth a look:</strong>}
-        {readiness.warn.map((m) => <div key={m} style={{ color: '#6b5300', paddingLeft: 14 }}>• {m}</div>)}
-      </div>
       <div style={{ padding: '16px', borderTop: '1px solid #dcdcde', background: '#f6f7f7', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-end' }}>
         {postId && <MoveToTrash postId={postId} onMessage={setStatusMessage} />}
         <button
@@ -1017,108 +988,6 @@ export default function PostEditor({
         <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Update to keep it.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       </div>
     ), { flush: true }) : null,
-    excerpt: box('main', 'excerpt', 'Excerpt', (
-      <div style={{ padding: '12px 14px' }}>
-        <label htmlFor="mf-excerpt" style={{ display: 'block', fontSize: 14, margin: '0 0 6px' }}>Excerpt</label>
-        <textarea id="mf-excerpt" rows={3} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: 8, fontSize: 14 }} />
-        <p style={{ fontSize: 14, color: '#50575e', margin: '8px 0 0' }}>Excerpts are optional hand-crafted summaries of your content that can be used in your theme.</p>
-      </div>
-    ), { flush: true }),
-    geo: box('main', 'geo', 'GEO & AEO', (
-      <div style={{ padding: 8 }}>
-          {/* TAB 5: GEO */}
-          {true && (
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <ReferencesPanel value={references} onChange={setReferences} trusted={['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au']} />
-              <div style={{ background: '#f0f0f1', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#2145e6' }}>
-                <strong>Generative Engine Optimization (GEO):</strong> Optimizes for AI overview engines (ChatGPT Search, Perplexity, Google SGE) by asserting structured entities and factual references.
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
-                  Primary Question Targeted
-                </label>
-                <input
-                  type="text"
-                  value={primaryQuestion}
-                  onChange={(e) => setPrimaryQuestion(e.target.value)}
-                  placeholder="e.g. What are the requirements for Skills in Demand visa?"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
-                  Concise Answer Summary (40–60 words)
-                </label>
-                <textarea
-                  rows={3}
-                  value={answerSummary}
-                  onChange={(e) => setAnswerSummary(e.target.value)}
-                  placeholder="Direct, factual answer for AI summary snippets..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
-                  Primary Entity Name
-                </label>
-                <input
-                  type="text"
-                  value={primaryEntityName}
-                  onChange={(e) => setPrimaryEntityName(e.target.value)}
-                  placeholder="e.g. Skills in Demand visa"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
-                  Official Entity Authority URL (sameAs)
-                </label>
-                <input
-                  type="url"
-                  value={primaryEntityUrl}
-                  onChange={(e) => setPrimaryEntityUrl(e.target.value)}
-                  placeholder="https://immi.homeaffairs.gov.au/..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
-          )}
-
-
-          {/* TAB 6: AEO */}
-          {true && (
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#f0f0f1', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#2145e6' }}>
-                <strong>Answer Engine Optimization (AEO):</strong> Evaluates answer structure, question-based H2/H3 headings, and direct answer speed.
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d2327', marginBottom: 8 }}>
-                  Question Outline Inspector ({headings.filter(h => h.text.includes('?') || /^(what|how|who|can|is|why)/i.test(h.text)).length} question headings)
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {headings.map((h, i) => (
-                    <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f6f7f7', borderRadius: 4 }}>
-                      <span style={{ fontWeight: 700, color: '#3858e9' }}>H{h.level}:</span> {h.text}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-
-      </div>
-    ), { flush: true, defaultOpen: false }),
-    indexing: box('main', 'indexing', 'Indexing', (
-      <div style={{ padding: 12 }}>
-          {true && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#50575e' }}>Save the post first.</div>)}
-      </div>
-    ), { flush: true, defaultOpen: false }),
   };
 
   return (
@@ -1182,9 +1051,9 @@ export default function PostEditor({
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: '#f6f7f7', border: '1px solid #c3c4c7', borderTop: 'none', fontSize: 13, color: '#50575e' }}>
               <span>Word count: {wordCount}</span>
-              <button type="button" onClick={switchMode} style={{ border: 'none', background: 'none', color: BLUE, textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>
-                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
-              </button>
+              {editorMode === 'blocks' && (
+                <button type="button" onClick={switchMode} style={{ border: 'none', background: 'none', color: BLUE, textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Switch to classic editor</button>
+              )}
             </div>
           </div>
 

@@ -32,6 +32,7 @@ const words = (s: string) => s.split(/\s+/).filter(Boolean);
 
 export function scoreSeo(i: ScoreInput): SeoScore {
   const c = buildChecklist(i);
+  const hasContent = words(text(i.bodyHtml)).length > 0 || /<img\b/i.test(i.bodyHtml);
   const ok = (list: ListCheck[], id: string) => list.find((x) => x.id === id)?.status === 'passed';
   const half = (list: ListCheck[], id: string) => list.find((x) => x.id === id)?.status === 'needs_improvement';
   const pts = (max: number, full: boolean, partial = false) => (full ? max : partial ? Math.round(max / 2) : 0);
@@ -99,6 +100,10 @@ export function scoreSeo(i: ScoreInput): SeoScore {
     mk('Content Readability', content),
     mk('Technical & Linking SEO', technical),
   ];
+  // Nothing written yet: nothing to score (otherwise "no long paragraphs", a short URL and so on would give free marks).
+  if (!hasContent) {
+    for (const cat of categories) { cat.earned = 0; cat.items.forEach((it) => { it.earned = 0; }); }
+  }
   const total = categories.reduce((a, b) => a + b.earned, 0);
   return { total, grade: gradeFor(total), categories };
 }

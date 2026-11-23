@@ -282,10 +282,6 @@ export default function ClassicEditor({
         .wp-visual-surface td,.wp-visual-surface th{border:1px solid #c3c4c7;padding:6px 10px}
         .wp-visual-surface a{color:#3858e9}
       `}</style>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: WP.toolbar, border: `1px solid ${WP.border}`, borderTop: 'none', fontSize: 12, color: '#50575e' }}>
-        <span>Word count: {(value.replace(/<[^>]*>/g, ' ').match(/\S+/g) || []).length}</span>
-        <span>Use Shift+Alt+1–6 for headings. Heading 1 is converted to Heading 2 on save (the post title is the only H1).</span>
-      </div>
     </div>
   );
 }
