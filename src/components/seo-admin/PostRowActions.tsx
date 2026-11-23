@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-const link: React.CSSProperties = { border: 'none', background: 'none', padding: 0, color: '#2271b1', cursor: 'pointer', fontSize: 13, textDecoration: 'none' };
+const link: React.CSSProperties = { border: 'none', background: 'none', padding: 0, color: '#3858e9', cursor: 'pointer', fontSize: 13, textDecoration: 'none' };
 
 /** Row actions shown under a post title on hover: Edit | Trash | View (or Restore | Delete Permanently in Trash). */
 export default function PostRowActions({ id, title, status, viewHref }: { id: string; title: string; status: string; viewHref: string }) {

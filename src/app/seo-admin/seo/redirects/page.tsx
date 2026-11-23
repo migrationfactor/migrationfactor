@@ -84,7 +84,7 @@ export default function RedirectsAdminPage() {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#135e96', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#2145e6', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
@@ -160,7 +160,7 @@ export default function RedirectsAdminPage() {
                 marginTop: 6,
                 padding: '10px 16px',
                 borderRadius: 6,
-                backgroundColor: '#2271b1',
+                backgroundColor: '#3858e9',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: 700,
@@ -196,7 +196,7 @@ export default function RedirectsAdminPage() {
                     <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#d63638', fontWeight: 600 }}>
                       {r.source_path}
                     </td>
-                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#2271b1' }}>
+                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: '#3858e9' }}>
                       {r.target_url}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#50575e' }}>

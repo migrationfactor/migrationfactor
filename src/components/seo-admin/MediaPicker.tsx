@@ -62,7 +62,7 @@ export default function MediaPicker({ onPick, onClose }: { onPick: (m: PickedMed
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or alt text" style={{ flex: '1 1 220px', padding: '8px 12px', border: '1px solid #8c8f94', borderRadius: 6 }} />
           <input value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Alt text for new upload (required)" style={{ flex: '1 1 260px', padding: '8px 12px', border: '1px solid #8c8f94', borderRadius: 6 }} />
-          <label style={{ padding: '8px 14px', background: '#2271b1', color: '#fff', borderRadius: 6, fontWeight: 700, cursor: uploading ? 'wait' : 'pointer' }}>
+          <label style={{ padding: '8px 14px', background: '#3858e9', color: '#fff', borderRadius: 6, fontWeight: 700, cursor: uploading ? 'wait' : 'pointer' }}>
             {uploading ? 'Uploading…' : 'Upload'}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" hidden disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }} />
           </label>

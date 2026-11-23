@@ -4,6 +4,7 @@ import { listPosts } from '@/lib/seo-system/posts-service';
 import { listCategories } from '@/lib/seo-system/taxonomies-service';
 import { verifySeoSession } from '@/lib/seo-system/auth';
 import BulkToolbar from '@/components/seo-admin/BulkToolbar';
+import { backfillMissing } from '@/lib/seo-system/analysis-service';
 import PostRowActions from '@/components/seo-admin/PostRowActions';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,8 @@ interface Props {
   searchParams: Promise<Record<string, string | undefined>>;
 }
 
-const blue = '#2271b1';
-const field: React.CSSProperties = { minHeight: 30, border: '1px solid #8c8f94', borderRadius: 3, padding: '0 8px', fontSize: 14, background: '#fff', color: '#2c3338' };
+const blue = '#3858e9';
+const field: React.CSSProperties = { width: 'auto', maxWidth: 220, minHeight: 30, border: '1px solid #8c8f94', borderRadius: 3, padding: '0 8px', fontSize: 14, background: '#fff', color: '#2c3338' };
 const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHeight: 30, border: `1px solid ${blue}`, borderRadius: 3, background: '#f6f7f7', color: blue, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
 
 const SEO_FILTERS: Array<[string, string]> = [
@@ -56,7 +57,7 @@ export default async function AllPostsPage(props: Props) {
   else if (seo === 'noindex') robotsIndex = false;
   else if (seo === 'orphans') orphans = true;
 
-  const { posts, total, statusCounts, mineCount, pillarCount, months } = await listPosts({
+  const listArgs = {
     status: mine || pillar ? 'all' : status,
     categoryId: params.category_id,
     authorId: params.author_id,
@@ -73,7 +74,12 @@ export default async function AllPostsPage(props: Props) {
     sortOrder,
     limit,
     offset: (page - 1) * limit,
-  });
+  } as Parameters<typeof listPosts>[0];
+  let data = await listPosts(listArgs);
+  // Posts that were imported or created before they were ever saved in the editor have no stored score or link graph yet.
+  const unscored = data.posts.filter((p: any) => p.seo_score === null || p.seo_score === undefined || Number(p.links_internal) + Number(p.links_external) === 0).map((p: any) => p.id);
+  if (unscored.length && (await backfillMissing(unscored))) data = await listPosts(listArgs);
+  const { posts, total, statusCounts, mineCount, pillarCount, months } = data;
   const categories = await listCategories();
   const lastPage = Math.max(1, Math.ceil(total / limit));
 

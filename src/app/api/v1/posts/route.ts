@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiRequest } from '@/lib/seo-system/api-auth';
 import { listPosts, createDraft } from '@/lib/seo-system/posts-service';
+import { refreshAnalysis } from '@/lib/seo-system/analysis-service';
 import { hasPermission } from '@/lib/seo-system/rbac';
 
 export async function GET(req: NextRequest) {
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       }
     }
     const post = await createDraft(auth!.userId, body);
+    await refreshAnalysis((post as any).id).catch(() => undefined);
     return NextResponse.json({ success: true, post }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json(

@@ -13,7 +13,7 @@ const ACTIONS: Array<{ id: string; label: string; danger?: boolean }> = [
   { id: 'delete_permanent', label: 'Delete Permanently', danger: true },
 ];
 
-const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHeight: 30, border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, cursor: 'pointer' };
+const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHeight: 30, border: '1px solid #3858e9', borderRadius: 3, background: '#f6f7f7', color: '#3858e9', fontSize: 13, cursor: 'pointer' };
 
 /**
  * WordPress-style "Bulk actions" select with Apply. Checkboxes (name="sel") and the select-all checkboxes
@@ -92,7 +92,7 @@ export default function BulkToolbar({ position = 'top' }: { position?: 'top' | '
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
               <button type="button" onClick={() => setPreview(null)} style={btn}>Cancel</button>
-              <button type="button" disabled={busy || (action === 'delete_permanent' && confirmText !== 'DELETE')} onClick={confirm} style={{ ...btn, background: a?.danger ? '#b32d2e' : '#2271b1', borderColor: a?.danger ? '#b32d2e' : '#2271b1', color: '#fff', fontWeight: 600 }}>Confirm</button>
+              <button type="button" disabled={busy || (action === 'delete_permanent' && confirmText !== 'DELETE')} onClick={confirm} style={{ ...btn, background: a?.danger ? '#b32d2e' : '#3858e9', borderColor: a?.danger ? '#b32d2e' : '#3858e9', color: '#fff', fontWeight: 600 }}>Confirm</button>
             </div>
           </div>
         </div>

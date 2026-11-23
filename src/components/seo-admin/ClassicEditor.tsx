@@ -20,7 +20,7 @@ const FORMATS: Array<{ tag: string; label: string; size: string; weight: number;
   { tag: 'pre', label: 'Preformatted', size: '0.9rem', weight: 400, key: '' },
 ];
 
-const WP = { bg: '#f0f0f1', border: '#c3c4c7', blue: '#2271b1', text: '#1d2327', toolbar: '#f6f7f7' };
+const WP = { bg: '#f0f0f1', border: '#c3c4c7', blue: '#3858e9', text: '#1d2327', toolbar: '#f6f7f7' };
 
 const tbBtn = (active = false): React.CSSProperties => ({
   width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -276,11 +276,11 @@ export default function ClassicEditor({
         .wp-visual-surface h4,.wp-visual-surface h5,.wp-visual-surface h6{margin:1em 0 .5em}
         .wp-visual-surface p{margin:0 0 1.1em}
         .wp-visual-surface img{max-width:100%;height:auto}
-        .wp-visual-surface blockquote{border-left:4px solid #2271b1;margin:1em 0;padding:.2em 1em;color:#444}
+        .wp-visual-surface blockquote{border-left:4px solid #3858e9;margin:1em 0;padding:.2em 1em;color:#444}
         .wp-visual-surface pre{background:#f6f7f7;padding:12px;overflow:auto;font-family:monospace}
         .wp-visual-surface table{border-collapse:collapse}
         .wp-visual-surface td,.wp-visual-surface th{border:1px solid #c3c4c7;padding:6px 10px}
-        .wp-visual-surface a{color:#2271b1}
+        .wp-visual-surface a{color:#3858e9}
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: WP.toolbar, border: `1px solid ${WP.border}`, borderTop: 'none', fontSize: 12, color: '#50575e' }}>
         <span>Word count: {(value.replace(/<[^>]*>/g, ' ').match(/\S+/g) || []).length}</span>

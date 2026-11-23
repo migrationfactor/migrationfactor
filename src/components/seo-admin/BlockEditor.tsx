@@ -25,7 +25,7 @@ export interface PickedMedia {
   height?: number;
 }
 
-const BRAND = { dark: '#1d2327', teal: '#2271b1', line: '#c3c4c7', soft: '#f6f7f7', muted: '#50575e', red: '#d63638', amber: '#996800' };
+const BRAND = { dark: '#1d2327', teal: '#3858e9', line: '#c3c4c7', soft: '#f6f7f7', muted: '#50575e', red: '#d63638', amber: '#996800' };
 const box: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' };
 const smallBtn: React.CSSProperties = { padding: '3px 8px', borderRadius: 4, border: `1px solid ${BRAND.line}`, background: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', color: BRAND.dark };
 const GENERIC_ANCHORS = /^(click here|read more|here|this link|link|more)$/i;

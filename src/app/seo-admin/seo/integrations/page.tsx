@@ -8,7 +8,7 @@ const btn = (primary = true): React.CSSProperties => ({
   padding: '9px 16px',
   borderRadius: 8,
   border: primary ? 'none' : '1px solid #8c8f94',
-  background: primary ? '#2271b1' : '#ffffff',
+  background: primary ? '#3858e9' : '#ffffff',
   color: primary ? '#ffffff' : '#1d2327',
   fontWeight: 700,
   fontSize: '0.8125rem',

@@ -64,7 +64,7 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
       <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1d2327' }}>Indexing status</div>
       <div style={{ padding: 12, background: '#f6f7f7', borderRadius: 8, border: '1px solid #c3c4c7', fontSize: '0.85rem' }}>
         <div>
-          Google index status: <strong style={{ color: '#2271b1' }}>{published ? LABELS[data?.status] || '…' : 'Not published'}</strong>
+          Google index status: <strong style={{ color: '#3858e9' }}>{published ? LABELS[data?.status] || '…' : 'Not published'}</strong>
         </div>
         {insp && (
           <div style={{ fontSize: '0.75rem', color: '#50575e', marginTop: 6, lineHeight: 1.6 }}>
@@ -122,7 +122,7 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
           ))}
         </div>
       )}
-      <Link href="/seo-admin/seo/integrations" style={{ fontSize: '0.75rem', color: '#2271b1' }}>
+      <Link href="/seo-admin/seo/integrations" style={{ fontSize: '0.75rem', color: '#3858e9' }}>
         Manage integrations
       </Link>
     </div>

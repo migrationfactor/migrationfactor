@@ -120,7 +120,7 @@ export default function PostEditor({
   const [references, setReferences] = useState<any[]>((initialPost?.references || []).map((r: any) => ({ title: r.title, url: r.url, publisher: r.publisher || '', publishedDate: r.publishedDate || r.published_date || '', note: r.note })));
 
   // Editor states
-  const [activeTab, setActiveTab] = useState<'general' | 'advanced' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'advanced' | 'social' | 'schema'>('general');
   const [serpPreviewDevice, setSerpPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -144,6 +144,17 @@ export default function PostEditor({
   const [showPopularTags, setShowPopularTags] = useState(false);
   const [kwInput, setKwInput] = useState('');
   const [snippetEdit, setSnippetEdit] = useState(false);
+  const [visOpen, setVisOpen] = useState(false);
+  const [openSec, setOpenSec] = useState<Record<string, boolean>>({ 'Basic SEO': true });
+  const DEFAULT_ORDER = { main: ['rankmath', 'revisions', 'excerpt', 'geo', 'indexing'], side: ['publish', 'format', 'categories', 'tags', 'author', 'links', 'featured'] };
+  const [order, setOrder] = useState<{ main: string[]; side: string[] }>(DEFAULT_ORDER);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('mf-editor-box-order') || 'null');
+      if (saved && DEFAULT_ORDER.main.every((i) => saved.main?.includes(i)) && DEFAULT_ORDER.side.every((i) => saved.side?.includes(i))) setOrder(saved);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [statusOpen, setStatusOpen] = useState(false);
   const [revCount, setRevCount] = useState<number | null>(null);
   useEffect(() => {
@@ -429,35 +440,69 @@ export default function PostEditor({
     }
   };
 
+  const BLUE = '#3858e9';
   const chkIcon = (st: string) => {
-    const c = st === 'passed' ? '#00a32a' : st === 'needs_improvement' ? '#dba617' : '#d63638';
-    const g = st === 'passed' ? '✓' : st === 'needs_improvement' ? '✓' : '✕';
-    return st === 'needs_improvement'
-      ? <span aria-hidden style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${c}`, color: c, fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{g}</span>
-      : <span aria-hidden style={{ width: 20, height: 20, borderRadius: '50%', background: c, color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{g}</span>;
+    if (st === 'needs_improvement') {
+      return <span aria-hidden style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid #f6ad55', color: '#f6ad55', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', boxSizing: 'border-box' }}>✓</span>;
+    }
+    const ok = st === 'passed';
+    return <span aria-hidden style={{ width: 20, height: 20, borderRadius: '50%', background: ok ? '#7ad28a' : '#f0908d', color: '#fff', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{ok ? '✓' : '✕'}</span>;
   };
-  const checkGroup = (label: string, checks: any[]) => {
+  const helpDot = (tip: string) => (
+    <span title={tip} style={{ width: 18, height: 18, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', cursor: 'help' }}>?</span>
+  );
+  const kwLower = focusKeyword.trim().toLowerCase();
+  const titleText = effectiveTitle;
+  const POWER = ['complete', 'ultimate', 'proven', 'essential', 'guide', 'best', 'new', 'free', 'easy', 'secret', 'fast', 'guaranteed', 'official', 'updated', 'simple', 'top', 'step'];
+  const SENTIMENT = /\b(best|great|easy|ultimate|complete|essential|proven|simple|free|top|worst|avoid|mistakes?|risks?|fail(s|ed|ure)?|problems?|hard|costly|common|need)\b/i;
+  const powerCount = POWER.filter((w) => new RegExp('\\b' + w + '\\b', 'i').test(titleText)).length;
+  const titleChecks = [
+    !kwLower
+      ? { id: 'tr1', status: 'failed', message: 'Add a Focus Keyword to check the SEO title.' }
+      : titleText.toLowerCase().startsWith(kwLower)
+        ? { id: 'tr1', status: 'passed', message: 'Focus Keyword used at the beginning of SEO title.' }
+        : titleText.toLowerCase().includes(kwLower)
+          ? { id: 'tr1', status: 'needs_improvement', message: 'Use the Focus Keyword near the beginning of SEO title.' }
+          : { id: 'tr1', status: 'failed', message: 'Focus Keyword does not appear in the SEO title.' },
+    SENTIMENT.test(titleText)
+      ? { id: 'tr2', status: 'passed', message: 'Your title has a positive or a negative sentiment.' }
+      : { id: 'tr2', status: 'failed', message: "Your title doesn't have a positive or a negative sentiment." },
+    powerCount > 0
+      ? { id: 'tr3', status: 'passed', message: `Your title contains ${powerCount} power word(s). Booyah!` }
+      : { id: 'tr3', status: 'failed', message: "Your title doesn't contain a power word. Add at least one." },
+    /\d/.test(titleText)
+      ? { id: 'tr4', status: 'passed', message: 'Your SEO title contains a number.' }
+      : { id: 'tr4', status: 'failed', message: "Your SEO title doesn't contain a number." },
+  ];
+  const sections: Array<[string, any[]]> = [
+    ['Basic SEO', liveAnalysis.checks.basic],
+    ['Additional', [...liveAnalysis.checks.additional, ...liveAnalysis.checks.technical]],
+    ['Title Readability', titleChecks],
+    ['Content Readability', liveAnalysis.checks.readability],
+  ];
+  const checkGroup = ([label, checks]: [string, any[]]) => {
     const real = checks.filter((c) => c.status !== 'not_applicable');
     const errs = real.filter((c) => c.status === 'failed').length;
+    const open = openSec[label] === true;
     return (
-      <details open={label === 'Basic SEO'} style={{ borderTop: '1px solid #dcdcde' }}>
-        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15, color: '#1d2327' }}>
+      <div key={label} style={{ borderTop: '1px solid #dcdcde' }}>
+        <button type="button" onClick={() => setOpenSec((o) => ({ ...o, [label]: !open }))} aria-expanded={open} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', border: 'none', background: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: 16, fontWeight: 600, color: '#1e1e1e' }}>
           {label}
-          <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 10px', borderRadius: 12, background: errs ? '#f4a7a7' : '#7ad28a', color: errs ? '#8a1f1f' : '#fff' }}>
-            {errs ? `✕ ${errs} Error${errs > 1 ? 's' : ''}` : '✓ All Good'}
-          </span>
-          <span aria-hidden style={{ marginLeft: 'auto', color: '#787c82' }}>⌃</span>
-        </summary>
-        <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {real.map((chk) => (
-            <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#2c3338' }}>
-              {chkIcon(chk.status)}
-              <span style={{ flex: 1 }}>{chk.message}{chk.status !== 'passed' && chk.fixAdvice ? <span style={{ color: '#2271b1' }}> {chk.fixAdvice}</span> : null}</span>
-              <span title={chk.fixAdvice || chk.name} style={{ width: 16, height: 16, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', cursor: 'help' }}>?</span>
-            </div>
-          ))}
-        </div>
-      </details>
+          <span style={{ fontSize: 12, fontWeight: 500, padding: '2px 12px', borderRadius: 14, background: errs ? '#f0908d' : '#7ad28a', color: '#fff' }}>{errs ? `✕ ${errs} Errors` : '✓ All Good'}</span>
+          <span aria-hidden style={{ marginLeft: 'auto' }}><Chevron up={open} /></span>
+        </button>
+        {open && (
+          <div style={{ padding: '4px 20px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {real.map((chk) => (
+              <div key={chk.id} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#2c3338' }}>
+                {chkIcon(chk.status)}
+                <span style={{ flex: 1 }}>{chk.message}{chk.status !== 'passed' && chk.fixAdvice ? ` ${chk.fixAdvice}` : ''}</span>
+                {helpDot(chk.fixAdvice || chk.name || chk.message)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     );
   };
   const addKeyword = (raw: string) => {
@@ -516,8 +561,8 @@ export default function PostEditor({
   };
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   const seoScore = liveAnalysis.overallScore;
-  const scoreColor = seoScore >= 80 ? '#00a32a' : seoScore >= 50 ? '#dba617' : '#d63638';
-  const scoreBg = seoScore >= 80 ? '#e7f5e9' : seoScore >= 50 ? '#fcf3d8' : '#fcebea';
+  const scoreColor = seoScore >= 80 ? '#2e9b4e' : seoScore >= 50 ? '#b7791f' : '#c53030';
+  const scoreBg = seoScore >= 80 ? '#e8f5ea' : seoScore >= 50 ? '#fcf3d8' : '#fcebea';
   const catsShown = catTab === 'used' ? [...catList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 10) : catList;
   const kwList = [focusKeyword, ...additionalKeywords.split(',').map((k: string) => k.trim())].filter(Boolean);
   const hl = (text: string) => {
@@ -526,181 +571,281 @@ export default function PostEditor({
     const parts = text.split(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, String.fromCharCode(92) + '$&') + ')', 'i'));
     return parts.map((p, i) => (p.toLowerCase() === kw.toLowerCase() ? <strong key={i}>{p}</strong> : <React.Fragment key={i}>{p}</React.Fragment>));
   };
-  const rmTabs: Array<[string, string]> = [['general', 'General'], ['advanced', 'Advanced'], ['schema', 'Schema'], ['social', 'Social'], ['geo', 'GEO'], ['aeo', 'AEO'], ['indexing', 'Indexing']];
-  const publishLabel = status === 'published' ? 'Update' : status === 'scheduled' ? 'Update' : 'Publish';
+  const publishLabel = status === 'published' || status === 'scheduled' ? 'Update' : 'Publish';
+  const pubUrl = `https://migrationfactor.com${initialPost?.legacy_path || `/blog/${slug}/`}`;
+  const snippetUrlParts = pubUrl.replace(/^https:\/\/migrationfactor\.com/, '');
+  const mv = (col: 'main' | 'side', id: string, dir: -1 | 1) => setOrder((o) => {
+    const list = [...o[col]];
+    const i = list.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return o;
+    [list[i], list[j]] = [list[j], list[i]];
+    const next = { ...o, [col]: list };
+    try { localStorage.setItem('mf-editor-box-order', JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+  const box = (col: 'main' | 'side', id: string, title: string, children: React.ReactNode, opts: { flush?: boolean; defaultOpen?: boolean } = {}) => (
+    <MetaBox key={id} id={`mf-box-${id}`} title={title} flush={opts.flush} defaultOpen={opts.defaultOpen} onUp={() => mv(col, id, -1)} onDown={() => mv(col, id, 1)}>{children}</MetaBox>
+  );
+  const linkBtn: React.CSSProperties = { border: 'none', background: 'none', color: BLUE, textDecoration: 'underline', cursor: 'pointer', fontSize: 14, padding: 0 };
+  const outBtn: React.CSSProperties = { padding: '0 14px', lineHeight: '36px', minHeight: 38, border: `1px solid ${BLUE}`, borderRadius: 3, background: '#fff', color: BLUE, fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
+  const radio = (on: boolean, disabled?: boolean) => (
+    <span aria-hidden style={{ width: 22, height: 22, borderRadius: '50%', border: on ? `6px solid ${BLUE}` : '1px solid #8c8f94', background: '#fff', boxSizing: 'border-box', flex: 'none', opacity: disabled ? 0.5 : 1 }} />
+  );
 
-  return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1d2327' }}>
-      <h1 style={{ fontSize: 23, fontWeight: 400, margin: '0 0 16px', padding: '9px 0 4px', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 12 }}>
-        {isNew ? 'Add Post' : 'Edit Post'}
-        {!isNew && <Link href="/seo-admin/blog/new" style={{ fontSize: 13, fontWeight: 600, padding: '4px 12px', border: '1px solid #2271b1', borderRadius: 3, color: '#2271b1', textDecoration: 'none', background: '#f6f7f7', lineHeight: 1.6 }}>Add Post</Link>}
-      </h1>
+  const publishBox = (
+    <>
+      <div style={{ padding: '14px 16px 10px', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        {status !== 'published' ? (
+          <button type="button" onClick={() => handleSaveDraft()} disabled={saving} style={outBtn}>{saving ? 'Saving…' : 'Save Draft'}</button>
+        ) : <span />}
+        {postId ? (
+          <Link href={`/preview/${postId}`} target="_blank" style={outBtn}>{status === 'published' ? 'Preview Changes' : 'Preview'}</Link>
+        ) : (
+          <button type="button" onClick={() => handleSaveDraft()} style={outBtn}>Preview</button>
+        )}
+      </div>
+      <div style={{ padding: '4px 16px 16px', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 16, color: '#1e1e1e' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><IconPin /><span>Status: <strong style={{ textTransform: 'capitalize' }}>{status === 'pending_review' ? 'Pending Review' : status}</strong>{postId && <> <button type="button" onClick={() => setStatusOpen((v) => !v)} style={linkBtn}>Edit</button></>}</span></div>
+        {statusOpen && postId && (
+          <WorkflowActions postId={postId} status={status} canPublish={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))} canDelete={false} onMessage={setStatusMessage} onStatus={setStatus} ensureSaved={async () => (dirty ? handleSaveDraft() : true)} wp />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><IconEye /><span>Visibility: <strong>Public</strong> <button type="button" onClick={() => setVisOpen((v) => !v)} style={linkBtn}>Edit</button></span></div>
+        {visOpen && (
+          <div style={{ marginLeft: 32, fontSize: 13 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="radio" checked readOnly /> Public <span style={{ color: '#646970' }}>Visible to everyone</span></label>
+            <button type="button" onClick={() => setVisOpen(false)} style={{ ...linkBtn, marginTop: 6 }}>OK</button>
+          </div>
+        )}
+        {postId && <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><IconClock /><span>Revisions: <strong>{revCount ?? '…'}</strong> <a href="#mf-box-revisions" style={{ color: BLUE }}>Browse</a></span></div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconCal />
+          <span>
+            {status === 'published' && initialPost?.published_at ? <>Published on: <strong>{fmtDate(initialPost.published_at)}</strong></> : status === 'scheduled' && initialPost?.scheduled_at ? <>Scheduled for: <strong>{fmtDate(initialPost.scheduled_at)}</strong></> : <>Publish <strong>immediately</strong></>}
+            {postId && <> <button type="button" onClick={() => setStatusOpen((v) => !v)} style={linkBtn}>Edit</button></>}
+          </span>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <span role="switch" aria-checked={minorUpdate} style={{ position: 'relative', width: 42, height: 22, borderRadius: 11, border: '2px solid #1e1e1e', background: minorUpdate ? BLUE : '#fff', borderColor: minorUpdate ? BLUE : '#1e1e1e', flex: 'none', display: 'inline-block', boxSizing: 'border-box' }}>
+            <span style={{ position: 'absolute', top: 3, left: minorUpdate ? 22 : 3, width: 12, height: 12, borderRadius: '50%', background: minorUpdate ? '#fff' : '#1e1e1e', transition: 'left .15s' }} />
+          </span>
+          <input type="checkbox" checked={minorUpdate} onChange={(e) => setMinorUpdate(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+          Lock Modified Date
+        </label>
+      </div>
+      {!isNew && (
+        <div style={{ background: scoreBg, borderTop: '1px solid #dcdcde', padding: '14px 16px', fontSize: 14, color: scoreColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IconBars /> SEO: {seoScore} / 100
+        </div>
+      )}
+      <div style={{ padding: '16px', borderTop: '1px solid #dcdcde', background: '#f6f7f7', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-end' }}>
+        {postId && <MoveToTrash postId={postId} onMessage={setStatusMessage} />}
+        <button
+          type="button"
+          onClick={status === 'published' || status === 'scheduled' ? () => handleSaveDraft() : onPublishClick}
+          disabled={saving || publishing}
+          style={{ padding: '0 22px', lineHeight: '38px', minHeight: 40, border: `1px solid ${BLUE}`, borderRadius: 3, background: BLUE, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {publishLabel}
+        </button>
+      </div>
+    </>
+  );
 
-      {[
-        lockedBy && { kind: 'error', node: <>{lockedBy.name} is editing this post right now, so saving is turned off for you. {lockedBy.canTakeOver && <button type="button" onClick={() => acquireLock(true)} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #2271b1', background: '#f6f7f7', color: '#2271b1', borderRadius: 3, cursor: 'pointer' }}>Take over</button>}</> },
-        restoreOffer && { kind: 'warning', node: <>An unsaved autosaved version from {new Date(restoreOffer.saved_at || restoreOffer.updated_at || Date.now()).toLocaleString()} was found. <button type="button" onClick={() => { applyPayload(restoreOffer.snapshot); setRestoreOffer(null); }} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #2271b1', background: '#f6f7f7', color: '#2271b1', borderRadius: 3, cursor: 'pointer' }}>Restore</button> <button type="button" onClick={() => setRestoreOffer(null)} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#f6f7f7', borderRadius: 3, cursor: 'pointer' }}>Dismiss</button></> },
-        conflict !== null && { kind: 'error', node: <>Someone else updated this post after you opened it. <button type="button" onClick={() => { setConflict(null); handleSaveDraft(true); }} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #d63638', background: '#f6f7f7', color: '#d63638', borderRadius: 3, cursor: 'pointer' }}>Overwrite</button> <button type="button" onClick={() => { savedKey.current = payloadKey; window.location.reload(); }} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#f6f7f7', borderRadius: 3, cursor: 'pointer' }}>Reload</button></> },
-        statusMessage && { kind: /^Error|disabled|Could not/i.test(statusMessage) ? 'error' : 'success', node: statusMessage },
-      ].filter(Boolean).map((n: any, i) => (
-        <div key={i} role="status" style={{ background: '#fff', border: '1px solid #c3c4c7', borderLeft: `4px solid ${n.kind === 'error' ? '#d63638' : n.kind === 'warning' ? '#dba617' : '#00a32a'}`, boxShadow: '0 1px 1px rgba(0,0,0,.04)', margin: '0 0 12px', padding: '10px 12px', fontSize: 13 }}>{n.node}</div>
-      ))}
+  const FORMATS: Array<[string, string]> = [['Standard', '📌'], ['Gallery', '🖼'], ['Image', '🖼'], ['Link', '🔗'], ['Quote', '❝'], ['Video', '🎞'], ['Audio', '🎵'], ['Status', '💬'], ['Aside', '📄']];
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 20, alignItems: 'start' }}>
-        {/* ---------------- Main column ---------------- */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          <div>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Add title"
-              aria-label="Add title"
-              style={{ width: '100%', fontSize: '1.7em', padding: '3px 8px', lineHeight: 1.9, border: '1px solid #8c8f94', borderRadius: 0, outline: 'none', boxSizing: 'border-box', color: '#1d2327', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,.07)' }}
-            />
-            {(title || slug || initialPost?.legacy_path) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 13, color: '#50575e', flexWrap: 'wrap', minHeight: 28 }}>
-                <strong>Permalink:</strong>
-                {initialPost?.legacy_path ? (
-                  <a style={{ color: '#2271b1', textDecoration: 'underline' }}>https://migrationfactor.com{initialPost.legacy_path}</a>
-                ) : slugEditing ? (
-                  <>
-                    <span>https://migrationfactor.com/blog/</span>
-                    <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', padding: '1px 6px', fontSize: 13 }} />
-                    <span>/</span>
-                    <button type="button" onClick={() => setSlugEditing(false)} style={{ padding: '0 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', lineHeight: '24px' }}>OK</button>
-                  </>
-                ) : (
-                  <>
-                    <a style={{ color: '#2271b1', textDecoration: 'underline' }}>https://migrationfactor.com/blog/<strong>{slug}</strong>/</a>
-                    <button type="button" onClick={() => setSlugEditing(true)} style={{ padding: '0 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', fontSize: 12, lineHeight: '24px' }}>Edit</button>
-                  </>
-                )}
+  const sideBoxes: Record<string, React.ReactNode> = {
+    publish: box('side', 'publish', 'Publish', publishBox, { flush: true }),
+    format: box('side', 'format', 'Format', (
+      <div style={{ padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {FORMATS.map(([name, icon], i) => (
+          <label key={name} title={i === 0 ? undefined : 'This site publishes standard posts only.'} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#1e1e1e', opacity: i === 0 ? 1 : 0.9, cursor: i === 0 ? 'default' : 'not-allowed' }}>
+            {radio(i === 0, i !== 0)}
+            <span aria-hidden style={{ width: 24, textAlign: 'center', filter: 'grayscale(1)', opacity: 0.45, fontSize: 18 }}>{icon}</span>
+            {name}
+          </label>
+        ))}
+      </div>
+    ), { flush: true }),
+    categories: box('side', 'categories', 'Categories', (
+      <div style={{ padding: '10px 12px 14px' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: -1, position: 'relative' }}>
+          {([['all', 'All Categories'], ['used', 'Most Used']] as const).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setCatTab(id)} style={{ padding: '6px 10px', border: catTab === id ? '1px solid #dcdcde' : '1px solid transparent', borderBottom: catTab === id ? '1px solid #fff' : '1px solid transparent', background: '#fff', color: catTab === id ? '#1e1e1e' : BLUE, fontSize: 14, cursor: 'pointer' }}>{label}</button>
+          ))}
+        </div>
+        <div className="mf-scroll" style={{ maxHeight: 230, overflowY: 'scroll', border: '1px solid #dcdcde', padding: '12px 12px 4px 14px' }}>
+          {catsShown.map((c: any) => (
+            <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, padding: '5px 0', color: '#1e1e1e' }}>
+              <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => toggleCategory(c.id)} style={{ width: 20, height: 20, margin: 0 }} />
+              <span style={{ flex: 1 }}>{c.name}</span>
+              {categoryIds.includes(c.id) && (
+                <button type="button" aria-label={`Make ${c.name} the primary category`} title="Primary category" onClick={(e) => { e.preventDefault(); setPrimaryCategoryId(c.id); }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>{radio(primaryCategoryId === c.id)}</button>
+              )}
+            </label>
+          ))}
+        </div>
+        {addingCat ? (
+          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+            <input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }} placeholder="New Category Name" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '4px 8px', fontSize: 14 }} />
+            <button type="button" onClick={addCategory} style={{ ...outBtn, lineHeight: '28px', minHeight: 30 }}>Add</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAddingCat(true)} style={{ ...linkBtn, marginTop: 14, fontWeight: 600 }}>+ Add Category</button>
+        )}
+      </div>
+    ), { flush: true }),
+    tags: box('side', 'tags', 'Tags', (
+      <div style={{ padding: '14px 12px 16px' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTags(); } }} aria-label="Add New Tag" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '0 8px', minHeight: 40, fontSize: 14 }} />
+          <button type="button" onClick={addTags} style={{ ...outBtn, minHeight: 40, padding: '0 20px' }}>Add</button>
+        </div>
+        <p style={{ fontSize: 14, color: '#50575e', margin: '12px 0' }}>Separate tags with commas</p>
+        {tagIds.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '8px 0' }}>
+            {tagIds.map((id) => {
+              const t = tagList.find((x: any) => x.id === id);
+              return t ? (
+                <div key={id} style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button type="button" aria-label={`Remove term: ${t.name}`} onClick={() => setTagIds(tagIds.filter((x) => x !== id))} style={{ width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'none', color: '#b32d2e', cursor: 'pointer', padding: 0 }}>⊗</button>{t.name}
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+        <button type="button" onClick={() => setShowPopularTags((v) => !v)} style={{ ...linkBtn, marginTop: 14 }}>Choose from the most used tags</button>
+        {showPopularTags && (
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {[...tagList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 20).map((t: any) => (
+              <button key={t.id} type="button" onClick={() => !tagIds.includes(t.id) && setTagIds([...tagIds, t.id])} style={{ border: 'none', background: 'none', color: BLUE, cursor: 'pointer', fontSize: 14, padding: 0 }}>{t.name}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    ), { flush: true }),
+    author: box('side', 'author', 'Author', (
+      <div style={{ padding: '12px' }}>
+        <select multiple value={selectedAuthorIds} onChange={(e) => setSelectedAuthorIds(Array.from(e.target.selectedOptions).map((o) => o.value))} aria-label="Author" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', fontSize: 14, minHeight: 70 }}>
+          {authors.map((a) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
+        </select>
+      </div>
+    ), { flush: true }),
+    links: box('side', 'links', 'Link Suggestions', (
+      <div style={{ padding: '12px 14px' }}>
+        {postId ? <LinksPanel postId={postId} /> : <p style={{ fontSize: 14, fontStyle: 'italic', color: '#50575e', margin: 0 }}>We can’t show any link suggestions for this post. Try selecting categories and tags for this post, and mark other posts as Pillar Content to make them show up here.</p>}
+      </div>
+    ), { flush: true }),
+    featured: box('side', 'featured', 'Featured image', (
+      <div style={{ padding: '12px' }}>
+        {featuredImageUrl ? (
+          <>
+            <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'block', width: '100%' }} aria-label="Click the image to edit or update">
+              <img src={featuredImageUrl} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+            </button>
+            <p style={{ fontSize: 15, color: '#50575e', margin: '16px 0' }}>Click the image to edit or update</p>
+            <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ ...linkBtn, color: '#b32d2e', fontSize: 15 }}>Remove featured image</button>
+          </>
+        ) : (
+          <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }} style={{ ...linkBtn, fontSize: 15 }}>Set featured image</button>
+        )}
+      </div>
+    ), { flush: true }),
+  };
+
+  const rankMathBox = (
+    <>
+      <div style={{ display: 'flex', borderBottom: '1px solid #dcdcde', background: '#f6f7f7', overflowX: 'auto' }}>
+        {([['general', 'General', <IconGear key="g" />], ['advanced', 'Advanced', <IconBriefcase key="a" />], ['schema', 'Schema', <IconSchema key="s" />], ['social', 'Social', <IconShare key="so" />]] as Array<[string, string, React.ReactNode]>).map(([id, label, icon]) => (
+          <button key={id} type="button" onClick={() => setActiveTab(id as any)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '18px 20px', border: 'none', borderBottom: activeTab === id ? '3px solid #0f9fe0' : '3px solid transparent', background: 'transparent', fontSize: 15, color: activeTab === id ? '#1e1e1e' : '#50575e', cursor: 'pointer', whiteSpace: 'nowrap', marginBottom: -1 }}>
+            {icon}{label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'general' && (
+        <div>
+          <div style={{ padding: '24px 26px 28px' }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#50575e', marginBottom: 14 }}>Preview</div>
+            <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 380 : 700 }}>
+              <div style={{ fontSize: 16, color: '#202124', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span>https://migrationfactor.com{hl(snippetUrlParts)}</span>
+                <button type="button" aria-label="Toggle desktop / mobile preview" title={serpPreviewDevice === 'desktop' ? 'Show mobile preview' : 'Show desktop preview'} onClick={() => setSerpPreviewDevice(serpPreviewDevice === 'desktop' ? 'mobile' : 'desktop')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#70757a', fontSize: 16, padding: 0 }}>⋮</button>
+              </div>
+              <div style={{ color: '#1a0dab', fontSize: 22, lineHeight: 1.3, margin: '6px 0 4px' }}>{hl(effectiveTitle)}</div>
+              <div style={{ color: '#4d5156', fontSize: 15, lineHeight: 1.55 }}>{effectiveDesc ? hl(effectiveDesc) : 'Please provide a meta description by editing the snippet below. If you don’t, Google will use the most relevant part of your post’s content.'}</div>
+            </div>
+            <button type="button" onClick={() => setSnippetEdit((v) => !v)} style={{ marginTop: 20, padding: '0 16px', lineHeight: '38px', background: '#0f9fe0', color: '#fff', border: 'none', borderRadius: 3, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Edit Snippet</button>
+            {snippetEdit && (
+              <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Title <span style={{ fontWeight: 400, fontSize: 13, color: titleCharCount > 60 ? '#d63638' : '#646970' }}>{titleCharCount} / 60 · ~{titlePixelWidth}px</span></label>
+                  <input type="text" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder={effectiveTitle} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
+                </div>
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Description <span style={{ fontWeight: 400, fontSize: 13, color: descCharCount > 160 ? '#d63638' : '#646970' }}>{descCharCount} / 160</span></label>
+                  <textarea rows={3} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
+                </div>
               </div>
             )}
           </div>
 
-          <div>
-            {editorMode === 'classic' ? (
-              <ClassicEditor value={classicHtml} onChange={setClassicHtml} resetKey={`${postId || 'new'}-${editorKey}`} pickMedia={pickMedia} notify={setStatusMessage} />
-            ) : (
-              <div style={{ background: '#ffffff', padding: 16, border: '1px solid #c3c4c7' }}>
-                <BlockEditor value={blocks} onChange={setBlocks} resetKey={`${postId || 'new'}-${editorKey}`} canRawHtml={canRawHtml} focusKeyword={focusKeyword} pickMedia={pickMedia} notify={setStatusMessage} />
+          <div style={{ borderTop: '1px solid #dcdcde', padding: '24px 26px 20px' }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: '#1e1e1e', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>Focus Keyword {helpDot('Add the keywords you want this post to rank for. The first one is the primary focus keyword.')}</div>
+            <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #8c8f94', background: '#fff', minHeight: 52 }}>
+              <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', padding: '8px 10px' }}>
+                {kwList.map((k, i) => (
+                  <span key={k} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 18, background: i === 0 ? '#7ad28a' : '#fde8cd', color: i === 0 ? '#fff' : '#f59e0b', fontSize: 16 }}>
+                    <button type="button" aria-label={`Remove ${k}`} onClick={() => removeKeyword(k)} style={{ position: 'absolute', left: -6, top: -9, width: 18, height: 18, borderRadius: '50%', border: '1px solid #dcdcde', background: '#fff', color: '#50575e', fontSize: 10, lineHeight: '16px', padding: 0, cursor: 'pointer' }}>✕</button>
+                    {i === 0 && <span aria-hidden>★</span>}{k}
+                  </span>
+                ))}
+                <input
+                  value={kwInput}
+                  onChange={(e) => { const v = e.target.value; if (v.endsWith(',')) { addKeyword(v); setKwInput(''); } else setKwInput(v); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(kwInput); setKwInput(''); } }}
+                  onBlur={() => { addKeyword(kwInput); setKwInput(''); }}
+                  placeholder="Example: Rank Math SEO"
+                  aria-label="Focus keyword"
+                  style={{ flex: 1, minWidth: 160, border: 'none', outline: 'none', fontSize: 15, color: '#50575e' }}
+                />
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: '#f6f7f7', border: '1px solid #c3c4c7', borderTop: 'none', fontSize: 13, color: '#50575e' }}>
-              <span>Word count: {wordCount}</span>
-              <button type="button" onClick={switchMode} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>
-                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
-              </button>
+              {!isNew && <div style={{ display: 'flex', alignItems: 'center', padding: '0 22px', background: scoreBg, color: scoreColor, fontWeight: 600, fontSize: 16 }}>{seoScore} / 100</div>}
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 22, fontSize: 15, fontWeight: 600, color: '#1e1e1e' }}>
+              <input type="checkbox" checked={isCornerstone} onChange={(e) => setIsCornerstone(e.target.checked)} style={{ width: 20, height: 20, margin: 0 }} /> This post is Pillar Content {helpDot('Pillar content is your most important, in-depth article on a topic. Other posts get link suggestions that point to it.')}
+            </label>
           </div>
 
-          <MetaBox title="Excerpt">
-            <label htmlFor="mf-excerpt" style={{ display: 'block', fontSize: 13, margin: '0 0 6px' }}>Excerpt</label>
-            <textarea id="mf-excerpt" rows={3} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: 6, fontSize: 14 }} />
-            <p style={{ fontSize: 13, color: '#646970', margin: '6px 0 0' }}>Excerpts are optional hand-crafted summaries of your content that can be used in your theme.</p>
-          </MetaBox>
+          <div>{sections.map(checkGroup)}</div>
+        </div>
+      )}
 
-          {/* ---------------- Rank Math SEO metabox ---------------- */}
-          <MetaBox title="Rank Math SEO" flush>
-            <div style={{ display: 'flex', borderBottom: '1px solid #dcdcde', background: '#f6f7f7', overflowX: 'auto' }}>
-              {rmTabs.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveTab(id as any)}
-                  style={{ padding: '14px 18px', border: 'none', borderBottom: activeTab === id ? '3px solid #0a95db' : '3px solid transparent', background: 'transparent', fontSize: 14, color: activeTab === id ? '#1d2327' : '#50575e', fontWeight: activeTab === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+      {activeTab === 'advanced' && (
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20, fontSize: 15 }}>
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Robots Meta</div>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}><input type="checkbox" checked={robotsIndex} onChange={(e) => setRobotsIndex(e.target.checked)} /> Index</label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}><input type="checkbox" checked={robotsFollow} onChange={(e) => setRobotsFollow(e.target.checked)} /> Follow</label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={sitemapInclude} onChange={(e) => setSitemapInclude(e.target.checked)} /> Include in XML sitemap</label>
+          </div>
+          <div>
+            <label htmlFor="mf-canonical" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Canonical URL</label>
+            <input id="mf-canonical" type="url" value={canonicalUrl} onChange={(e) => setCanonicalUrl(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
+            <p style={{ fontSize: 14, color: '#646970', margin: '6px 0 0' }}>The canonical URL informs search engines which version of this page is the preferred one. Leave it empty to use the post URL.</p>
+          </div>
+          <div>
+            <label htmlFor="mf-breadcrumb" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Breadcrumb Title</label>
+            <input id="mf-breadcrumb" type="text" value={breadcrumbTitle} onChange={(e) => setBreadcrumbTitle(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
+          </div>
+          <div>
+            <label htmlFor="mf-h1" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Custom H1</label>
+            <input id="mf-h1" type="text" value={customH1} onChange={(e) => setCustomH1(e.target.value)} placeholder="Leave empty to use the post title" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '8px 10px', fontSize: 15 }} />
+          </div>
+        </div>
+      )}
 
-            {activeTab === 'general' && (
-              <div>
-                <div style={{ padding: '16px 16px 18px' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#50575e', marginBottom: 8 }}>Preview</div>
-                  <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 360 : 640 }}>
-                    <div style={{ fontSize: 14, color: '#202124', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>https://migrationfactor.com{initialPost?.legacy_path || `/blog/${slug}/`}</span>
-                      <button type="button" aria-label="Toggle desktop / mobile preview" title={serpPreviewDevice === 'desktop' ? 'Show mobile preview' : 'Show desktop preview'} onClick={() => setSerpPreviewDevice(serpPreviewDevice === 'desktop' ? 'mobile' : 'desktop')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#70757a', fontSize: 14 }}>⋮</button>
-                    </div>
-                    <div style={{ color: '#1a0dab', fontSize: 20, lineHeight: 1.3, margin: '3px 0' }}>{hl(effectiveTitle)}</div>
-                    <div style={{ color: '#4d5156', fontSize: 14, lineHeight: 1.58 }}>{effectiveDesc ? hl(effectiveDesc) : 'Please provide a meta description by editing the snippet below. If you don’t, Google will use the most relevant part of your post’s content.'}</div>
-                  </div>
-                  <button type="button" onClick={() => setSnippetEdit((v) => !v)} style={{ marginTop: 14, padding: '6px 14px', background: '#0a95db', color: '#fff', border: 'none', borderRadius: 3, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Edit Snippet</button>
-                  {snippetEdit && (
-                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div>
-                        <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Title <span style={{ fontWeight: 400, fontSize: 12, color: titleCharCount > 60 ? '#d63638' : '#646970' }}>{titleCharCount} / 60 · ~{titlePixelWidth}px</span></label>
-                        <input type="text" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder={effectiveTitle} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
-                      </div>
-                      <div>
-                        <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Description <span style={{ fontWeight: 400, fontSize: 12, color: descCharCount > 160 ? '#d63638' : '#646970' }}>{descCharCount} / 160</span></label>
-                        <textarea rows={3} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ borderTop: '1px solid #dcdcde', padding: '16px' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#50575e', marginBottom: 8 }}>Focus Keyword <span title="Add the keywords you want this post to rank for. The first one is the primary focus keyword." style={{ display: 'inline-flex', width: 16, height: 16, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, alignItems: 'center', justifyContent: 'center', cursor: 'help', marginLeft: 4 }}>?</span></div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '8px 10px', border: '1px solid #8c8f94', background: '#fff', minHeight: 40 }}>
-                    {kwList.map((k, i) => (
-                      <span key={k} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 16, background: i === 0 ? '#7ad28a' : '#fde6c8', color: i === 0 ? '#fff' : '#d97706', fontSize: 14 }}>
-                        <button type="button" aria-label={`Remove ${k}`} onClick={() => removeKeyword(k)} style={{ position: 'absolute', left: -6, top: -8, width: 16, height: 16, borderRadius: '50%', border: '1px solid #c3c4c7', background: '#fff', color: '#50575e', fontSize: 9, lineHeight: '14px', padding: 0, cursor: 'pointer' }}>✕</button>
-                        {i === 0 && <span aria-hidden>★</span>}{k}
-                      </span>
-                    ))}
-                    <input
-                      value={kwInput}
-                      onChange={(e) => { const v = e.target.value; if (v.endsWith(',')) { addKeyword(v); setKwInput(''); } else setKwInput(v); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(kwInput); setKwInput(''); } }}
-                      onBlur={() => { addKeyword(kwInput); setKwInput(''); }}
-                      placeholder="Example: Rank Math SEO"
-                      aria-label="Focus keyword"
-                      style={{ flex: 1, minWidth: 140, border: 'none', outline: 'none', fontSize: 14 }}
-                    />
-                  </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16, fontSize: 14, fontWeight: 600 }}>
-                    <input type="checkbox" checked={isCornerstone} onChange={(e) => setIsCornerstone(e.target.checked)} /> This post is Pillar Content
-                  </label>
-                </div>
-
-                <div style={{ background: '#fff' }}>
-                  {checkGroup('Basic SEO', liveAnalysis.checks.basic)}
-                  {checkGroup('Additional', liveAnalysis.checks.additional)}
-                  {checkGroup('Content Readability', liveAnalysis.checks.readability)}
-                  {checkGroup('Technical SEO', liveAnalysis.checks.technical)}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'advanced' && (
-              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14 }}>
-                <div>
-                  <div style={{ fontWeight: 600, marginBottom: 6 }}>Robots Meta</div>
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}><input type="checkbox" checked={robotsIndex} onChange={(e) => setRobotsIndex(e.target.checked)} /> Index</label>
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}><input type="checkbox" checked={robotsFollow} onChange={(e) => setRobotsFollow(e.target.checked)} /> Follow</label>
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={sitemapInclude} onChange={(e) => setSitemapInclude(e.target.checked)} /> Include in XML sitemap</label>
-                </div>
-                <div>
-                  <label htmlFor="mf-canonical" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Canonical URL</label>
-                  <input id="mf-canonical" type="url" value={canonicalUrl} onChange={(e) => setCanonicalUrl(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
-                  <p style={{ fontSize: 13, color: '#646970', margin: '4px 0 0' }}>The canonical URL informs search engines which version of this page is the preferred one. Leave it empty to use the post URL.</p>
-                </div>
-                <div>
-                  <label htmlFor="mf-breadcrumb" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Breadcrumb Title</label>
-                  <input id="mf-breadcrumb" type="text" value={breadcrumbTitle} onChange={(e) => setBreadcrumbTitle(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
-                </div>
-                <div>
-                  <label htmlFor="mf-h1" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Custom H1</label>
-                  <input id="mf-h1" type="text" value={customH1} onChange={(e) => setCustomH1(e.target.value)} placeholder="Leave empty to use the post title" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
-                </div>
-              </div>
-            )}
-
-            <div style={{ padding: activeTab === 'general' || activeTab === 'advanced' ? 0 : 16 }}>
+      <div style={{ padding: activeTab === 'schema' || activeTab === 'social' ? 16 : 0 }}>
           {/* TAB 3: SOCIAL */}
           {activeTab === 'social' && (
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -712,7 +857,7 @@ export default function PostEditor({
               {!useSeoValues && (
                 <>
                   <div style={{ borderTop: '1px solid #c3c4c7', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#2271b1', margin: '0 0 8px' }}>
+                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3858e9', margin: '0 0 8px' }}>
                       Facebook / Open Graph Custom Overrides
                     </h4>
                     <input
@@ -732,7 +877,7 @@ export default function PostEditor({
                   </div>
 
                   <div style={{ borderTop: '1px solid #c3c4c7', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#2271b1', margin: '0 0 8px' }}>
+                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3858e9', margin: '0 0 8px' }}>
                       X / Twitter Custom Overrides
                     </h4>
                     <input
@@ -772,6 +917,7 @@ export default function PostEditor({
               </div>
             </div>
           )}
+
 
           {/* TAB 4: SCHEMA */}
           {activeTab === 'schema' && (
@@ -817,11 +963,32 @@ export default function PostEditor({
             </div>
           )}
 
+
+      </div>
+    </>
+  );
+
+  const mainBoxes: Record<string, React.ReactNode> = {
+    rankmath: box('main', 'rankmath', 'Rank Math SEO', rankMathBox, { flush: true }),
+    revisions: postId ? box('main', 'revisions', 'Revisions', (
+      <div style={{ padding: '10px 14px 14px' }}>
+        <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Update to keep it.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+      </div>
+    ), { flush: true }) : null,
+    excerpt: box('main', 'excerpt', 'Excerpt', (
+      <div style={{ padding: '12px 14px' }}>
+        <label htmlFor="mf-excerpt" style={{ display: 'block', fontSize: 14, margin: '0 0 6px' }}>Excerpt</label>
+        <textarea id="mf-excerpt" rows={3} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: 8, fontSize: 14 }} />
+        <p style={{ fontSize: 14, color: '#50575e', margin: '8px 0 0' }}>Excerpts are optional hand-crafted summaries of your content that can be used in your theme.</p>
+      </div>
+    ), { flush: true }),
+    geo: box('main', 'geo', 'GEO & AEO', (
+      <div style={{ padding: 8 }}>
           {/* TAB 5: GEO */}
-          {activeTab === 'geo' && (
+          {true && (
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <ReferencesPanel value={references} onChange={setReferences} trusted={['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au']} />
-              <div style={{ background: '#f0f0f1', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#135e96' }}>
+              <div style={{ background: '#f0f0f1', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#2145e6' }}>
                 <strong>Generative Engine Optimization (GEO):</strong> Optimizes for AI overview engines (ChatGPT Search, Perplexity, Google SGE) by asserting structured entities and factual references.
               </div>
 
@@ -879,10 +1046,11 @@ export default function PostEditor({
             </div>
           )}
 
+
           {/* TAB 6: AEO */}
-          {activeTab === 'aeo' && (
+          {true && (
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#f0f0f1', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#135e96' }}>
+              <div style={{ background: '#f0f0f1', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#2145e6' }}>
                 <strong>Answer Engine Optimization (AEO):</strong> Evaluates answer structure, question-based H2/H3 headings, and direct answer speed.
               </div>
 
@@ -893,7 +1061,7 @@ export default function PostEditor({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {headings.map((h, i) => (
                     <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f6f7f7', borderRadius: 4 }}>
-                      <span style={{ fontWeight: 700, color: '#2271b1' }}>H{h.level}:</span> {h.text}
+                      <span style={{ fontWeight: 700, color: '#3858e9' }}>H{h.level}:</span> {h.text}
                     </div>
                   ))}
                 </div>
@@ -901,164 +1069,89 @@ export default function PostEditor({
             </div>
           )}
 
-          {activeTab === 'indexing' && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#50575e' }}>Save the post first.</div>)}
 
+      </div>
+    ), { flush: true, defaultOpen: false }),
+    indexing: box('main', 'indexing', 'Indexing', (
+      <div style={{ padding: 12 }}>
+          {true && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#50575e' }}>Save the post first.</div>)}
+      </div>
+    ), { flush: true, defaultOpen: false }),
+  };
+
+  return (
+    <div style={{ maxWidth: 1400, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1e1e1e' }}>
+      <style>{`.mf-scroll::-webkit-scrollbar{width:16px}.mf-scroll::-webkit-scrollbar-thumb{background:#8e8e8e;border-radius:10px;border:4px solid #fff}.mf-scroll::-webkit-scrollbar-track{background:#fff}`}</style>
+      <h1 style={{ fontSize: 23, fontWeight: 400, margin: '0 0 16px', padding: '9px 0 4px', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 12 }}>
+        {isNew ? 'Add Post' : 'Edit Post'}
+        {!isNew && <Link href="/seo-admin/blog/new" style={{ fontSize: 14, fontWeight: 600, padding: '6px 14px', border: `1px solid ${BLUE}`, borderRadius: 3, color: BLUE, textDecoration: 'none', background: '#fff', lineHeight: 1.2 }}>Add Post</Link>}
+      </h1>
+
+      {[
+        lockedBy && { kind: 'error', node: <>{lockedBy.name} is editing this post right now, so saving is turned off for you. {lockedBy.canTakeOver && <button type="button" onClick={() => acquireLock(true)} style={{ marginLeft: 8, padding: '2px 10px', border: `1px solid ${BLUE}`, background: '#fff', color: BLUE, borderRadius: 3, cursor: 'pointer' }}>Take over</button>}</> },
+        restoreOffer && { kind: 'warning', node: <>An unsaved autosaved version from {new Date(restoreOffer.saved_at || restoreOffer.updated_at || Date.now()).toLocaleString()} was found. <button type="button" onClick={() => { applyPayload(restoreOffer.snapshot); setRestoreOffer(null); }} style={{ marginLeft: 8, padding: '2px 10px', border: `1px solid ${BLUE}`, background: '#fff', color: BLUE, borderRadius: 3, cursor: 'pointer' }}>Restore</button> <button type="button" onClick={() => setRestoreOffer(null)} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#fff', borderRadius: 3, cursor: 'pointer' }}>Dismiss</button></> },
+        conflict !== null && { kind: 'error', node: <>Someone else updated this post after you opened it. <button type="button" onClick={() => { setConflict(null); handleSaveDraft(true); }} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #d63638', background: '#fff', color: '#d63638', borderRadius: 3, cursor: 'pointer' }}>Overwrite</button> <button type="button" onClick={() => { savedKey.current = payloadKey; window.location.reload(); }} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#fff', borderRadius: 3, cursor: 'pointer' }}>Reload</button></> },
+        statusMessage && { kind: /^Error|disabled|Could not/i.test(statusMessage) ? 'error' : 'success', node: statusMessage },
+      ].filter(Boolean).map((n: any, i) => (
+        <div key={i} role="status" style={{ background: '#fff', border: '1px solid #c3c4c7', borderLeft: `4px solid ${n.kind === 'error' ? '#d63638' : n.kind === 'warning' ? '#dba617' : '#00a32a'}`, boxShadow: '0 1px 1px rgba(0,0,0,.04)', margin: '0 0 12px', padding: '10px 12px', fontSize: 14 }}>{n.node}</div>
+      ))}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 20, alignItems: 'start' }}>
+        {/* ---------------- Main column ---------------- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          <div>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Add title"
+              aria-label="Add title"
+              style={{ width: '100%', fontSize: '1.7em', padding: '3px 8px', lineHeight: 1.9, border: '1px solid #8c8f94', borderRadius: 0, outline: 'none', boxSizing: 'border-box', color: '#1e1e1e', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,.07)' }}
+            />
+            {(title || slug || initialPost?.legacy_path) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 14, color: '#50575e', flexWrap: 'wrap', minHeight: 28 }}>
+                <strong>Permalink:</strong>
+                {initialPost?.legacy_path ? (
+                  <a style={{ color: BLUE, textDecoration: 'underline' }}>{pubUrl}</a>
+                ) : slugEditing ? (
+                  <>
+                    <span>https://migrationfactor.com/blog/</span>
+                    <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', padding: '1px 6px', fontSize: 14 }} />
+                    <span>/</span>
+                    <button type="button" onClick={() => setSlugEditing(false)} style={{ ...outBtn, lineHeight: '24px', minHeight: 26, padding: '0 10px', fontSize: 13 }}>OK</button>
+                  </>
+                ) : (
+                  <>
+                    <a style={{ color: BLUE, textDecoration: 'underline' }}>https://migrationfactor.com/blog/<strong>{slug}</strong>/</a>
+                    <button type="button" onClick={() => setSlugEditing(true)} style={{ ...outBtn, lineHeight: '24px', minHeight: 26, padding: '0 10px', fontSize: 13 }}>Edit</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            {editorMode === 'classic' ? (
+              <ClassicEditor value={classicHtml} onChange={setClassicHtml} resetKey={`${postId || 'new'}-${editorKey}`} pickMedia={pickMedia} notify={setStatusMessage} />
+            ) : (
+              <div style={{ background: '#ffffff', padding: 16, border: '1px solid #c3c4c7' }}>
+                <BlockEditor value={blocks} onChange={setBlocks} resetKey={`${postId || 'new'}-${editorKey}`} canRawHtml={canRawHtml} focusKeyword={focusKeyword} pickMedia={pickMedia} notify={setStatusMessage} />
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: '#f6f7f7', border: '1px solid #c3c4c7', borderTop: 'none', fontSize: 13, color: '#50575e' }}>
+              <span>Word count: {wordCount}</span>
+              <button type="button" onClick={switchMode} style={{ border: 'none', background: 'none', color: BLUE, textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
+              </button>
             </div>
-          </MetaBox>
+          </div>
 
-          {postId && (
-            <MetaBox title="Revisions" id="mf-revisions">
-              <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Update to keep it.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
-            </MetaBox>
-          )}
+          {order.main.map((id) => mainBoxes[id] ?? null)}
         </div>
 
         {/* ---------------- Sidebar ---------------- */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          <MetaBox title="Publish" flush>
-            <div style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              {status !== 'published' ? (
-                <button type="button" onClick={() => handleSaveDraft()} disabled={saving} style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, fontWeight: 400, cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save Draft'}</button>
-              ) : <span />}
-              {postId ? (
-                <Link href={`/preview/${postId}`} target="_blank" style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, textDecoration: 'none' }}>{status === 'published' ? 'Preview Changes' : 'Preview'}</Link>
-              ) : (
-                <button type="button" onClick={() => handleSaveDraft()} style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, cursor: 'pointer' }}>Preview</button>
-              )}
-            </div>
-            <div style={{ padding: '0 12px 8px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>📌 Status: <strong style={{ textTransform: 'capitalize' }}>{status === 'pending_review' ? 'Pending Review' : status}</strong>{postId && <> <button type="button" onClick={() => setStatusOpen((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Edit</button></>}</div>
-              {statusOpen && postId && (
-                <WorkflowActions
-                  postId={postId}
-                  status={status}
-                  canPublish={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
-                  canDelete={false}
-                  onMessage={setStatusMessage}
-                  onStatus={setStatus}
-                  ensureSaved={async () => (dirty ? handleSaveDraft() : true)}
-                  wp
-                />
-              )}
-              {postId && <div>🕘 Revisions: <strong>{revCount ?? '…'}</strong> <a href="#mf-revisions" style={{ color: '#2271b1' }}>Browse</a></div>}
-              <div>📅 {status === 'published' && initialPost?.published_at ? <>Published on: <strong>{fmtDate(initialPost.published_at)}</strong></> : status === 'scheduled' && initialPost?.scheduled_at ? <>Scheduled for: <strong>{fmtDate(initialPost.scheduled_at)}</strong></> : <>Publish <strong>immediately</strong> {postId && <button type="button" onClick={() => setStatusOpen((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Edit</button>}</>}</div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <span role="switch" aria-checked={minorUpdate} style={{ position: 'relative', width: 40, height: 20, borderRadius: 10, border: '2px solid #1d2327', background: minorUpdate ? '#2271b1' : '#fff', flex: 'none', display: 'inline-block' }}>
-                  <span style={{ position: 'absolute', top: 2, left: minorUpdate ? 22 : 2, width: 12, height: 12, borderRadius: '50%', background: minorUpdate ? '#fff' : '#1d2327', transition: 'left .15s' }} />
-                </span>
-                <input type="checkbox" checked={minorUpdate} onChange={(e) => setMinorUpdate(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-                Lock Modified Date
-              </label>
-            </div>
-            {!isNew && <div style={{ background: scoreBg, borderTop: '1px solid #dcdcde', padding: '10px 12px', fontSize: 13, color: scoreColor, fontWeight: 600 }}>SEO: {seoScore} / 100</div>}
-            <div style={{ padding: '10px 12px', borderTop: '1px solid #dcdcde', background: '#f6f7f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 40 }}>
-              {postId ? <MoveToTrash postId={postId} onMessage={setStatusMessage} /> : <span />}
-              <button
-                type="button"
-                onClick={status === 'published' || status === 'scheduled' ? () => handleSaveDraft() : onPublishClick}
-                disabled={saving || publishing}
-                style={{ padding: '0 14px', lineHeight: '30px', border: '1px solid #2271b1', borderRadius: 3, background: '#2271b1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                {publishLabel}
-              </button>
-            </div>
-          </MetaBox>
-
-          <MetaBox title="Categories" flush>
-            <div style={{ padding: '8px 12px 12px' }}>
-              <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #dcdcde', marginBottom: 8 }}>
-                {([['all', 'All Categories'], ['used', 'Most Used']] as const).map(([id, label]) => (
-                  <button key={id} type="button" onClick={() => setCatTab(id)} style={{ padding: '4px 8px', border: 'none', borderBottom: catTab === id ? '2px solid #1d2327' : '2px solid transparent', background: 'none', color: catTab === id ? '#1d2327' : '#2271b1', fontSize: 13, cursor: 'pointer' }}>{label}</button>
-                ))}
-              </div>
-              <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #dcdcde', padding: '8px 10px' }}>
-                {catsShown.map((c: any) => (
-                  <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
-                    <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => toggleCategory(c.id)} />
-                    <span style={{ flex: 1 }}>{c.name}</span>
-                    {categoryIds.includes(c.id) && (
-                      <input type="radio" name="primary-category" aria-label={`Make ${c.name} the primary category`} title="Primary category" checked={primaryCategoryId === c.id} onChange={() => setPrimaryCategoryId(c.id)} />
-                    )}
-                  </label>
-                ))}
-              </div>
-              {addingCat ? (
-                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                  <input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }} placeholder="New Category Name" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '3px 6px', fontSize: 13 }} />
-                  <button type="button" onClick={addCategory} style={{ padding: '0 8px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, cursor: 'pointer' }}>Add</button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setAddingCat(true)} style={{ marginTop: 10, border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>+ Add Category</button>
-              )}
-            </div>
-          </MetaBox>
-
-          <MetaBox title="Tags" flush>
-            <div style={{ padding: '10px 12px 12px' }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTags(); } }} aria-label="Add New Tag" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '4px 6px', fontSize: 14 }} />
-                <button type="button" onClick={addTags} style={{ padding: '0 14px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
-              </div>
-              <p style={{ fontSize: 12, fontStyle: 'italic', color: '#646970', margin: '6px 0' }}>Separate tags with commas</p>
-              {tagIds.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, margin: '6px 0' }}>
-                  {tagIds.map((id) => {
-                    const t = tagList.find((x: any) => x.id === id);
-                    return t ? (
-                      <div key={id} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <button type="button" aria-label={`Remove term: ${t.name}`} onClick={() => setTagIds(tagIds.filter((x) => x !== id))} style={{ width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'none', color: '#d63638', cursor: 'pointer', padding: 0 }}>⊗</button>{t.name}
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-              )}
-              <button type="button" onClick={() => setShowPopularTags((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0, marginTop: 8 }}>Choose from the most used tags</button>
-              {showPopularTags && (
-                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {[...tagList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 20).map((t: any) => (
-                    <button key={t.id} type="button" onClick={() => !tagIds.includes(t.id) && setTagIds([...tagIds, t.id])} style={{ border: 'none', background: 'none', color: '#2271b1', cursor: 'pointer', fontSize: 13, padding: 0 }}>{t.name}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </MetaBox>
-
-          <MetaBox title="Author" flush>
-            <div style={{ padding: '10px 12px 12px' }}>
-              <select
-                multiple
-                value={selectedAuthorIds}
-                onChange={(e) => setSelectedAuthorIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
-                aria-label="Author"
-                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', fontSize: 13, minHeight: 70 }}
-              >
-                {authors.map((a) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
-              </select>
-            </div>
-          </MetaBox>
-
-          <MetaBox title="Link Suggestions" flush>
-            <div style={{ padding: '4px 4px 8px' }}>
-              {postId ? <LinksPanel postId={postId} /> : <p style={{ fontSize: 13, fontStyle: 'italic', color: '#646970', margin: 8 }}>We can’t show any link suggestions for this post. Try selecting categories and tags for this post, and mark other posts as Pillar Content to make them show up here.</p>}
-            </div>
-          </MetaBox>
-
-          <MetaBox title="Featured image" flush>
-            <div style={{ padding: '12px' }}>
-              {featuredImageUrl ? (
-                <>
-                  <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'block', width: '100%' }} aria-label="Click the image to edit or update">
-                    <img src={featuredImageUrl} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                  </button>
-                  <p style={{ fontSize: 13, color: '#646970', margin: '8px 0' }}>Click the image to edit or update</p>
-                  <input value={featuredAlt} onChange={(e) => setFeaturedAlt(e.target.value)} placeholder="Alternative Text" aria-label="Alternative Text" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '4px 6px', fontSize: 13, marginBottom: 8 }} />
-                  <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ border: 'none', background: 'none', color: '#b32d2e', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Remove featured image</button>
-                </>
-              ) : (
-                <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Set featured image</button>
-              )}
-            </div>
-          </MetaBox>
+          {order.side.map((id) => sideBoxes[id] ?? null)}
         </div>
       </div>
 
@@ -1142,7 +1235,7 @@ export default function PostEditor({
                   style={{
                     padding: '8px 18px',
                     borderRadius: 6,
-                    background: '#2271b1',
+                    background: '#3858e9',
                     color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '0.875rem',
@@ -1167,16 +1260,39 @@ export default function PostEditor({
   );
 }
 
-/** WordPress-style postbox: bordered white box with a heading row and a collapse arrow. */
-function MetaBox({ title, children, flush, id }: { title: string; children: React.ReactNode; flush?: boolean; id?: string }) {
-  const [open, setOpen] = useState(true);
+/** WordPress-style postbox: bordered white box, heading row with move up / move down / collapse controls. */
+function MetaBox({ title, children, flush, id, onUp, onDown, defaultOpen = true }: { title: string; children: React.ReactNode; flush?: boolean; id?: string; onUp?: () => void; onDown?: () => void; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const ctl: React.CSSProperties = { width: 36, height: 36, border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#3c434a', padding: 0 };
   return (
     <div id={id} style={{ background: '#fff', border: '1px solid #c3c4c7', boxShadow: '0 1px 1px rgba(0,0,0,.04)' }}>
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: 'none', borderBottom: open ? '1px solid #c3c4c7' : 'none', background: '#fff', cursor: 'pointer', textAlign: 'left' }}>
-        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, lineHeight: 1.4, color: '#1d2327' }}>{title}</h2>
-        <span aria-hidden style={{ color: '#787c82', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 14, borderBottom: open ? '1px solid #c3c4c7' : 'none', minHeight: 46 }}>
+        <h2 onClick={() => setOpen((v) => !v)} style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.4, color: '#1e1e1e', flex: 1, cursor: 'pointer', padding: '10px 0' }}>{title}</h2>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button type="button" aria-label={'Move ' + title + ' up'} onClick={onUp} style={ctl}><Chevron up /></button>
+          <button type="button" aria-label={'Move ' + title + ' down'} onClick={onDown} style={ctl}><Chevron /></button>
+          <button type="button" aria-label={open ? 'Collapse ' + title : 'Expand ' + title} aria-expanded={open} onClick={() => setOpen((v) => !v)} style={{ ...ctl, width: 30, color: '#787c82' }}><span aria-hidden style={{ fontSize: 10 }}>{open ? '▲' : '▼'}</span></button>
+        </div>
+      </div>
       {open && <div style={flush ? undefined : { padding: '6px 12px 12px' }}>{children}</div>}
     </div>
   );
 }
+
+function Chevron({ up }: { up?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ transform: up ? 'none' : 'rotate(180deg)' }}>
+      <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+const ico = { width: 22, height: 22, viewBox: '0 0 24 24', 'aria-hidden': true, focusable: false } as const;
+function IconPin() { return <svg {...ico} style={{ flex: 'none' }}><path d="M14 3l7 7-2 2-1.5-1.5-3.8 3.8.8 4.2-1.6 1.6-3.4-3.4L4 21l-1-1 5.3-5.3-3.4-3.4L6.5 9.7l4.2.8 3.8-3.8L13 5.2 14 3z" fill="#1e1e1e" /></svg>; }
+function IconEye() { return <svg {...ico} style={{ flex: 'none' }}><path d="M12 5C6.5 5 2.7 9 1 12c1.7 3 5.5 7 11 7s9.3-4 11-7c-1.7-3-5.5-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z" fill="#1e1e1e" /></svg>; }
+function IconClock() { return <svg {...ico} style={{ flex: 'none' }}><path d="M12 3a9 9 0 11-8.5 6H1l3.5-4L8 9H5.6A7 7 0 1012 5v2h-1V4.5l1-.5zm-1 5h1.5v4.2l3 1.8-.8 1.3L11 13V8z" fill="#1e1e1e" /></svg>; }
+function IconCal() { return <svg {...ico} style={{ flex: 'none' }}><path d="M5 4h2V2h2v2h6V2h2v2h2a1 1 0 011 1v15a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zm0 5v10h14V9H5zm2 2h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2zM7 15h2v2H7v-2zm4 0h2v2h-2v-2z" fill="#1e1e1e" /></svg>; }
+function IconBars() { return <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style={{ flex: 'none' }}><path d="M3 19l4-6 3 3 4-8 3 4 4-6v13H3z" fill="currentColor" /></svg>; }
+function IconGear() { return <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm8.4 5.1l1.8 1.4-2 3.4-2.1-.8a7 7 0 01-1.5.9L16.2 20H12.2l-.4-2.3a7 7 0 01-1.5-.9l-2.1.8-2-3.4 1.8-1.4a7 7 0 010-1.8L6.2 9.6l2-3.4 2.1.8a7 7 0 011.5-.9L12.2 4h4l.4 2.1a7 7 0 011.5.9l2.1-.8 2 3.4-1.8 1.4a7 7 0 010 1.8z" transform="translate(-2 0) scale(.92)" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>; }
+function IconBriefcase() { return <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5V4h6v1M3 7h18v12H3zM3 12h18" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>; }
+function IconSchema() { return <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v14H3zM3 18l3 3h12l3-3M8 9h8M8 13h5" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>; }
+function IconShare() { return <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="18" cy="6" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="18" cy="18" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M8 11l8-4M8 13l8 4" stroke="currentColor" strokeWidth="1.6" /></svg>; }

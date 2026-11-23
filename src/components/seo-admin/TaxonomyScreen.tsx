@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 /** Categories and Tags screens in the WordPress layout: Add form on the left, list table on the right. */
 
-const C = { blue: '#2271b1', text: '#1d2327', muted: '#646970', line: '#c3c4c7', red: '#b32d2e', stripe: '#f6f7f7' };
+const C = { blue: '#3858e9', text: '#1d2327', muted: '#646970', line: '#c3c4c7', red: '#b32d2e', stripe: '#f6f7f7' };
 const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHeight: 30, border: `1px solid ${C.blue}`, borderRadius: 3, background: '#f6f7f7', color: C.blue, fontSize: 13, cursor: 'pointer' };
 const primary: React.CSSProperties = { ...btn, background: C.blue, color: '#fff', fontWeight: 600 };
 const field: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', borderRadius: 4, padding: '0 8px', lineHeight: '2', minHeight: 30, fontSize: 14, background: '#fff', color: C.text };

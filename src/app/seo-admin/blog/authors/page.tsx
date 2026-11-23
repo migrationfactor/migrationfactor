@@ -80,7 +80,7 @@ export default function AuthorsAdminPage() {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#135e96', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#2145e6', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
@@ -177,7 +177,7 @@ export default function AuthorsAdminPage() {
                 marginTop: 6,
                 padding: '10px 16px',
                 borderRadius: 6,
-                backgroundColor: '#2271b1',
+                backgroundColor: '#3858e9',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: 700,
@@ -217,11 +217,11 @@ export default function AuthorsAdminPage() {
                     <td style={{ padding: '12px 14px', color: '#50575e' }}>
                       {a.job_title || 'Migration Specialist'}
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#2271b1' }}>
+                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#3858e9' }}>
                       {a.post_count || 0}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <Link href={`/blog/author/${a.slug}/`} target="_blank" style={{ color: '#2271b1', textDecoration: 'none', fontSize: '0.8125rem' }}>
+                      <Link href={`/blog/author/${a.slug}/`} target="_blank" style={{ color: '#3858e9', textDecoration: 'none', fontSize: '0.8125rem' }}>
                         View Profile ↗
                       </Link>
                     </td>

@@ -24,7 +24,7 @@ export default function SeoReportsPage() {
   }, []);
 
   const postLink = (row: any) => (
-    <Link href={`/seo-admin/blog/${row.source_post_id ?? row.id}`} style={{ color: '#2271b1', fontWeight: 600 }}>
+    <Link href={`/seo-admin/blog/${row.source_post_id ?? row.id}`} style={{ color: '#3858e9', fontWeight: 600 }}>
       {row.source_title ?? row.title}
     </Link>
   );
@@ -92,7 +92,7 @@ export default function SeoReportsPage() {
               key: 'act',
               label: 'Action',
               render: (r) => (
-                <Link href="/seo-admin/seo/redirects" style={{ color: '#2271b1', fontWeight: 600 }}>
+                <Link href="/seo-admin/seo/redirects" style={{ color: '#3858e9', fontWeight: 600 }}>
                   Create redirect
                 </Link>
               ),

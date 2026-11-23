@@ -1,10 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { getSeoDashboardData } from '@/lib/seo-system/dashboard-service';
+import { backfillAllMissing } from '@/lib/seo-system/analysis-service';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SeoAdminDashboardPage() {
+  await backfillAllMissing().catch(() => 0);
   const data = await getSeoDashboardData();
   const { statusCounts, scores, issues, indexingCounts, top404s, recentActivity } = data;
 

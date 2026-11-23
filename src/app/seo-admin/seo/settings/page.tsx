@@ -157,7 +157,7 @@ export default function SeoSettingsPage() {
             </ul>
           )}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button disabled={busy} onClick={() => save(true)} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+            <button disabled={busy} onClick={() => save(true)} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: '#3858e9', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
               Confirm and save
             </button>
             <button onClick={() => setImpact(null)} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #8c8f94', background: '#fff', cursor: 'pointer' }}>
@@ -167,7 +167,7 @@ export default function SeoSettingsPage() {
         </div>
       )}
 
-      <button disabled={busy} onClick={() => save(false)} style={{ padding: '11px 22px', borderRadius: 8, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+      <button disabled={busy} onClick={() => save(false)} style={{ padding: '11px 22px', borderRadius: 8, border: 'none', background: '#3858e9', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
         {busy ? 'Saving…' : 'Save settings'}
       </button>
 

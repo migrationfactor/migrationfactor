@@ -8,7 +8,7 @@ const btn = (primary = true, danger = false): React.CSSProperties => ({
   padding: '8px 14px',
   borderRadius: 8,
   border: primary ? 'none' : '1px solid #8c8f94',
-  background: danger ? '#d63638' : primary ? '#2271b1' : '#ffffff',
+  background: danger ? '#d63638' : primary ? '#3858e9' : '#ffffff',
   color: primary || danger ? '#ffffff' : '#1d2327',
   fontWeight: 700,
   fontSize: '0.8125rem',
@@ -186,7 +186,7 @@ export default function RobotsTxtAdminPage() {
           <button style={btn()} onClick={runTest}>Test</button>
         </div>
         {testResult && (
-          <p style={{ marginTop: 10, fontWeight: 700, color: testResult.allowed ? '#2271b1' : '#d63638' }}>
+          <p style={{ marginTop: 10, fontWeight: 700, color: testResult.allowed ? '#3858e9' : '#d63638' }}>
             {testResult.allowed ? 'Allowed' : 'Blocked'}
             {testResult.matchedRule ? ` — matching rule: ${testResult.matchedRule}` : ' — no rule matches'}
           </p>
@@ -240,7 +240,7 @@ export default function RobotsTxtAdminPage() {
           <div key={v.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #dcdcde', fontSize: '0.8125rem' }}>
             <span style={{ flex: 1 }}>
               {new Date(v.created_at).toLocaleString()} · {v.created_by || 'system'} · {v.note}
-              {v.active && <strong style={{ color: '#2271b1' }}> (active)</strong>}
+              {v.active && <strong style={{ color: '#3858e9' }}> (active)</strong>}
             </span>
             {!v.active && <button style={btn(false)} onClick={() => rollback(v.id)}>Restore</button>}
           </div>

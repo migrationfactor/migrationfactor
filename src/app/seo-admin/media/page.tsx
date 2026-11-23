@@ -103,7 +103,7 @@ export default function MediaLibraryAdminPage() {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#135e96', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#2145e6', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
@@ -159,7 +159,7 @@ export default function MediaLibraryAdminPage() {
             disabled={uploading || !selectedFile}
             style={{
               padding: '9px 16px',
-              backgroundColor: '#2271b1',
+              backgroundColor: '#3858e9',
               color: '#ffffff',
               border: 'none',
               borderRadius: 6,
@@ -260,7 +260,7 @@ export default function MediaLibraryAdminPage() {
                   {m.width} x {m.height} px · {Math.round(m.file_size / 1024)} KB
                 </div>
                 {m.alt_text && (
-                  <div style={{ fontSize: '0.75rem', color: '#2271b1', fontStyle: 'italic', marginBottom: 8 }}>
+                  <div style={{ fontSize: '0.75rem', color: '#3858e9', fontStyle: 'italic', marginBottom: 8 }}>
                     Alt: "{m.alt_text}"
                   </div>
                 )}

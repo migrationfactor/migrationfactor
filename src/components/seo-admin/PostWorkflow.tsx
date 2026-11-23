@@ -37,7 +37,7 @@ export function WorkflowActions({ postId, status, canPublish, canDelete, onMessa
   ensureSaved: () => Promise<boolean>;
 }) {
   const router = useRouter();
-  const lnk: React.CSSProperties = { border: 'none', background: 'none', padding: 0, color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, textAlign: 'left' };
+  const lnk: React.CSSProperties = { border: 'none', background: 'none', padding: 0, color: '#3858e9', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, textAlign: 'left' };
   const [dlg, setDlg] = useState<null | 'schedule' | 'unpublish' | 'trash'>(null);
   const [when, setWhen] = useState('');
   const [behavior, setBehavior] = useState<'404' | '410' | '301'>('410');
@@ -70,7 +70,7 @@ export function WorkflowActions({ postId, status, canPublish, canDelete, onMessa
           {err && <div style={{ color: '#d63638', fontSize: '0.8rem' }}>{err}</div>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" style={btn} onClick={() => setDlg(null)}>Cancel</button>
-            <button type="button" disabled={!when || busy} style={{ ...btn, background: '#2271b1', color: '#fff' }} onClick={() => run(async () => {
+            <button type="button" disabled={!when || busy} style={{ ...btn, background: '#3858e9', color: '#fff' }} onClick={() => run(async () => {
               if (!(await ensureSaved())) return;
               await call(`/api/v1/posts/${postId}/schedule`, 'POST', { publish_at: new Date(when).toISOString() });
               onStatus('scheduled'); onMessage('Scheduled.'); setDlg(null); router.refresh();
@@ -129,13 +129,13 @@ export function RevisionsPanel({ postId, onRestore }: { postId: string; onRestor
           <span aria-hidden style={{ width: 32, height: 32, borderRadius: 3, background: '#dcdcde', flex: 'none' }} />
           <span>
             {r.created_by_name || 'System'}, {ago(r.created_at)} (
-            <button type="button" style={{ border: 'none', background: 'none', padding: 0, color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }} onClick={async () => {
+            <button type="button" style={{ border: 'none', background: 'none', padding: 0, color: '#3858e9', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }} onClick={async () => {
               try {
                 const rev = await call(`/api/v1/posts/${postId}/revisions/${r.revision_no}`, 'GET');
                 if (!rev.restorable) { setErr('This older revision is partial and cannot be restored.'); return; }
                 if (confirm('Load this revision into the editor? Nothing is saved until you click Update.')) onRestore(rev.editorPayload);
               } catch (e: any) { setErr(e.message); }
-            }}>{new Date(r.created_at).toLocaleString('en-AU', { month: 'long', day: 'numeric', year: 'numeric' })} @ {new Date(r.created_at).toLocaleTimeString('en-GB')}</button>
+            }}>{new Date(r.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} @ {new Date(r.created_at).toLocaleTimeString('en-GB')}</button>
             )
           </span>
         </div>
@@ -233,7 +233,7 @@ export function SchemaPanel({ postId, refreshKey }: { postId: string; refreshKey
         <button type="button" style={{ ...btn, marginLeft: 'auto' }} onClick={load} disabled={busy}>{busy ? 'Checking…' : 'Re-check'}</button>
       </div>
       {err && <div style={{ color: '#d63638' }}>{err}</div>}
-      {v && v.errors.length === 0 && v.warnings.length === 0 && <div style={{ color: '#2271b1', marginTop: 6 }}>✓ No problems found in the saved version.</div>}
+      {v && v.errors.length === 0 && v.warnings.length === 0 && <div style={{ color: '#3858e9', marginTop: 6 }}>✓ No problems found in the saved version.</div>}
       {v?.errors.map((m: string) => <div key={m} style={{ color: '#d63638', marginTop: 4 }}>✕ {m}</div>)}
       {v?.warnings.map((m: string) => <div key={m} style={{ color: '#996800', marginTop: 4 }}>⚠ {m}</div>)}
       {data && (
@@ -275,7 +275,7 @@ export function ReferencesPanel({ value, onChange, trusted }: { value: any[]; on
               <button type="button" style={btn} onClick={() => onChange(value.filter((_, k) => k !== i))}>Remove</button>
               {bad && <span style={{ color: '#d63638' }}>Use a full https:// link.</span>}
               {dup && <span style={{ color: '#d63638' }}>Duplicate source.</span>}
-              {isTrusted && <span style={{ color: '#2271b1' }}>✓ Trusted source</span>}
+              {isTrusted && <span style={{ color: '#3858e9' }}>✓ Trusted source</span>}
             </div>
           </div>
         );

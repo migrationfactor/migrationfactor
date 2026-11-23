@@ -28,7 +28,7 @@ export default function IndexingPage() {
         <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 24, fontSize: '0.875rem' }}>
           <p style={{ margin: '0 0 6px' }}>
             Sitemap index:{' '}
-            <a href={sitemap.index} target="_blank" rel="noopener noreferrer" style={{ color: '#2271b1', fontWeight: 600 }}>
+            <a href={sitemap.index} target="_blank" rel="noopener noreferrer" style={{ color: '#3858e9', fontWeight: 600 }}>
               {sitemap.index}
             </a>
           </p>

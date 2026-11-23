@@ -39,7 +39,7 @@ export default function AuditLogPage() {
           placeholder="Filter by action, e.g. post.publish"
           style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem' }}
         />
-        <button type="submit" style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+        <button type="submit" style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#3858e9', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
           Filter
         </button>
       </form>
