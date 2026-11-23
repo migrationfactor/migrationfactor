@@ -4,6 +4,7 @@ import { getPost } from '@/lib/seo-system/posts-service';
 import { validateSchemaGraph } from '@/lib/seo-system/schema-service';
 import { renderSeoHead } from '@/lib/seo-system/head-service';
 import { SITE_URL } from '@/lib/seo-system/technical-seo';
+import { getSeoSettings } from '@/lib/seo-system/settings-service';
 
 export async function GET(
   req: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
 
   const result = renderSeoHead({
     siteUrl: SITE_URL,
-    siteName: 'Migration Factor',
+    siteName: (await getSeoSettings()).siteName,
     post,
     seo: post.seo,
     social: post.social,

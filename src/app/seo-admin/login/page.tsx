@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { SITE_NAME, initials } from '@/lib/seo-system/site-config';
 
 export default function SeoAdminLoginPage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function SeoAdminLoginPage() {
 
   return (
     <div className="sa-login">
-      <h1 className="sa-login-logo"><span>MF</span>Migration Factor SEO</h1>
+      <h1 className="sa-login-logo"><span>{initials(SITE_NAME)}</span>{SITE_NAME} SEO</h1>
       <div className="sa-login-box">
         {error && <div className="sa-notice sa-notice-error" role="alert"><p>{error}</p></div>}
         <form onSubmit={handleSubmit}>
@@ -56,7 +57,7 @@ export default function SeoAdminLoginPage() {
           </p>
         </form>
       </div>
-      <p className="sa-login-note">Use your Migration Factor admin email and password.</p>
+      <p className="sa-login-note">Use your admin email and password.</p>
     </div>
   );
 }

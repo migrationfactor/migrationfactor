@@ -16,6 +16,7 @@ interface ParsedLink {
   position: 'body' | 'faq';
 }
 
+
 export function extractLinks(html: string): ParsedLink[] {
   const withoutToc = html.replace(/<nav[^>]*class="table-of-contents"[\s\S]*?<\/nav>/gi, '');
   const out: ParsedLink[] = [];
@@ -181,7 +182,7 @@ function isPrivateHost(host: string): boolean {
 export async function checkUrl(url: string): Promise<{ status: number; redirect: string | null }> {
   const u = new URL(url);
   if (!/^https?:$/.test(u.protocol) || isPrivateHost(u.hostname)) return { status: 0, redirect: null };
-  const headers = { 'User-Agent': 'MigrationFactorLinkChecker/1.0 (+https://migrationfactor.com)' };
+  const headers = { 'User-Agent': 'SeoAdminLinkChecker/1.0 (+' + SITE_URL + ')' };
   for (const method of ['HEAD', 'GET'] as const) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {

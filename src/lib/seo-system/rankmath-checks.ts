@@ -3,6 +3,8 @@
  * Pure functions so they run live in the browser and in tests. Wording follows the familiar Rank Math checklist.
  */
 
+import { SITE_HOST } from './site-config';
+
 export type CheckStatus = 'passed' | 'needs_improvement' | 'failed';
 export interface ListCheck {
   id: string;
@@ -52,7 +54,7 @@ export function buildChecklist(i: ChecklistInput): { basic: ListCheck[]; additio
   const body = text(i.bodyHtml);
   const bodyLower = body.toLowerCase();
   const wordList = words(body);
-  const host = i.siteHost || 'migrationfactor.com';
+  const host = i.siteHost || SITE_HOST;
 
   const inTitle = kw && title.toLowerCase().includes(kw);
   const inDesc = kw && i.metaDescription.toLowerCase().includes(kw);
@@ -109,9 +111,11 @@ export function buildChecklist(i: ChecklistInput): { basic: ListCheck[]; additio
       ? { id: 'a2', status: 'passed', message: 'Focus Keyword found in image alt attribute(s).' }
       : { id: 'a2', status: 'failed', message: 'Add an image with your Focus Keyword as alt text.' },
     densityCheck,
-    urlLen <= 75
-      ? { id: 'a4', status: 'passed', message: `URL is ${urlLen} characters long. Kudos!` }
-      : { id: 'a4', status: 'failed', message: `URL is ${urlLen} characters long. Consider shortening it.` },
+    wc === 0
+      ? { id: 'a4', status: 'failed', message: 'Add a title and some content so the URL can be checked.' }
+      : urlLen <= 75
+        ? { id: 'a4', status: 'passed', message: `URL is ${urlLen} characters long. Kudos!` }
+        : { id: 'a4', status: 'failed', message: `URL is ${urlLen} characters long. Consider shortening it.` },
     external.length
       ? { id: 'a5', status: 'passed', message: 'Great! You are linking to external resources.' }
       : { id: 'a5', status: 'failed', message: 'Link out to external resources.' },
@@ -149,15 +153,18 @@ export function buildChecklist(i: ChecklistInput): { basic: ListCheck[]; additio
   // ---- Content readability ----
   const hasToc = /TOC_PLACEHOLDER|table of contents|class\s*=\s*["'][^"']*\btoc\b|id\s*=\s*["']toc/i.test(i.bodyHtml);
   const paragraphs = Array.from(i.bodyHtml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)).map((m) => words(text(m[1])).length);
+  if (paragraphs.length === 0 && wc > 0) paragraphs.push(wc);
   const longPara = paragraphs.some((n) => n > 120);
   const hasMedia = /<(img|video|iframe)\b|youtube\.com|youtu\.be|vimeo\.com/i.test(i.bodyHtml);
   const contentReadability: ListCheck[] = [
     hasToc
       ? { id: 'c1', status: 'passed', message: 'You seem to be using a Table of Contents to break-down your text.' }
       : { id: 'c1', status: 'failed', message: "You don't seem to be using a Table of Contents to break-down your text." },
-    longPara
-      ? { id: 'c2', status: 'failed', message: 'At least one of your paragraphs is long. Consider using short paragraphs.' }
-      : { id: 'c2', status: 'passed', message: 'You are using short paragraphs.' },
+    paragraphs.length === 0
+      ? { id: 'c2', status: 'failed', message: 'Add some content with short paragraphs.' }
+      : longPara
+        ? { id: 'c2', status: 'failed', message: 'At least one of your paragraphs is long. Consider using short paragraphs.' }
+        : { id: 'c2', status: 'passed', message: 'You are using short paragraphs.' },
     hasMedia
       ? { id: 'c3', status: 'passed', message: 'Your content contains images and/or video(s).' }
       : { id: 'c3', status: 'failed', message: 'You are not using rich media like images or videos.' },

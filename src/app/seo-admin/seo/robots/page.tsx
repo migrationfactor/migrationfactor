@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/seo-admin/DataTable';
+import { SITE_NAME, SITE_URL } from '@/lib/seo-system/site-config';
 
 const card: React.CSSProperties = { background: '#ffffff', padding: 22, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 18 };
 const btn = (primary = true, danger = false): React.CSSProperties => ({
@@ -216,7 +217,7 @@ export default function RobotsTxtAdminPage() {
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.875rem', marginBottom: 8 }}>
           <input type="checkbox" checked={llms.enabled} onChange={(e) => setLlms({ ...llms, enabled: e.target.checked })} /> Serve /llms.txt
         </label>
-        <textarea rows={6} value={llms.content} onChange={(e) => setLlms({ ...llms, content: e.target.value })} placeholder={'# Migration Factor\n> Australian migration guides\n\n- [Blog](https://migrationfactor.com/blog)'} style={{ width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 8, border: '1px solid #8c8f94', fontFamily: 'monospace', fontSize: '0.85rem' }} />
+        <textarea rows={6} value={llms.content} onChange={(e) => setLlms({ ...llms, content: e.target.value })} placeholder={'# ' + SITE_NAME + '\n> A one-line description of the site\n\n- [Blog](' + SITE_URL + '/blog)'} style={{ width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 8, border: '1px solid #8c8f94', fontFamily: 'monospace', fontSize: '0.85rem' }} />
         <div style={{ marginTop: 12, fontSize: '0.8125rem' }}>
           <label>
             "Search generative AI" setting in Search Console (changed there, not here) — recorded value:{' '}

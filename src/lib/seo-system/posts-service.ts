@@ -8,6 +8,8 @@ import { MIN_FEATURED_WIDTH } from './image-meta';
 import { reindexPostLinks } from './link-service';
 import { validateSchemaGraph, validateCustomJsonLd } from './schema-service';
 import { computeSheetScore, analysisColumns } from './sheet-score-service';
+import { SITE_URL as CFG_URL } from './site-config';
+import { applyTitleTemplate } from './settings-defaults';
 import { renderSeoHead } from './head-service';
 
 export interface PostListFilters {
@@ -105,7 +107,7 @@ export function validateCanonicalUrl(value: string | null | undefined): string |
   try {
     url = new URL(value.trim());
   } catch {
-    const err: any = new Error('Canonical URL must be an absolute URL such as https://migrationfactor.com/blog/my-post/.');
+    const err: any = new Error('Canonical URL must be an absolute https:// URL.');
     err.status = 422;
     throw err;
   }
@@ -448,7 +450,8 @@ async function createDraftCore(actorId: string, input: CreatePostInput) {
   const { html, wordCount, readingTimeMin, headings } = renderBlocksToHtml(blocks);
 
   // SEO Fallbacks per Section 6.2
-  const effectiveTitle = input.seoTitleRaw || `${input.title} - Migration Factor`;
+  const stCreate = await getSeoSettings();
+  const effectiveTitle = input.seoTitleRaw || applyTitleTemplate(stCreate.titleTemplate, { title: input.title, siteName: stCreate.siteName, separator: stCreate.titleSeparator });
   const effectiveDesc = input.metaDescriptionRaw || input.excerpt || '';
 
   return await withTransaction(async (client) => {
@@ -712,7 +715,9 @@ async function updatePostCore(
   const { html, wordCount, readingTimeMin } = renderBlocksToHtml(blocks);
 
   // Fallbacks
-  const effectiveTitle = input.seoTitleRaw !== undefined ? (input.seoTitleRaw || `${newTitle} - Migration Factor`) : (current.seo?.seo_title_raw || `${newTitle} - Migration Factor`);
+  const stUpdate = await getSeoSettings();
+  const templated = applyTitleTemplate(stUpdate.titleTemplate, { title: newTitle, siteName: stUpdate.siteName, separator: stUpdate.titleSeparator });
+  const effectiveTitle = input.seoTitleRaw !== undefined ? (input.seoTitleRaw || templated) : (current.seo?.seo_title_raw || templated);
   const effectiveDesc = input.metaDescriptionRaw !== undefined ? (input.metaDescriptionRaw || input.excerpt || '') : (current.seo?.meta_description_raw || current.excerpt || '');
 
   return await withTransaction(async (client) => {
@@ -971,6 +976,7 @@ async function updatePostCore(
       primaryQuestion: input.primaryQuestion || current.geo_aeo?.primary_question,
       answerSummary: input.answerSummary || current.geo_aeo?.answer_summary,
       references: input.references || current.references || [],
+      trustedDomains: (await getSeoSettings()).trustedDomains,
     };
 
     const analysisResult = runContentAnalysis(analysisPayload);
@@ -980,7 +986,7 @@ async function updatePostCore(
       focusKeyword: String(analysisPayload.focusKeyword || ''),
       seoTitle: effectiveTitle,
       metaDescription: effectiveDesc,
-      url: 'https://migrationfactor.com' + (current.legacy_path || '/blog/' + newSlug + '/'),
+      url: CFG_URL + (current.legacy_path || '/blog/' + newSlug + '/'),
       bodyHtml: html,
       robotsIndex: analysisPayload.robotsIndex !== false,
       canonicalUrl: String(analysisPayload.canonicalUrl || ''),
@@ -1347,7 +1353,7 @@ async function publishPostCore(id: string, actorId: string, acknowledgeWarnings:
     await client.query(
       `INSERT INTO public.seo_scheduled_jobs (event_type, aggregate_id, payload, available_at)
        VALUES ('post.published', $1, $2, now())`,
-      [id, JSON.stringify({ postId: id, slug: post.slug, url: `https://migrationfactor.com/blog/${post.slug}` })]
+      [id, JSON.stringify({ postId: id, slug: post.slug, url: `${CFG_URL}/blog/${post.slug}` })]
     );
 
     // 4. Audit Log

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
+    "test": "node --env-file=.env --import tsx --test tests/*.test.mjs tests/*.test.ts",
     "admin:create": "node scripts/create-admin.mjs",
     "db:migrate": "node scripts/migrate-leads.mjs",
     "migrate:wp:inspect": "tsx scripts/wordpress-migration/fetch-posts.ts inspect",

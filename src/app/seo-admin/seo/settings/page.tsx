@@ -65,7 +65,7 @@ export default function SeoSettingsPage() {
     }
   };
 
-  const preview = applyTitleTemplate(s.titleTemplate, { title: 'Skills in Demand Visa: Requirements', siteName: s.siteName, separator: s.titleSeparator });
+  const preview = applyTitleTemplate(s.titleTemplate, { title: 'Sample post title', siteName: s.siteName, separator: s.titleSeparator });
 
   return (
     <div style={{ maxWidth: 820 }}>
@@ -122,7 +122,7 @@ export default function SeoSettingsPage() {
         <Field label="Default social image" help="Used when a post has no featured image. 1200 × 630 recommended.">
           <input style={input} value={s.defaultSocialImage} onChange={(e) => set({ defaultSocialImage: e.target.value })} />
         </Field>
-        <Field label="X (Twitter) handle" help="Example: @migrationfactor">
+        <Field label="X (Twitter) handle" help="Example: @yourbrand">
           <input style={input} value={s.twitterSite} onChange={(e) => set({ twitterSite: e.target.value })} />
         </Field>
         <Field label="Insert a table of contents automatically when a post has at least this many H2 headings" help="0 turns it off. Posts with their own TOC block are never changed.">
@@ -137,7 +137,7 @@ export default function SeoSettingsPage() {
         <Field label="Trusted source domains" help="One per line. Links to these count as authoritative sources in the GEO and link-quality checks.">
           <textarea style={{ ...input, minHeight: 90 }} value={(s.trustedDomains || []).join(String.fromCharCode(10))} onChange={(e) => set({ trustedDomains: e.target.value.split(String.fromCharCode(10)) })} />
         </Field>
-        <Field label="Brand name variants" help="One per line. Spellings that should always be written the same way (for example Migration Factor, MigrationFactor).">
+        <Field label="Brand name variants" help="One per line. Spellings that should always be written the same way (for example Your Brand, YourBrand).">
           <textarea style={{ ...input, minHeight: 70 }} value={(s.brandAliases || []).join(String.fromCharCode(10))} onChange={(e) => set({ brandAliases: e.target.value.split(String.fromCharCode(10)) })} />
         </Field>
       </div>

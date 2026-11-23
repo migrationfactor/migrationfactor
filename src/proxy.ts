@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { SITE_HOST } from '@/lib/seo-system/site-config';
 import { createServerClient } from '@supabase/ssr';
 
 /**
@@ -8,11 +9,11 @@ import { createServerClient } from '@supabase/ssr';
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // One canonical host (FR-TEC-006): www.migrationfactor.com -> migrationfactor.com with a permanent redirect.
+  // One canonical host (FR-TEC-006): www.<site host> -> <site host> with a permanent redirect.
   const host = (request.headers.get('host') || '').toLowerCase();
-  if (host.startsWith('www.migrationfactor.com')) {
+  if (SITE_HOST && host.startsWith('www.' + SITE_HOST)) {
     const target = new URL(request.url);
-    target.host = 'migrationfactor.com';
+    target.host = SITE_HOST;
     target.protocol = 'https:';
     target.port = '';
     return NextResponse.redirect(target, 301);

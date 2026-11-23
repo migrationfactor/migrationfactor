@@ -10,12 +10,14 @@ export interface PasteReport {
   blocks: number;
 }
 
+import { SITE_URL } from '@/lib/seo-system/site-config';
+
 const INLINE_OK = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'S', 'CODE', 'SUP', 'SUB', 'A', 'BR']);
 
 function cleanHref(href: string): string | null {
   if (!href || /^\s*(javascript|data|vbscript):/i.test(href)) return null;
   try {
-    const u = new URL(href, 'https://migrationfactor.com');
+    const u = new URL(href, SITE_URL || 'http://localhost');
     for (const k of [...u.searchParams.keys()]) if (/^(utm_|gclid|fbclid|mc_)/i.test(k)) u.searchParams.delete(k);
     return /^https?:/i.test(href) ? u.toString() : href;
   } catch {

@@ -1,6 +1,7 @@
 import { verifySeoSession } from '@/lib/seo-system/auth';
 import { listCategories, listAuthors, listTags } from '@/lib/seo-system/taxonomies-service';
 import PostEditor from '@/components/seo-admin/PostEditor';
+import { getSeoSettings } from '@/lib/seo-system/settings-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export default async function NewPostAdminPage() {
     <PostEditor
       categories={categories}
       authors={authors}
+      site={await getSeoSettings().then((st) => ({ name: st.siteName, titleTemplate: st.titleTemplate, titleSeparator: st.titleSeparator }))}
       tags={await listTags()}
       currentUser={{ id: session?.user?.id, roles: (session?.user as any)?.roles || [] }}
     />

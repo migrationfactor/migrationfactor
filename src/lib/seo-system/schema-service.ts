@@ -58,9 +58,11 @@ export interface SchemaContext {
 /**
  * Builds the consolidated single @graph JSON-LD structure per SRS Section 10 & 13
  */
+import { SITE_URL, SITE_NAME } from './site-config';
+
 export function buildSchemaGraph(ctx: SchemaContext) {
-  const siteUrl = (ctx.siteUrl || 'https://migrationfactor.com').replace(/\/$/, '');
-  const siteName = ctx.siteName || 'Migration Factor';
+  const siteUrl = (ctx.siteUrl || SITE_URL).replace(/\/$/, '');
+  const siteName = ctx.siteName || SITE_NAME;
   // The canonical URL is the @id base (FR-SCH-002); migrated posts keep their original root URL.
   const canonicalUrl = ctx.seo?.canonical_url as string | undefined;
   const pageUrl = canonicalUrl && canonicalUrl.startsWith(siteUrl) ? canonicalUrl : `${siteUrl}/blog/${ctx.post.slug}`;
@@ -163,9 +165,9 @@ export function buildSchemaGraph(ctx: SchemaContext) {
 
   const authorsList = ctx.authors && ctx.authors.length > 0 ? ctx.authors : [{
     id: 'author-1',
-    slug: 'migration-factor-team',
-    display_name: 'Migration Factor Team',
-    job_title: 'Migration Specialist',
+    slug: (siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'editorial') + '-team',
+    display_name: siteName + ' Team',
+    job_title: '',
     same_as: [],
   }];
 

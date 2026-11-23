@@ -2,7 +2,9 @@ import { query, queryOne, withTransaction } from './db';
 import { logAudit } from './audit';
 import { isProductionHost, BLOCK_ALL_ROBOTS } from './robots-service';
 
-export const SITE_URL = 'https://migrationfactor.com';
+import { SITE_URL as CONFIG_SITE_URL } from './site-config';
+
+export const SITE_URL = CONFIG_SITE_URL;
 
 export const generateSitemapIndexXml = generateSitemapIndex;
 export const generatePostSitemapXml = generatePostSitemap;

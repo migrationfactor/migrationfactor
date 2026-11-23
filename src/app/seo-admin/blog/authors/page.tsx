@@ -11,6 +11,7 @@ export default function AuthorsAdminPage() {
   const [jobTitle, setJobTitle] = useState('Registered Migration Specialist');
   const [shortBio, setShortBio] = useState('');
   const [linkedInUrl, setLinkedInUrl] = useState('');
+  const [credentialIssuer, setCredentialIssuer] = useState('');
   const [credentialName, setCredentialName] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -35,7 +36,7 @@ export default function AuthorsAdminPage() {
     setStatusMessage('');
 
     const sameAs = linkedInUrl ? [linkedInUrl.trim()] : [];
-    const credentials = credentialName ? [{ name: credentialName.trim(), issuingBody: 'OMARA / Migration Institute of Australia' }] : [];
+    const credentials = credentialName ? [{ name: credentialName.trim(), issuingBody: credentialIssuer.trim() }] : [];
 
     try {
       const res = await fetch('/api/v1/authors', {
@@ -140,7 +141,7 @@ export default function AuthorsAdminPage() {
                 rows={3}
                 value={shortBio}
                 onChange={(e) => setShortBio(e.target.value)}
-                placeholder="Specializes in Australian employer nomination and skilled visa pathways..."
+                placeholder="A short professional biography"
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem' }}
               />
             </div>
@@ -153,8 +154,15 @@ export default function AuthorsAdminPage() {
                 type="text"
                 value={credentialName}
                 onChange={(e) => setCredentialName(e.target.value)}
-                placeholder="e.g. Graduate Certificate in Australian Migration Law"
+                placeholder="Qualification or licence name"
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem' }}
+              />
+              <input
+                type="text"
+                value={credentialIssuer}
+                onChange={(e) => setCredentialIssuer(e.target.value)}
+                placeholder="Issued by (organisation)"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem', marginTop: 6 }}
               />
             </div>
 

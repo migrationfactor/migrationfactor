@@ -1,5 +1,6 @@
 import { escapeAttr, escapeHtml } from './sanitizer';
 import { applyTitleTemplate, SeoSettings } from './settings-defaults';
+import { SITE_URL, SITE_NAME } from './site-config';
 import { buildSchemaGraph, renderSchemaScriptTag, SchemaContext } from './schema-service';
 
 export interface HeadRenderInput {
@@ -65,9 +66,9 @@ export function buildRobotsDirective(seo: any, isPreview: boolean = false): stri
  * Builds complete head tags with strict deduplication (FR-FE-001, FR-FE-004, Section 13.3)
  */
 export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
-  const siteUrl = (input.siteUrl || 'https://migrationfactor.com').replace(/\/$/, '');
+  const siteUrl = (input.siteUrl || SITE_URL).replace(/\/$/, '');
   const settings = input.settings;
-  const siteName = settings?.siteName || input.siteName || 'Migration Factor';
+  const siteName = settings?.siteName || input.siteName || SITE_NAME;
   const post = input.post;
   const seo = input.seo || post.seo || {};
   const social = input.social || post.social || {};
@@ -199,7 +200,7 @@ export function renderSeoHead(input: HeadRenderInput): RenderedHeadResult {
  */
 export function generateNextMetadata(input: HeadRenderInput) {
   const rendered = renderSeoHead(input);
-  const siteName = input.settings?.siteName || input.siteName || 'Migration Factor';
+  const siteName = input.settings?.siteName || input.siteName || SITE_NAME;
   const socialDesc = rendered.metaDescription || input.post?.excerpt || undefined;
 
   return {

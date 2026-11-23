@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifySeoSession } from '@/lib/seo-system/auth';
+import { getSeoSettings } from '@/lib/seo-system/settings-service';
 import SeoAdminChrome from '@/components/seo-admin/SeoAdminChrome';
 import '@/styles/seo-admin.css';
 
@@ -25,7 +26,7 @@ export default async function SeoAdminLayout({ children }: { children: React.Rea
   }
 
   return (
-    <SeoAdminChrome name={user.display_name} roles={(user.roles || []).join(', ')}>
+    <SeoAdminChrome name={user.display_name} roles={(user.roles || []).join(', ')} siteName={(await getSeoSettings()).siteName}>
       {children}
     </SeoAdminChrome>
   );

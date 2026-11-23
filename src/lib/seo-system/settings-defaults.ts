@@ -8,6 +8,8 @@ export const TITLE_SEPARATORS: Record<string, string> = {
   emdash: '—',
 };
 
+import { SITE_NAME } from './site-config';
+
 export interface SeoSettings {
   siteName: string;
   alternateName: string;
@@ -40,19 +42,19 @@ export interface SeoSettings {
 }
 
 export const DEFAULT_SETTINGS: SeoSettings = {
-  siteName: 'Migration Factor',
+  siteName: SITE_NAME,
   alternateName: '',
   titleSeparator: 'pipe',
   titleTemplate: '%title% %sep% %sitename%',
   descriptionTemplate: '',
-  organization: { name: 'Migration Factor', legalName: '', logoUrl: '', description: '', sameAs: [], phone: '', email: '', address: '' },
+  organization: { name: SITE_NAME, legalName: '', logoUrl: '', description: '', sameAs: [], phone: '', email: '', address: '' },
   defaultSocialImage: '',
   twitterSite: '',
   requireFeaturedImage: true,
   autoTocMinH2: 0,
   trashRetentionDays: 30,
   minWords: 300,
-  trustedDomains: ['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au'],
+  trustedDomains: [],
   brandAliases: [],
 };
 

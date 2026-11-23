@@ -9,6 +9,8 @@ import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
 import ClassicEditor from './ClassicEditor';
 import { htmlToBlocks } from './paste-clean';
+import { SITE_URL, SITE_HOST } from '@/lib/seo-system/site-config';
+import { applyTitleTemplate } from '@/lib/seo-system/settings-defaults';
 import { buildChecklist } from '@/lib/seo-system/rankmath-checks';
 import { scoreSeo } from '@/lib/seo-system/seo-score';
 import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel, ReferencesPanel, MoveToTrash } from './PostWorkflow';
@@ -19,6 +21,8 @@ interface PostEditorProps {
   authors: any[];
   tags?: any[];
   currentUser: any;
+  /** Title template and name from Settings, used for the live search-result preview. */
+  site?: { name: string; titleTemplate: string; titleSeparator: string };
 }
 
 export default function PostEditor({
@@ -27,6 +31,7 @@ export default function PostEditor({
   authors,
   tags = [],
   currentUser,
+  site,
 }: PostEditorProps) {
   const router = useRouter();
   const postId = initialPost?.id;
@@ -192,7 +197,7 @@ export default function PostEditor({
   }, [currentBlocks]);
 
   // Live SEO, Readability, Technical, GEO and AEO calculation
-  const effectiveTitle = seoTitle || `${title || 'Post Title'} - Migration Factor`;
+  const effectiveTitle = seoTitle || (site ? applyTitleTemplate(site.titleTemplate, { title, siteName: site.name, separator: site.titleSeparator as any }) : title);
   const effectiveDesc = metaDescription || excerpt || '';
 
   const liveAnalysis = useMemo(() => {
@@ -467,7 +472,7 @@ export default function PostEditor({
   const helpDot = (tip: string) => (
     <span title={tip} style={{ width: 18, height: 18, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', cursor: 'help' }}>?</span>
   );
-  const pubUrl = `https://migrationfactor.com${initialPost?.legacy_path || `/blog/${slug}/`}`;
+  const pubUrl = `${SITE_URL}${initialPost?.legacy_path || `/blog/${slug}/`}`;
   const checklist = buildChecklist({
     focusKeyword,
     seoTitle: effectiveTitle,
@@ -586,7 +591,7 @@ export default function PostEditor({
     return parts.map((p, i) => (p.toLowerCase() === kw.toLowerCase() ? <strong key={i}>{p}</strong> : <React.Fragment key={i}>{p}</React.Fragment>));
   };
   const publishLabel = status === 'published' || status === 'scheduled' ? 'Update' : 'Publish';
-  const snippetUrlParts = pubUrl.replace(/^https:\/\/migrationfactor\.com/, '');
+  const snippetUrlParts = pubUrl.slice(SITE_URL.length);
   const mv = (col: 'main' | 'side', id: string, dir: -1 | 1) => setOrder((o) => {
     const list = [...o[col]];
     const i = list.indexOf(id);
@@ -782,7 +787,7 @@ export default function PostEditor({
             <div style={{ fontSize: 16, fontWeight: 600, color: '#50575e', marginBottom: 14 }}>Preview</div>
             <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 380 : 700 }}>
               <div style={{ fontSize: 16, color: '#202124', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span>https://migrationfactor.com{hl(snippetUrlParts)}</span>
+                <span>{SITE_URL}{hl(snippetUrlParts)}</span>
                 <button type="button" aria-label="Toggle desktop / mobile preview" title={serpPreviewDevice === 'desktop' ? 'Show mobile preview' : 'Show desktop preview'} onClick={() => setSerpPreviewDevice(serpPreviewDevice === 'desktop' ? 'mobile' : 'desktop')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#70757a', fontSize: 16, padding: 0 }}>⋮</button>
               </div>
               <div style={{ color: '#1a0dab', fontSize: 22, lineHeight: 1.3, margin: '6px 0 4px' }}>{hl(effectiveTitle)}</div>
@@ -919,7 +924,7 @@ export default function PostEditor({
                   </div>
                 )}
                 <div style={{ padding: 12, background: '#f6f7f7' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#50575e', textTransform: 'uppercase' }}>migrationfactor.com</div>
+                  <div style={{ fontSize: '0.7rem', color: '#50575e', textTransform: 'uppercase' }}>{SITE_HOST}</div>
                   <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1d2327', marginTop: 2 }}>
                     {(!useSeoValues && ogTitle) ? ogTitle : effectiveTitle}
                   </div>
@@ -1026,14 +1031,14 @@ export default function PostEditor({
                   <a style={{ color: BLUE, textDecoration: 'underline' }}>{pubUrl}</a>
                 ) : slugEditing ? (
                   <>
-                    <span>https://migrationfactor.com/blog/</span>
+                    <span>{SITE_URL}/blog/</span>
                     <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', padding: '1px 6px', fontSize: 14 }} />
                     <span>/</span>
                     <button type="button" onClick={() => setSlugEditing(false)} style={{ ...outBtn, lineHeight: '24px', minHeight: 26, padding: '0 10px', fontSize: 13 }}>OK</button>
                   </>
                 ) : (
                   <>
-                    <a style={{ color: BLUE, textDecoration: 'underline' }}>https://migrationfactor.com/blog/<strong>{slug}</strong>/</a>
+                    <a style={{ color: BLUE, textDecoration: 'underline' }}>{SITE_URL}/blog/<strong>{slug}</strong>/</a>
                     <button type="button" onClick={() => setSlugEditing(true)} style={{ ...outBtn, lineHeight: '24px', minHeight: 26, padding: '0 10px', fontSize: 13 }}>Edit</button>
                   </>
                 )}

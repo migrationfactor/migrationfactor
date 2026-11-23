@@ -15,6 +15,8 @@ export interface CheckResult {
   highlights?: Array<{ start?: number; end?: number; text?: string; blockId?: string }>;
 }
 
+import { SITE_HOST } from './site-config';
+
 export interface AnalysisInput {
   title: string;
   customH1?: string;
@@ -48,6 +50,8 @@ export interface AnalysisInput {
   primaryEntity?: { name: string; sameAs?: string[] } | null;
   secondaryEntities?: Array<{ name: string; sameAs?: string[] }>;
   references?: Array<{ title: string; url: string; publisher?: string }>;
+  /** Domains the site owner treats as authoritative (Settings → Trusted source domains). */
+  trustedDomains?: string[];
   originalInsightAttestation?: boolean;
   primaryQuestion?: string;
   relatedQuestions?: string[];
@@ -215,7 +219,7 @@ export function extractContentDetails(blocks: ContentBlock[]) {
     const hrefMatches = rawHtml.matchAll(/href=["']([^"']+)["']/gi);
     for (const m of hrefMatches) {
       const url = m[1];
-      if (url.startsWith('/') || url.includes('migrationfactor.com')) {
+      if (url.startsWith('/') || (SITE_HOST !== '' && url.includes(SITE_HOST))) {
         internalLinks.push(url);
       } else if (url.startsWith('http')) {
         externalLinks.push(url);
@@ -251,7 +255,7 @@ export function extractContentDetails(blocks: ContentBlock[]) {
       hasStepsBlock = true;
     } else if (b.type === 'link') {
       const url = String(b.data?.url || b.url || '');
-      if (url.startsWith('/') || url.includes('migrationfactor.com')) {
+      if (url.startsWith('/') || (SITE_HOST !== '' && url.includes(SITE_HOST))) {
         internalLinks.push(url);
       } else if (url.startsWith('http')) {
         externalLinks.push(url);
@@ -527,17 +531,17 @@ export function runSeoAnalysis(input: AnalysisInput): FullAnalysisResult {
   if (extracted.externalLinks.length > 0 || (input.references && input.references.length > 0)) {
     additional.push({ id: 'A3', name: 'External links present', status: 'passed', pointsEarned: 10, maxPoints: 10, message: 'Article cites external sources.' });
   } else {
-    additional.push({ id: 'A3', name: 'External links present', status: 'failed', pointsEarned: 0, maxPoints: 10, message: 'No external authority links or citations found.', fixAdvice: 'Cite official government sources (e.g. immi.homeaffairs.gov.au).' });
+    additional.push({ id: 'A3', name: 'External links present', status: 'failed', pointsEarned: 0, maxPoints: 10, message: 'No external authority links or citations found.', fixAdvice: 'Cite authoritative sources (set them in Settings → Trusted source domains).' });
   }
 
   // A4: External link quality (8 pts)
-  const trustedDomains = ['gov.au', 'homeaffairs.gov.au', 'education.gov.au', 'legislation.gov.au', 'australia.gov.au'];
+  const trustedDomains = input.trustedDomains || [];
   const allExt = [...extracted.externalLinks, ...(input.references?.map((r) => r.url) || [])];
   const hasTrusted = allExt.some((url) => trustedDomains.some((td) => url.includes(td)));
   if (hasTrusted) {
     additional.push({ id: 'A4', name: 'External link authority', status: 'passed', pointsEarned: 8, maxPoints: 8, message: 'Includes citations to verified official government domains (.gov.au).' });
   } else if (allExt.length > 0) {
-    additional.push({ id: 'A4', name: 'External link authority', status: 'needs_improvement', pointsEarned: 4, maxPoints: 8, message: 'External links present, but none point to primary official government sources.', fixAdvice: 'Add a direct reference to official Home Affairs or OMARA guidelines.' });
+    additional.push({ id: 'A4', name: 'External link authority', status: 'needs_improvement', pointsEarned: 4, maxPoints: 8, message: 'External links present, but none point to your trusted source domains.', fixAdvice: 'Add a direct reference to one of your trusted source domains.' });
   } else {
     additional.push({ id: 'A4', name: 'External link authority', status: 'failed', pointsEarned: 0, maxPoints: 8, message: 'No external references to evaluate.' });
   }

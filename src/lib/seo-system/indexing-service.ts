@@ -3,7 +3,9 @@ import { logAudit } from './audit';
 import crypto from 'crypto';
 
 export const INDEXNOW_API_ENDPOINT = 'https://api.indexnow.org/indexnow';
-export const DEFAULT_HOST = 'migrationfactor.com';
+import { SITE_HOST } from './site-config';
+
+export const DEFAULT_HOST = SITE_HOST;
 
 export interface IndexingStatusResult {
   postId: string;

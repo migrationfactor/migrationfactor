@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { initials } from '@/lib/seo-system/site-config';
 
 type Child = { label: string; href: string; external?: boolean };
 type Entry = { label: string; href: string; icon: string; children?: Child[] };
@@ -58,7 +59,7 @@ function Icon({ name }: { name: string }) {
 }
 
 /** WordPress-style admin bar, collapsible left menu and content frame for the SEO admin. */
-export default function SeoAdminChrome({ name, roles, children }: { name: string; roles: string; children: React.ReactNode }) {
+export default function SeoAdminChrome({ name, roles, siteName, children }: { name: string; roles: string; siteName: string; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [pathname]);
@@ -79,7 +80,7 @@ export default function SeoAdminChrome({ name, roles, children }: { name: string
         <button type="button" className="sa-bar-toggle" aria-label="Menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           <span /><span /><span />
         </button>
-        <Link href="/seo-admin" className="sa-bar-item sa-bar-site"><span className="sa-bar-logo">MF</span><span>Migration Factor SEO</span></Link>
+        <Link href="/seo-admin" className="sa-bar-item sa-bar-site"><span className="sa-bar-logo">{initials(siteName)}</span><span>{siteName} SEO</span></Link>
         <Link href="/" className="sa-bar-item sa-bar-hide-sm" target="_blank">View site</Link>
         <Link href="/seo-admin/blog/new" className="sa-bar-item"><span aria-hidden="true">＋</span> New</Link>
         <div className="sa-bar-spacer" />

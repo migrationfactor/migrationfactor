@@ -1,4 +1,6 @@
 import { query } from './db';
+import { SITE_URL } from './site-config';
+import { getSeoSettings } from './settings-service';
 import { runContentAnalysis } from './analysis';
 import { getPost } from './posts-service';
 import { reindexPostLinks } from './link-service';
@@ -33,13 +35,14 @@ export async function refreshAnalysis(postId: string): Promise<boolean> {
     primaryQuestion: geo.primary_question || '',
     answerSummary: geo.answer_summary || '',
     references: post.references || [],
+    trustedDomains: (await getSeoSettings()).trustedDomains,
   } as any);
   const sheet = await computeSheetScore({
     postId,
     focusKeyword: seo.focus_keyword || '',
     seoTitle: seo.seo_title_effective || seo.seo_title_raw || post.title,
     metaDescription: seo.meta_description_effective || seo.meta_description_raw || post.excerpt || '',
-    url: 'https://migrationfactor.com' + (post.legacy_path || '/blog/' + post.slug + '/'),
+    url: SITE_URL + (post.legacy_path || '/blog/' + post.slug + '/'),
     bodyHtml: post.body_html || '',
     robotsIndex: seo.robots_index !== false,
     canonicalUrl: seo.canonical_url || '',
