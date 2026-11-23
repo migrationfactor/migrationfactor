@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function SeoAdminLoginPage() {
@@ -39,26 +38,25 @@ export default function SeoAdminLoginPage() {
   };
 
   return (
-    <div className="admin-login">
-      <div className="admin-login-card">
-        <Image src="/brand/mark.webp" width={72} height={72} alt="Migration Factor" priority />
-        <h1>SEO admin sign in</h1>
-        <p>SEO, GEO &amp; AEO blog management. Authorised Migration Factor staff only.</p>
-        {error && <p className="admin-message error" role="alert">{error}</p>}
-        <form className="admin-login-form" onSubmit={handleSubmit}>
-          <label>
-            Email
-            <input type="email" autoComplete="username" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <label>
-            Password
-            <input type="password" autoComplete="current-password" required maxLength={200} value={password} onChange={(e) => setPassword(e.target.value)} />
-          </label>
-          <button type="submit" className="admin-button" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
+    <div className="sa-login">
+      <h1 className="sa-login-logo"><span>MF</span>Migration Factor SEO</h1>
+      <div className="sa-login-box">
+        {error && <div className="sa-notice sa-notice-error" role="alert"><p>{error}</p></div>}
+        <form onSubmit={handleSubmit}>
+          <p>
+            <label htmlFor="sa-email">Email Address</label>
+            <input id="sa-email" type="email" autoComplete="username" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
+          </p>
+          <p>
+            <label htmlFor="sa-pass">Password</label>
+            <input id="sa-pass" type="password" autoComplete="current-password" required maxLength={200} value={password} onChange={(e) => setPassword(e.target.value)} />
+          </p>
+          <p className="sa-login-submit">
+            <button type="submit" className="button button-primary" disabled={loading}>{loading ? 'Logging in…' : 'Log In'}</button>
+          </p>
         </form>
       </div>
+      <p className="sa-login-note">Use your Migration Factor admin email and password.</p>
     </div>
   );
 }

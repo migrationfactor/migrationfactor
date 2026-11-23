@@ -25,8 +25,8 @@ export interface PickedMedia {
   height?: number;
 }
 
-const BRAND = { dark: '#042628', teal: '#0b666a', line: '#cfe3e3', soft: '#f2f8f8', muted: '#3d5557', red: '#a01b2b', amber: '#8a5a00' };
-const box: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' };
+const BRAND = { dark: '#1d2327', teal: '#2271b1', line: '#c3c4c7', soft: '#f6f7f7', muted: '#50575e', red: '#d63638', amber: '#996800' };
+const box: React.CSSProperties = { width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' };
 const smallBtn: React.CSSProperties = { padding: '3px 8px', borderRadius: 4, border: `1px solid ${BRAND.line}`, background: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', color: BRAND.dark };
 const GENERIC_ANCHORS = /^(click here|read more|here|this link|link|more)$/i;
 
@@ -351,7 +351,7 @@ export default function BlockEditor({
             {d.url ? <img src={d.url} alt="" style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 6, display: 'block', marginBottom: 8 }} /> : <div style={{ color: BRAND.muted, fontSize: '0.85rem', marginBottom: 8 }}>No image chosen.</div>}
             <button type="button" style={smallBtn} onClick={async () => { const m = await pickMedia(); if (m) set({ url: m.url, alt: d.alt || m.alt || '', width: m.width, height: m.height, mediaId: m.id }); }}>{d.url ? 'Replace image' : 'Choose / upload image'}</button>
             <label style={{ marginLeft: 12, fontSize: '0.8rem' }}><input type="checkbox" checked={Boolean(d.isDecorative)} onChange={(e) => set({ isDecorative: e.target.checked })} /> Decorative (no alt text)</label>
-            {!d.isDecorative && <input value={d.alt || ''} onChange={(e) => set({ alt: e.target.value })} placeholder="Alt text (required): describe the image" style={{ ...box, marginTop: 8, borderColor: d.url && !d.alt ? BRAND.red : '#b9d3d4' }} />}
+            {!d.isDecorative && <input value={d.alt || ''} onChange={(e) => set({ alt: e.target.value })} placeholder="Alt text (required): describe the image" style={{ ...box, marginTop: 8, borderColor: d.url && !d.alt ? BRAND.red : '#8c8f94' }} />}
             <input value={d.caption || ''} onChange={(e) => set({ caption: e.target.value })} placeholder="Caption (optional)" style={{ ...box, marginTop: 6 }} />
           </div>
         );
@@ -400,7 +400,7 @@ export default function BlockEditor({
             <input value={d.heading || ''} onChange={(e) => set({ heading: e.target.value })} placeholder="Section heading (H2)" style={{ ...box, marginBottom: 8, fontWeight: 700 }} />
             {(d.items || []).map((q: any, i: number) => (
               <div key={i} style={{ border: `1px solid ${BRAND.line}`, borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                <input value={q.question || ''} onChange={(e) => { const n = [...d.items]; n[i] = { ...q, question: e.target.value }; set({ items: n }); }} placeholder={`Question ${i + 1} (5–150 characters)`} style={{ ...box, marginBottom: 6, borderColor: !q.question ? BRAND.red : '#b9d3d4' }} />
+                <input value={q.question || ''} onChange={(e) => { const n = [...d.items]; n[i] = { ...q, question: e.target.value }; set({ items: n }); }} placeholder={`Question ${i + 1} (5–150 characters)`} style={{ ...box, marginBottom: 6, borderColor: !q.question ? BRAND.red : '#8c8f94' }} />
                 <InlineField value={q.answer || ''} onChange={(v) => { const n = [...d.items]; n[i] = { ...q, answer: v }; set({ items: n }); }} rows={3} placeholder="Answer (always visible text)" />
                 <button type="button" style={{ ...smallBtn, marginTop: 4 }} onClick={() => set({ items: d.items.filter((_: any, k: number) => k !== i) })}>Remove question</button>
               </div>

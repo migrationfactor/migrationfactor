@@ -33,85 +33,91 @@ export default async function SeoAdminDashboardPage() {
 
   return (
     <>
-      <header className="admin-header">
-        <div>
-          <h1>SEO &amp; editorial dashboard</h1>
-          <p>Authoritative visibility metrics, quality scores, and crawl readiness.</p>
-        </div>
-        <Link href="/seo-admin/blog/new" className="admin-button">Write new post</Link>
-      </header>
+      <h1 className="wp-heading-inline">Dashboard</h1>
+      <hr className="wp-header-end" />
 
-      <div className="admin-cards">
-        {statusCards.map((item) => (
-          <Link key={item.label} href={`/seo-admin/blog?status=${item.status}`} className="admin-card">
-            <span>{item.label}</span>
-            <strong>{item.count}</strong>
-          </Link>
-        ))}
-      </div>
-
-      <div className="admin-panels seo-section">
-        <section className="admin-panel">
-          <h2>Average scores (published posts)</h2>
-          <div className="seo-score-grid">
-            {scoreCards.map((c) => (
-              <div key={c.label} className="seo-score">
-                <span>{c.label}</span>
-                <strong>{c.value || 0}<small>/100</small></strong>
-              </div>
-            ))}
+      <div className="sa-widgets">
+        <section className="postbox">
+          <h2 className="postbox-title">At a Glance</h2>
+          <div className="inside">
+            <ul className="sa-glance">
+              {statusCards.map((item) => (
+                <li key={item.label}>
+                  <Link href={`/seo-admin/blog?status=${item.status}`}><b>{item.count}</b> {item.label}</Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
-        <section className="admin-panel">
-          <h2>SEO quality distribution</h2>
-          <div className="seo-band-stack">
-            <Link href="/seo-admin/blog?score_band=80-100" className="seo-band seo-band-high"><span>High quality (80–100)</span><span>{scores.bandHigh} posts</span></Link>
-            <Link href="/seo-admin/blog?score_band=50-79" className="seo-band seo-band-med"><span>Needs improvement (50–79)</span><span>{scores.bandMed} posts</span></Link>
-            <Link href="/seo-admin/blog?score_band=0-49" className="seo-band seo-band-low"><span>Poor / high risk (0–49)</span><span>{scores.bandLow} posts</span></Link>
-          </div>
-        </section>
-      </div>
 
-      <section className="admin-panel seo-section">
-        <h2>SEO &amp; crawlability issues</h2>
-        <div className="seo-issue-grid">
-          {issueRows.map((iss) => (
-            <Link key={iss.label} href={`/seo-admin/blog?${iss.filter}`} className="seo-issue">
-              <span>{iss.label}</span>
-              <span className={`seo-pill${iss.count > 0 ? (iss.danger ? ' seo-pill-danger' : ' seo-pill-warn') : ''}`}>{iss.count}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <div className="admin-panels">
-        <section className="admin-panel">
-          <h2>Indexing submissions (IndexNow / GSC)</h2>
-          <div className="seo-metrics">
-            <div><span>Queued</span><strong>{indexingCounts.queued}</strong></div>
-            <div><span>Submitted</span><strong>{indexingCounts.submitted}</strong></div>
-            <div><span>Accepted</span><strong>{indexingCounts.accepted}</strong></div>
-            <div><span>Failed</span><strong>{indexingCounts.failed}</strong></div>
-          </div>
-          <p className="seo-note">Statuses follow verified evidence only: Submitted → Accepted → Crawled → Indexed.</p>
-        </section>
-        <section className="admin-panel">
-          <div className="seo-panel-head">
-            <h2>Recent 404 URLs</h2>
-            <Link href="/seo-admin/seo/redirects">Create redirect ↗</Link>
-          </div>
-          {top404s.length === 0 ? (
-            <p className="admin-empty">No recent 404s captured.</p>
-          ) : (
-            <div>
-              {top404s.map((n: any) => (
-                <div key={n.path} className="seo-kv-row">
-                  <span className="seo-mono">{n.path}</span>
-                  <strong>{n.total_hits} hits</strong>
+        <section className="postbox">
+          <h2 className="postbox-title">Average Scores (Published Posts)</h2>
+          <div className="inside">
+            <div className="sa-score-grid">
+              {scoreCards.map((c) => (
+                <div key={c.label} className="sa-score">
+                  <span>{c.label}</span>
+                  <strong>{c.value || 0}<small>/100</small></strong>
                 </div>
               ))}
             </div>
-          )}
+          </div>
+        </section>
+
+        <section className="postbox">
+          <h2 className="postbox-title">SEO Quality Distribution</h2>
+          <div className="inside">
+            <ul className="sa-bands">
+              <li className="sa-band-high"><Link href="/seo-admin/blog?score_band=80-100"><span>High quality (80–100)</span><b>{scores.bandHigh}</b></Link></li>
+              <li className="sa-band-med"><Link href="/seo-admin/blog?score_band=50-79"><span>Needs improvement (50–79)</span><b>{scores.bandMed}</b></Link></li>
+              <li className="sa-band-low"><Link href="/seo-admin/blog?score_band=0-49"><span>Poor / high risk (0–49)</span><b>{scores.bandLow}</b></Link></li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="postbox">
+          <h2 className="postbox-title">Indexing Submissions (IndexNow / GSC)</h2>
+          <div className="inside">
+            <div className="sa-metrics">
+              <div><span>Queued</span><strong>{indexingCounts.queued}</strong></div>
+              <div><span>Submitted</span><strong>{indexingCounts.submitted}</strong></div>
+              <div><span>Accepted</span><strong>{indexingCounts.accepted}</strong></div>
+              <div><span>Failed</span><strong>{indexingCounts.failed}</strong></div>
+            </div>
+            <p className="description">Statuses follow verified evidence only: Submitted → Accepted → Crawled → Indexed.</p>
+          </div>
+        </section>
+
+        <section className="postbox sa-widget-wide">
+          <h2 className="postbox-title">SEO &amp; Crawlability Issues</h2>
+          <div className="inside">
+            <ul className="sa-issues">
+              {issueRows.map((iss) => (
+                <li key={iss.label}>
+                  <Link href={`/seo-admin/blog?${iss.filter}`}>
+                    <span>{iss.label}</span>
+                    <b className={iss.count > 0 ? (iss.danger ? 'is-danger' : 'is-warn') : undefined}>{iss.count}</b>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="postbox">
+          <h2 className="postbox-title">Recent 404 URLs</h2>
+          <div className="inside">
+            {top404s.length === 0 ? (
+              <p className="description">No recent 404s captured.</p>
+            ) : (
+              <ul className="sa-kv">
+                {top404s.map((n: any) => (
+                  <li key={n.path}><code>{n.path}</code><b>{n.total_hits} hits</b></li>
+                ))}
+              </ul>
+            )}
+            <p><Link href="/seo-admin/seo/redirects">Create a redirect →</Link></p>
+          </div>
         </section>
       </div>
     </>

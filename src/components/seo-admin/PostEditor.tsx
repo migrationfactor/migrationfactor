@@ -10,7 +10,7 @@ import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
 import ClassicEditor from './ClassicEditor';
 import { htmlToBlocks } from './paste-clean';
-import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel, ReferencesPanel } from './PostWorkflow';
+import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel, ReferencesPanel, MoveToTrash } from './PostWorkflow';
 
 interface PostEditorProps {
   initialPost?: any;
@@ -120,7 +120,7 @@ export default function PostEditor({
   const [references, setReferences] = useState<any[]>((initialPost?.references || []).map((r: any) => ({ title: r.title, url: r.url, publisher: r.publisher || '', publishedDate: r.publishedDate || r.published_date || '', note: r.note })));
 
   // Editor states
-  const [activeTab, setActiveTab] = useState<'post' | 'seo' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing' | 'links' | 'history'>('seo');
+  const [activeTab, setActiveTab] = useState<'general' | 'advanced' | 'social' | 'schema' | 'geo' | 'aeo' | 'indexing'>('general');
   const [serpPreviewDevice, setSerpPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -129,6 +129,27 @@ export default function PostEditor({
   const [prepublishResult, setPrepublishResult] = useState<any>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [minorUpdate, setMinorUpdate] = useState(false);
+  const [tagList, setTagList] = useState<any[]>(tags);
+  const [catList, setCatList] = useState<any[]>(categories);
+  const [categoryIds, setCategoryIds] = useState<string[]>(() => {
+    const ids = (initialPost?.categories || []).map((c: any) => c.id);
+    if (ids.length) return ids;
+    const first = initialPost?.primary_category_id || categories[0]?.id;
+    return first ? [first] : [];
+  });
+  const [catTab, setCatTab] = useState<'all' | 'used'>('all');
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [showPopularTags, setShowPopularTags] = useState(false);
+  const [kwInput, setKwInput] = useState('');
+  const [snippetEdit, setSnippetEdit] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [revCount, setRevCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!postId) return;
+    fetch('/api/v1/posts/' + postId + '/revisions').then((r) => r.json()).then((d) => setRevCount(Array.isArray(d) ? d.length : null)).catch(() => undefined);
+  }, [postId]);
 
   // Auto-slug generator on new post title entry
   useEffect(() => {
@@ -193,6 +214,7 @@ export default function PostEditor({
       primaryCategoryId: primaryCategoryId || null,
       authorIds: selectedAuthorIds,
       tagIds,
+      categoryIds,
       reviewedBy: reviewedBy || null,
       focusKeyword: focusKeyword || null,
       additionalKeywords: additionalKeywords.split(',').map(k => k.trim()).filter(Boolean),
@@ -308,7 +330,7 @@ export default function PostEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
-  const handleSaveDraft = async (force = false): Promise<boolean> => {
+  const handleSaveDraft = async (force = false, thenPublish = false): Promise<boolean> => {
     if (lockedBy) { setStatusMessage('Saving is disabled: ' + lockedBy.name + ' is editing this post.'); return false; }
     setSaving(true);
     setStatusMessage('');
@@ -325,6 +347,9 @@ export default function PostEditor({
         const data = await res.json();
         if (res.ok) {
           savedKey.current = payloadKey;
+          if (thenPublish) {
+            try { await fetch(`/api/v1/posts/${data.post.id}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acknowledge_warnings: false }) }); } catch { /* the editor shows Publish again */ }
+          }
           router.push(`/seo-admin/blog/${data.post.id}`);
         } else {
           setStatusMessage(`Error: ${data.message || 'Failed to save'}`);
@@ -404,692 +429,290 @@ export default function PostEditor({
     }
   };
 
-  return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Top Bar (Section 16.2) */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: '#ffffff',
-          padding: '14px 24px',
-          borderRadius: 12,
-          border: '1px solid #cfe3e3',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link href="/seo-admin/blog" style={{ color: '#0b666a', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
-            ← All Posts
-          </Link>
-          <span
-            style={{
-              padding: '3px 10px',
-              borderRadius: 12,
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              backgroundColor: status === 'published' ? '#d4efec' : '#e9f3f3',
-              color: status === 'published' ? '#0b666a' : '#3d5557',
-            }}
-          >
-            {status}
+  const chkIcon = (st: string) => {
+    const c = st === 'passed' ? '#00a32a' : st === 'needs_improvement' ? '#dba617' : '#d63638';
+    const g = st === 'passed' ? '✓' : st === 'needs_improvement' ? '✓' : '✕';
+    return st === 'needs_improvement'
+      ? <span aria-hidden style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${c}`, color: c, fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{g}</span>
+      : <span aria-hidden style={{ width: 20, height: 20, borderRadius: '50%', background: c, color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{g}</span>;
+  };
+  const checkGroup = (label: string, checks: any[]) => {
+    const real = checks.filter((c) => c.status !== 'not_applicable');
+    const errs = real.filter((c) => c.status === 'failed').length;
+    return (
+      <details open={label === 'Basic SEO'} style={{ borderTop: '1px solid #dcdcde' }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15, color: '#1d2327' }}>
+          {label}
+          <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 10px', borderRadius: 12, background: errs ? '#f4a7a7' : '#7ad28a', color: errs ? '#8a1f1f' : '#fff' }}>
+            {errs ? `✕ ${errs} Error${errs > 1 ? 's' : ''}` : '✓ All Good'}
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#6b8183' }}>{saveStatus}</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {postId && (
-            <Link
-              href={`/preview/${postId}`}
-              target="_blank"
-              style={{
-                padding: '8px 14px',
-                borderRadius: 6,
-                border: '1px solid #b9d3d4',
-                color: '#042628',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-              }}
-            >
-              👁️ Preview
-            </Link>
-          )}
-
-          <button
-            onClick={() => handleSaveDraft()}
-            disabled={saving}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              background: '#e9f3f3',
-              color: '#042628',
-              border: '1px solid #b9d3d4',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </button>
-
-          {status === 'published' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label style={{ fontSize: '0.8rem', color: '#3d5557', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="checkbox"
-                  checked={minorUpdate}
-                  onChange={(e) => setMinorUpdate(e.target.checked)}
-                />
-                Minor update
-              </label>
-              <button
-                onClick={() => handleSaveDraft()}
-                style={{
-                  padding: '8px 18px',
-                  borderRadius: 6,
-                  background: '#0b666a',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Update Live
-              </button>
+          <span aria-hidden style={{ marginLeft: 'auto', color: '#787c82' }}>⌃</span>
+        </summary>
+        <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {real.map((chk) => (
+            <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#2c3338' }}>
+              {chkIcon(chk.status)}
+              <span style={{ flex: 1 }}>{chk.message}{chk.status !== 'passed' && chk.fixAdvice ? <span style={{ color: '#2271b1' }}> {chk.fixAdvice}</span> : null}</span>
+              <span title={chk.fixAdvice || chk.name} style={{ width: 16, height: 16, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', cursor: 'help' }}>?</span>
             </div>
-          ) : (
-            <button
-              onClick={handleInitiatePublish}
-              disabled={publishing || isNew}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 6,
-                background: isNew ? '#6b8183' : '#0b666a',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                border: 'none',
-                cursor: isNew ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Publish Post
-            </button>
-          )}
+          ))}
         </div>
-      </div>
+      </details>
+    );
+  };
+  const addKeyword = (raw: string) => {
+    const word = raw.trim().replace(/,$/, '').trim();
+    if (!word) return;
+    const all = [focusKeyword, ...additionalKeywords.split(',').map((k: string) => k.trim())].filter(Boolean);
+    if (all.some((k) => k.toLowerCase() === word.toLowerCase())) return;
+    if (!focusKeyword) setFocusKeyword(word);
+    else setAdditionalKeywords([...additionalKeywords.split(',').map((k: string) => k.trim()).filter(Boolean), word].join(', '));
+  };
+  const removeKeyword = (word: string) => {
+    const extras = additionalKeywords.split(',').map((k: string) => k.trim()).filter(Boolean);
+    if (word === focusKeyword) { setFocusKeyword(extras[0] || ''); setAdditionalKeywords(extras.slice(1).join(', ')); }
+    else setAdditionalKeywords(extras.filter((k: string) => k !== word).join(', '));
+  };
+  const addTags = async () => {
+    const names = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
+    if (!names.length) return;
+    const next = [...tagIds];
+    for (const name of names) {
+      let t = tagList.find((x: any) => x.name.toLowerCase() === name.toLowerCase());
+      if (!t) {
+        try {
+          const res = await fetch('/api/v1/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+          const created = await res.json();
+          if (res.ok) { t = created.tag || created; setTagList((l: any[]) => [...l, t]); }
+        } catch { /* ignore */ }
+      }
+      if (t && !next.includes(t.id)) next.push(t.id);
+    }
+    setTagIds(next);
+    setTagInput('');
+  };
+  const addCategory = async () => {
+    const name = newCatName.trim();
+    if (!name) return;
+    try {
+      const res = await fetch('/api/v1/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      const created = await res.json();
+      const c = created.category || created;
+      if (res.ok && c?.id) { setCatList((l: any[]) => [...l, c]); setCategoryIds((ids) => [...ids, c.id]); if (!primaryCategoryId) setPrimaryCategoryId(c.id); setNewCatName(''); setAddingCat(false); }
+      else setStatusMessage(created.message || 'Could not add the category.');
+    } catch (e: any) { setStatusMessage(e.message); }
+  };
+  const toggleCategory = (id: string) => {
+    const on = categoryIds.includes(id);
+    const next = on ? categoryIds.filter((x) => x !== id) : [...categoryIds, id];
+    setCategoryIds(next);
+    if (!on && !primaryCategoryId) setPrimaryCategoryId(id);
+    if (on && primaryCategoryId === id) setPrimaryCategoryId(next[0] || '');
+  };
+  const onPublishClick = async () => {
+    if (isNew) { await handleSaveDraft(false, true); return; }
+    if (dirty && !(await handleSaveDraft())) return;
+    handleInitiatePublish();
+  };
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const seoScore = liveAnalysis.overallScore;
+  const scoreColor = seoScore >= 80 ? '#00a32a' : seoScore >= 50 ? '#dba617' : '#d63638';
+  const scoreBg = seoScore >= 80 ? '#e7f5e9' : seoScore >= 50 ? '#fcf3d8' : '#fcebea';
+  const catsShown = catTab === 'used' ? [...catList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 10) : catList;
+  const kwList = [focusKeyword, ...additionalKeywords.split(',').map((k: string) => k.trim())].filter(Boolean);
+  const hl = (text: string) => {
+    const kw = focusKeyword.trim();
+    if (!kw) return text;
+    const parts = text.split(new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, String.fromCharCode(92) + '$&') + ')', 'i'));
+    return parts.map((p, i) => (p.toLowerCase() === kw.toLowerCase() ? <strong key={i}>{p}</strong> : <React.Fragment key={i}>{p}</React.Fragment>));
+  };
+  const rmTabs: Array<[string, string]> = [['general', 'General'], ['advanced', 'Advanced'], ['schema', 'Schema'], ['social', 'Social'], ['geo', 'GEO'], ['aeo', 'AEO'], ['indexing', 'Indexing']];
+  const publishLabel = status === 'published' ? 'Update' : status === 'scheduled' ? 'Update' : 'Publish';
 
-      {lockedBy && (
-        <div role="alert" style={{ padding: '12px 16px', background: '#fdecee', border: '1px solid #e8b4ba', borderRadius: 8, fontSize: '0.875rem', color: '#6b1020', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          {lockedBy.name} is editing this post right now, so saving is turned off for you.
-          {lockedBy.canTakeOver && <button type="button" onClick={() => acquireLock(true)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #a01b2b', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Take over</button>}
-        </div>
-      )}
-      {restoreOffer && (
-        <div style={{ padding: '12px 16px', background: '#fff8e1', border: '1px solid #f0d890', borderRadius: 8, fontSize: '0.875rem', color: '#5c4400', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          An unsaved autosaved version from {new Date(restoreOffer.saved_at || restoreOffer.updated_at || Date.now()).toLocaleString()} was found.
-          <button type="button" onClick={() => { applyPayload(restoreOffer.snapshot); setRestoreOffer(null); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #0b666a', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Restore it</button>
-          <button type="button" onClick={() => setRestoreOffer(null)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Discard</button>
-        </div>
-      )}
-      {conflict !== null && (
-        <div role="alertdialog" style={{ padding: '12px 16px', background: '#fdecee', border: '1px solid #e8b4ba', borderRadius: 8, fontSize: '0.875rem', color: '#6b1020', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          Someone else saved a newer version of this post. Overwrite it with yours, or reload their version?
-          <button type="button" onClick={() => { setConflict(null); handleSaveDraft(true); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #a01b2b', background: '#fff', cursor: 'pointer', fontWeight: 700 }}>Overwrite with mine</button>
-          <button type="button" onClick={() => { savedKey.current = payloadKey; window.location.reload(); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Reload theirs</button>
-        </div>
-      )}
-      {statusMessage && (
-        <div style={{ padding: '12px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', fontSize: '0.875rem' }}>
-          {statusMessage}
-        </div>
-      )}
+  return (
+    <div style={{ maxWidth: 1400, margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1d2327' }}>
+      <h1 style={{ fontSize: 23, fontWeight: 400, margin: '0 0 16px', padding: '9px 0 4px', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 12 }}>
+        {isNew ? 'Add Post' : 'Edit Post'}
+        {!isNew && <Link href="/seo-admin/blog/new" style={{ fontSize: 13, fontWeight: 600, padding: '4px 12px', border: '1px solid #2271b1', borderRadius: 3, color: '#2271b1', textDecoration: 'none', background: '#f6f7f7', lineHeight: 1.6 }}>Add Post</Link>}
+      </h1>
 
-      {/* 2-Column Editor Layout (Main Content + Right Sidebar) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: 24, alignItems: 'start' }}>
-        {/* Main Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Title, permalink and editor (WordPress classic layout) */}
+      {[
+        lockedBy && { kind: 'error', node: <>{lockedBy.name} is editing this post right now, so saving is turned off for you. {lockedBy.canTakeOver && <button type="button" onClick={() => acquireLock(true)} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #2271b1', background: '#f6f7f7', color: '#2271b1', borderRadius: 3, cursor: 'pointer' }}>Take over</button>}</> },
+        restoreOffer && { kind: 'warning', node: <>An unsaved autosaved version from {new Date(restoreOffer.saved_at || restoreOffer.updated_at || Date.now()).toLocaleString()} was found. <button type="button" onClick={() => { applyPayload(restoreOffer.snapshot); setRestoreOffer(null); }} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #2271b1', background: '#f6f7f7', color: '#2271b1', borderRadius: 3, cursor: 'pointer' }}>Restore</button> <button type="button" onClick={() => setRestoreOffer(null)} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#f6f7f7', borderRadius: 3, cursor: 'pointer' }}>Dismiss</button></> },
+        conflict !== null && { kind: 'error', node: <>Someone else updated this post after you opened it. <button type="button" onClick={() => { setConflict(null); handleSaveDraft(true); }} style={{ marginLeft: 8, padding: '2px 10px', border: '1px solid #d63638', background: '#f6f7f7', color: '#d63638', borderRadius: 3, cursor: 'pointer' }}>Overwrite</button> <button type="button" onClick={() => { savedKey.current = payloadKey; window.location.reload(); }} style={{ padding: '2px 10px', border: '1px solid #c3c4c7', background: '#f6f7f7', borderRadius: 3, cursor: 'pointer' }}>Reload</button></> },
+        statusMessage && { kind: /^Error|disabled|Could not/i.test(statusMessage) ? 'error' : 'success', node: statusMessage },
+      ].filter(Boolean).map((n: any, i) => (
+        <div key={i} role="status" style={{ background: '#fff', border: '1px solid #c3c4c7', borderLeft: `4px solid ${n.kind === 'error' ? '#d63638' : n.kind === 'warning' ? '#dba617' : '#00a32a'}`, boxShadow: '0 1px 1px rgba(0,0,0,.04)', margin: '0 0 12px', padding: '10px 12px', fontSize: 13 }}>{n.node}</div>
+      ))}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 20, alignItems: 'start' }}>
+        {/* ---------------- Main column ---------------- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
           <div>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Add title"
-              aria-label="Post title"
-              style={{ width: '100%', fontSize: '1.7rem', padding: '3px 10px', lineHeight: 1.9, border: '1px solid #8c8f94', borderRadius: 4, outline: 'none', boxSizing: 'border-box', color: '#1d2327', background: '#fff' }}
+              aria-label="Add title"
+              style={{ width: '100%', fontSize: '1.7em', padding: '3px 8px', lineHeight: 1.9, border: '1px solid #8c8f94', borderRadius: 0, outline: 'none', boxSizing: 'border-box', color: '#1d2327', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,.07)' }}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: '0.8125rem', color: '#50575e', flexWrap: 'wrap', minHeight: 28 }}>
-              <strong>Permalink:</strong>
-              {initialPost?.legacy_path ? (
-                <span style={{ color: '#2271b1' }}>https://migrationfactor.com{initialPost.legacy_path}</span>
-              ) : slugEditing ? (
-                <>
-                  <span>https://migrationfactor.com/blog/</span>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', borderRadius: 3, padding: '2px 6px', fontFamily: 'monospace' }} />
-                  <span>/</span>
-                  <button type="button" onClick={() => setSlugEditing(false)} style={{ padding: '2px 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer' }}>OK</button>
-                </>
-              ) : (
-                <>
-                  <a style={{ color: '#2271b1' }}>https://migrationfactor.com/blog/<strong>{slug || 'your-post-title'}</strong>/</a>
-                  <button type="button" onClick={() => setSlugEditing(true)} style={{ padding: '1px 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}>Edit</button>
-                </>
-              )}
-              <button type="button" onClick={switchMode} style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.8125rem' }}>
-                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
-              </button>
-            </div>
+            {(title || slug || initialPost?.legacy_path) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 13, color: '#50575e', flexWrap: 'wrap', minHeight: 28 }}>
+                <strong>Permalink:</strong>
+                {initialPost?.legacy_path ? (
+                  <a style={{ color: '#2271b1', textDecoration: 'underline' }}>https://migrationfactor.com{initialPost.legacy_path}</a>
+                ) : slugEditing ? (
+                  <>
+                    <span>https://migrationfactor.com/blog/</span>
+                    <input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} style={{ border: '1px solid #8c8f94', padding: '1px 6px', fontSize: 13 }} />
+                    <span>/</span>
+                    <button type="button" onClick={() => setSlugEditing(false)} style={{ padding: '0 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', lineHeight: '24px' }}>OK</button>
+                  </>
+                ) : (
+                  <>
+                    <a style={{ color: '#2271b1', textDecoration: 'underline' }}>https://migrationfactor.com/blog/<strong>{slug}</strong>/</a>
+                    <button type="button" onClick={() => setSlugEditing(true)} style={{ padding: '0 10px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontWeight: 600, cursor: 'pointer', fontSize: 12, lineHeight: '24px' }}>Edit</button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
             {editorMode === 'classic' ? (
               <ClassicEditor value={classicHtml} onChange={setClassicHtml} resetKey={`${postId || 'new'}-${editorKey}`} pickMedia={pickMedia} notify={setStatusMessage} />
             ) : (
-              <div style={{ background: '#ffffff', padding: 16, borderRadius: 4, border: '1px solid #c3c4c7' }}>
-                <BlockEditor
-                  value={blocks}
-                  onChange={setBlocks}
-                  resetKey={`${postId || 'new'}-${editorKey}`}
-                  canRawHtml={canRawHtml}
-                  focusKeyword={focusKeyword}
-                  pickMedia={pickMedia}
-                  notify={setStatusMessage}
-                />
+              <div style={{ background: '#ffffff', padding: 16, border: '1px solid #c3c4c7' }}>
+                <BlockEditor value={blocks} onChange={setBlocks} resetKey={`${postId || 'new'}-${editorKey}`} canRawHtml={canRawHtml} focusKeyword={focusKeyword} pickMedia={pickMedia} notify={setStatusMessage} />
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', marginTop: 8, background: '#f6f7f7', border: '1px solid #c3c4c7', fontSize: '0.8125rem', color: '#50575e' }}>
-              <span>Words: <strong>{wordCount}</strong></span>
-              <span>Reading time: <strong>~{readingTimeMin} min</strong></span>
-              <span>Headings: <strong>{headings.length}</strong></span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Sticky Score Summary Row (Section 16.2) */}
-          <div
-            style={{
-              background: '#042628',
-              color: '#ffffff',
-              padding: '14px 16px',
-              borderRadius: 12,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 8,
-              textAlign: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            }}
-          >
-            <div
-              onClick={() => setActiveTab('seo')}
-              style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'seo' ? '#07484b' : 'transparent' }}
-            >
-              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>SEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: liveAnalysis.overallScore >= 80 ? '#4ade80' : liveAnalysis.overallScore >= 50 ? '#fde047' : '#b4424f' }}>
-                {liveAnalysis.overallScore}
-              </div>
-            </div>
-
-            <div
-              onClick={() => setActiveTab('seo')}
-              style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'seo' ? '#07484b' : 'transparent' }}
-            >
-              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>Read</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
-                {liveAnalysis.readabilityScore}
-              </div>
-            </div>
-
-            <div
-              onClick={() => setActiveTab('geo')}
-              style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'geo' ? '#07484b' : 'transparent' }}
-            >
-              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>GEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
-                {liveAnalysis.geoScore}
-              </div>
-            </div>
-
-            <div
-              onClick={() => setActiveTab('aeo')}
-              style={{ cursor: 'pointer', padding: 4, borderRadius: 6, background: activeTab === 'aeo' ? '#07484b' : 'transparent' }}
-            >
-              <div style={{ fontSize: '0.6875rem', color: '#6b8183', textTransform: 'uppercase', fontWeight: 700 }}>AEO</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#35b5ac' }}>
-                {liveAnalysis.aeoScore}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar Tab Buttons */}
-          <div style={{ display: 'flex', background: '#cfe3e3', borderRadius: 8, padding: 3, gap: 2, overflowX: 'auto' }}>
-            {[
-              { id: 'post', label: 'Post' },
-              { id: 'seo', label: 'SEO' },
-              { id: 'social', label: 'Social' },
-              { id: 'schema', label: 'Schema' },
-              { id: 'geo', label: 'GEO' },
-              { id: 'aeo', label: 'AEO' },
-              { id: 'indexing', label: 'Indexing' },
-              { id: 'links', label: 'Links' },
-              { id: 'history', label: 'History' },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id as any)}
-                style={{
-                  flex: 1,
-                  padding: '6px 8px',
-                  borderRadius: 6,
-                  border: 'none',
-                  fontSize: '0.75rem',
-                  fontWeight: activeTab === t.id ? 700 : 500,
-                  backgroundColor: activeTab === t.id ? '#ffffff' : 'transparent',
-                  color: activeTab === t.id ? '#0b666a' : '#3d5557',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t.label}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: '#f6f7f7', border: '1px solid #c3c4c7', borderTop: 'none', fontSize: 13, color: '#50575e' }}>
+              <span>Word count: {wordCount}</span>
+              <button type="button" onClick={switchMode} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+                {editorMode === 'classic' ? 'Switch to block editor' : 'Switch to classic editor'}
               </button>
-            ))}
+            </div>
           </div>
 
-          {/* TAB 1: POST SETTINGS */}
-          {activeTab === 'post' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {postId && (
-                <WorkflowActions
-                  postId={postId}
-                  status={status}
-                  canPublish={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
-                  canDelete={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
-                  onMessage={setStatusMessage}
-                  onStatus={setStatus}
-                  ensureSaved={async () => (dirty ? handleSaveDraft() : true)}
-                />
-              )}
-              {/* Primary Category */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
-                  Primary Category *
-                </label>
-                <select
-                  value={primaryCategoryId}
-                  onChange={(e) => setPrimaryCategoryId(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}
+          <MetaBox title="Excerpt">
+            <label htmlFor="mf-excerpt" style={{ display: 'block', fontSize: 13, margin: '0 0 6px' }}>Excerpt</label>
+            <textarea id="mf-excerpt" rows={3} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: 6, fontSize: 14 }} />
+            <p style={{ fontSize: 13, color: '#646970', margin: '6px 0 0' }}>Excerpts are optional hand-crafted summaries of your content that can be used in your theme.</p>
+          </MetaBox>
+
+          {/* ---------------- Rank Math SEO metabox ---------------- */}
+          <MetaBox title="Rank Math SEO" flush>
+            <div style={{ display: 'flex', borderBottom: '1px solid #dcdcde', background: '#f6f7f7', overflowX: 'auto' }}>
+              {rmTabs.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id as any)}
+                  style={{ padding: '14px 18px', border: 'none', borderBottom: activeTab === id ? '3px solid #0a95db' : '3px solid transparent', background: 'transparent', fontSize: 14, color: activeTab === id ? '#1d2327' : '#50575e', fontWeight: activeTab === id ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
-                  <option value="">Select Category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
+                  {label}
+                </button>
+              ))}
+            </div>
 
-              {/* Authors Multi-select */}
+            {activeTab === 'general' && (
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
-                  Authors (Ordered) *
-                </label>
-                <select
-                  multiple
-                  value={selectedAuthorIds}
-                  onChange={(e) => {
-                    const opts = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    setSelectedAuthorIds(opts);
-                  }}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', minHeight: 80, background: '#ffffff' }}
-                >
-                  {authors.map((a) => (
-                    <option key={a.id} value={a.id}>{a.display_name} ({a.job_title || 'Specialist'})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>Tags</label>
-                <select multiple value={tagIds} onChange={(e) => setTagIds(Array.from(e.target.selectedOptions).map((o) => o.value))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', minHeight: 80, background: '#ffffff' }}>
-                  {tags.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>Reviewed by (expert reviewer)</label>
-                <select value={reviewedBy} onChange={(e) => setReviewedBy(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
-                  <option value="">Not reviewed</option>
-                  {authors.filter((a: any) => a.is_reviewer).map((a: any) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
-                </select>
-              </div>
-
-              {/* Featured Image */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
-                  Featured Image URL *
-                </label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }}
-                    style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #0b666a', background: '#fff', color: '#0b666a', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    {featuredImageUrl ? 'Replace image' : 'Choose / upload image'}
-                  </button>
-                  {featuredImageUrl && (
-                    <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cfe3e3', background: '#fff', cursor: 'pointer' }}>Remove</button>
+                <div style={{ padding: '16px 16px 18px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#50575e', marginBottom: 8 }}>Preview</div>
+                  <div style={{ fontFamily: 'arial, sans-serif', maxWidth: serpPreviewDevice === 'mobile' ? 360 : 640 }}>
+                    <div style={{ fontSize: 14, color: '#202124', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>https://migrationfactor.com{initialPost?.legacy_path || `/blog/${slug}/`}</span>
+                      <button type="button" aria-label="Toggle desktop / mobile preview" title={serpPreviewDevice === 'desktop' ? 'Show mobile preview' : 'Show desktop preview'} onClick={() => setSerpPreviewDevice(serpPreviewDevice === 'desktop' ? 'mobile' : 'desktop')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#70757a', fontSize: 14 }}>⋮</button>
+                    </div>
+                    <div style={{ color: '#1a0dab', fontSize: 20, lineHeight: 1.3, margin: '3px 0' }}>{hl(effectiveTitle)}</div>
+                    <div style={{ color: '#4d5156', fontSize: 14, lineHeight: 1.58 }}>{effectiveDesc ? hl(effectiveDesc) : 'Please provide a meta description by editing the snippet below. If you don’t, Google will use the most relevant part of your post’s content.'}</div>
+                  </div>
+                  <button type="button" onClick={() => setSnippetEdit((v) => !v)} style={{ marginTop: 14, padding: '6px 14px', background: '#0a95db', color: '#fff', border: 'none', borderRadius: 3, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Edit Snippet</button>
+                  {snippetEdit && (
+                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div>
+                        <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Title <span style={{ fontWeight: 400, fontSize: 12, color: titleCharCount > 60 ? '#d63638' : '#646970' }}>{titleCharCount} / 60 · ~{titlePixelWidth}px</span></label>
+                        <input type="text" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder={effectiveTitle} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Description <span style={{ fontWeight: 400, fontSize: 12, color: descCharCount > 160 ? '#d63638' : '#646970' }}>{descCharCount} / 160</span></label>
+                        <textarea rows={3} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
+                      </div>
+                    </div>
                   )}
                 </div>
-                {featuredImageUrl && (
-                  <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', height: 120 }}>
-                    <img src={featuredImageUrl} alt="Featured preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                )}
-                <div style={{ marginTop: 8 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
-                    Featured Image Alt Text * (Required)
-                  </label>
-                  <input
-                    type="text"
-                    value={featuredAlt}
-                    onChange={(e) => setFeaturedAlt(e.target.value)}
-                    placeholder="Descriptive alt text describing the image"
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
 
-              {/* Excerpt */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
-                  Excerpt (Summary)
-                </label>
-                <textarea
-                  rows={3}
-                  value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
-                  placeholder="Short post summary for listings and fallback meta description..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: SEO (Rank Math inspired) */}
-          {activeTab === 'seo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {/* Focus Keyword */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
-                  Focus Keyword *
-                </label>
-                <input
-                  type="text"
-                  value={focusKeyword}
-                  onChange={(e) => setFocusKeyword(e.target.value)}
-                  placeholder="e.g. skills in demand visa"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    border: '2px solid #0b666a',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    color: '#042628',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <div style={{ marginTop: 6 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
-                    Additional Keywords (Comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={additionalKeywords}
-                    onChange={(e) => setAdditionalKeywords(e.target.value)}
-                    placeholder="e.g. skills in demand visa requirements, employer sponsorship australia"
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              {/* Live Google SERP Preview (Desktop / Mobile) */}
-              <div style={{ background: '#f2f8f8', padding: 14, borderRadius: 8, border: '1px solid #cfe3e3' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3d5557', textTransform: 'uppercase' }}>
-                    Google SERP Snippet Preview
-                  </span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button
-                      type="button"
-                      onClick={() => setSerpPreviewDevice('desktop')}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        borderRadius: 4,
-                        border: 'none',
-                        background: serpPreviewDevice === 'desktop' ? '#042628' : '#cfe3e3',
-                        color: serpPreviewDevice === 'desktop' ? '#ffffff' : '#3d5557',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Desktop
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSerpPreviewDevice('mobile')}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        borderRadius: 4,
-                        border: 'none',
-                        background: serpPreviewDevice === 'mobile' ? '#042628' : '#cfe3e3',
-                        color: serpPreviewDevice === 'mobile' ? '#ffffff' : '#3d5557',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Mobile
-                    </button>
-                  </div>
-                </div>
-
-                {/* Google Snippet Representation */}
-                <div style={{ fontFamily: 'arial, sans-serif', fontSize: '0.875rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#202124', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ color: '#5f6368' }}>https://migrationfactor.com &gt; blog &gt; {slug || '...'}</span>
-                  </div>
-                  <div style={{ color: '#1a0dab', fontSize: '1.15rem', fontWeight: 500, lineHeight: 1.3, marginTop: 2, cursor: 'pointer' }}>
-                    {effectiveTitle}
-                  </div>
-                  <div style={{ color: '#4d5156', fontSize: '0.85rem', lineHeight: 1.4, marginTop: 4 }}>
-                    {effectiveDesc || 'Please provide a meta description for this article to help Google display an accurate summary in search results.'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Edit SEO Snippet Inputs */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#042628' }}>
-                    SEO Title Tag
-                  </label>
-                  <span style={{ fontSize: '0.75rem', color: titleCharCount > 60 ? '#a01b2b' : titleCharCount >= 30 ? '#0b666a' : '#d97706' }}>
-                    {titleCharCount} chars · ~{titlePixelWidth}px / 580px
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
-                  placeholder="Defaults to Post Title - Migration Factor"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#042628' }}>
-                    Meta Description
-                  </label>
-                  <span style={{ fontSize: '0.75rem', color: descCharCount > 160 ? '#a01b2b' : descCharCount >= 120 ? '#0b666a' : '#d97706' }}>
-                    {descCharCount} / 160 chars
-                  </span>
-                </div>
-                <textarea
-                  rows={3}
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  placeholder="Concise, compelling description containing focus keyword..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* Checklist Breakdown Groups (Rank Math style) */}
-              <div style={{ marginTop: 8 }}>
-                <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#042628', marginBottom: 10 }}>
-                  Rank Math Inspired Checks
-                </h3>
-
-                {/* Basic SEO Accordion */}
-                <details open style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
-                  <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Basic SEO ({liveAnalysis.checks.basic.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.basic.length} passed)
-                  </summary>
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.basic.map(chk => (
-                      <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
-                        <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
-                          {chk.status !== 'passed' && chk.fixAdvice && (
-                            <div style={{ color: '#0b666a', marginTop: 2, fontStyle: 'italic' }}>Tip: {chk.fixAdvice}</div>
-                          )}
-                        </div>
-                      </div>
+                <div style={{ borderTop: '1px solid #dcdcde', padding: '16px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#50575e', marginBottom: 8 }}>Focus Keyword <span title="Add the keywords you want this post to rank for. The first one is the primary focus keyword." style={{ display: 'inline-flex', width: 16, height: 16, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, alignItems: 'center', justifyContent: 'center', cursor: 'help', marginLeft: 4 }}>?</span></div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '8px 10px', border: '1px solid #8c8f94', background: '#fff', minHeight: 40 }}>
+                    {kwList.map((k, i) => (
+                      <span key={k} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 16, background: i === 0 ? '#7ad28a' : '#fde6c8', color: i === 0 ? '#fff' : '#d97706', fontSize: 14 }}>
+                        <button type="button" aria-label={`Remove ${k}`} onClick={() => removeKeyword(k)} style={{ position: 'absolute', left: -6, top: -8, width: 16, height: 16, borderRadius: '50%', border: '1px solid #c3c4c7', background: '#fff', color: '#50575e', fontSize: 9, lineHeight: '14px', padding: 0, cursor: 'pointer' }}>✕</button>
+                        {i === 0 && <span aria-hidden>★</span>}{k}
+                      </span>
                     ))}
-                  </div>
-                </details>
-
-                {/* Additional SEO Accordion */}
-                <details style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
-                  <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Additional SEO ({liveAnalysis.checks.additional.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.additional.length} passed)
-                  </summary>
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.additional.map(chk => (
-                      <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
-                        <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-
-                {/* Readability Accordion */}
-                <details style={{ marginBottom: 10, border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
-                  <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Readability ({liveAnalysis.checks.readability.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.readability.length} passed)
-                  </summary>
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.readability.map(chk => (
-                      <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
-                        <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-
-                {/* Technical SEO Accordion */}
-                <details style={{ border: '1px solid #cfe3e3', borderRadius: 6, padding: 8 }}>
-                  <summary style={{ fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', color: '#0b666a' }}>
-                    Technical SEO ({liveAnalysis.checks.technical.filter(c => c.status === 'passed').length} / {liveAnalysis.checks.technical.length} passed)
-                  </summary>
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {liveAnalysis.checks.technical.map(chk => (
-                      <div key={chk.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', padding: '4px 0' }}>
-                        <span>{chk.status === 'passed' ? '🟢' : chk.status === 'needs_improvement' ? '🟡' : '🔴'}</span>
-                        <div>
-                          <strong>{chk.name}:</strong> <span style={{ color: '#3d5557' }}>{chk.message}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </div>
-
-              {/* Advanced Directives Toggle */}
-              <details style={{ marginTop: 12, borderTop: '1px solid #cfe3e3', paddingTop: 10 }}>
-                <summary style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#3d5557', cursor: 'pointer' }}>
-                  Advanced Robots & Canonical Settings
-                </summary>
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                    <input type="checkbox" checked={robotsIndex} onChange={(e) => setRobotsIndex(e.target.checked)} />
-                    Index this post (Uncheck for noindex)
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                    <input type="checkbox" checked={robotsFollow} onChange={(e) => setRobotsFollow(e.target.checked)} />
-                    Follow links (Uncheck for nofollow)
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                    <input type="checkbox" checked={sitemapInclude} onChange={(e) => setSitemapInclude(e.target.checked)} />
-                    Include in XML Sitemap
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                    <input type="checkbox" checked={isCornerstone} onChange={(e) => setIsCornerstone(e.target.checked)} />
-                    Mark as Cornerstone Content
-                  </label>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
-                      Canonical URL Override
-                    </label>
                     <input
-                      type="url"
-                      value={canonicalUrl}
-                      onChange={(e) => setCanonicalUrl(e.target.value)}
-                      placeholder="Leave blank for self-canonical"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      value={kwInput}
+                      onChange={(e) => { const v = e.target.value; if (v.endsWith(',')) { addKeyword(v); setKwInput(''); } else setKwInput(v); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(kwInput); setKwInput(''); } }}
+                      onBlur={() => { addKeyword(kwInput); setKwInput(''); }}
+                      placeholder="Example: Rank Math SEO"
+                      aria-label="Focus keyword"
+                      style={{ flex: 1, minWidth: 140, border: 'none', outline: 'none', fontSize: 14 }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#3d5557', marginBottom: 2 }}>
-                      Custom H1 (if different from title)
-                    </label>
-                    <input
-                      type="text"
-                      value={customH1}
-                      onChange={(e) => setCustomH1(e.target.value)}
-                      placeholder="Custom H1 heading"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.8rem', boxSizing: 'border-box' }}
-                    />
-                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16, fontSize: 14, fontWeight: 600 }}>
+                    <input type="checkbox" checked={isCornerstone} onChange={(e) => setIsCornerstone(e.target.checked)} /> This post is Pillar Content
+                  </label>
                 </div>
-              </details>
-            </div>
-          )}
 
+                <div style={{ background: '#fff' }}>
+                  {checkGroup('Basic SEO', liveAnalysis.checks.basic)}
+                  {checkGroup('Additional', liveAnalysis.checks.additional)}
+                  {checkGroup('Content Readability', liveAnalysis.checks.readability)}
+                  {checkGroup('Technical SEO', liveAnalysis.checks.technical)}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'advanced' && (
+              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14 }}>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>Robots Meta</div>
+                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}><input type="checkbox" checked={robotsIndex} onChange={(e) => setRobotsIndex(e.target.checked)} /> Index</label>
+                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}><input type="checkbox" checked={robotsFollow} onChange={(e) => setRobotsFollow(e.target.checked)} /> Follow</label>
+                  <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={sitemapInclude} onChange={(e) => setSitemapInclude(e.target.checked)} /> Include in XML sitemap</label>
+                </div>
+                <div>
+                  <label htmlFor="mf-canonical" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Canonical URL</label>
+                  <input id="mf-canonical" type="url" value={canonicalUrl} onChange={(e) => setCanonicalUrl(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
+                  <p style={{ fontSize: 13, color: '#646970', margin: '4px 0 0' }}>The canonical URL informs search engines which version of this page is the preferred one. Leave it empty to use the post URL.</p>
+                </div>
+                <div>
+                  <label htmlFor="mf-breadcrumb" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Breadcrumb Title</label>
+                  <input id="mf-breadcrumb" type="text" value={breadcrumbTitle} onChange={(e) => setBreadcrumbTitle(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
+                </div>
+                <div>
+                  <label htmlFor="mf-h1" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Custom H1</label>
+                  <input id="mf-h1" type="text" value={customH1} onChange={(e) => setCustomH1(e.target.value)} placeholder="Leave empty to use the post title" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '6px 8px', fontSize: 14 }} />
+                </div>
+              </div>
+            )}
+
+            <div style={{ padding: activeTab === 'general' || activeTab === 'advanced' ? 0 : 16 }}>
           {/* TAB 3: SOCIAL */}
           {activeTab === 'social' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600, color: '#042628' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', fontWeight: 600, color: '#1d2327' }}>
                 <input type="checkbox" checked={useSeoValues} onChange={(e) => setUseSeoValues(e.target.checked)} />
                 Use SEO Title and Meta Description for Social
               </label>
 
               {!useSeoValues && (
                 <>
-                  <div style={{ borderTop: '1px solid #cfe3e3', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0b666a', margin: '0 0 8px' }}>
+                  <div style={{ borderTop: '1px solid #c3c4c7', paddingTop: 12 }}>
+                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#2271b1', margin: '0 0 8px' }}>
                       Facebook / Open Graph Custom Overrides
                     </h4>
                     <input
@@ -1097,19 +720,19 @@ export default function PostEditor({
                       value={ogTitle}
                       onChange={(e) => setOgTitle(e.target.value)}
                       placeholder="Custom OG Title"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
                     />
                     <textarea
                       rows={2}
                       value={ogDescription}
                       onChange={(e) => setOgDescription(e.target.value)}
                       placeholder="Custom OG Description"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                     />
                   </div>
 
-                  <div style={{ borderTop: '1px solid #cfe3e3', paddingTop: 12 }}>
-                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0b666a', margin: '0 0 8px' }}>
+                  <div style={{ borderTop: '1px solid #c3c4c7', paddingTop: 12 }}>
+                    <h4 style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#2271b1', margin: '0 0 8px' }}>
                       X / Twitter Custom Overrides
                     </h4>
                     <input
@@ -1117,32 +740,32 @@ export default function PostEditor({
                       value={twitterTitle}
                       onChange={(e) => setTwitterTitle(e.target.value)}
                       placeholder="Custom Twitter Title"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', marginBottom: 6, boxSizing: 'border-box' }}
                     />
                     <textarea
                       rows={2}
                       value={twitterDescription}
                       onChange={(e) => setTwitterDescription(e.target.value)}
                       placeholder="Custom Twitter Description"
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                     />
                   </div>
                 </>
               )}
 
               {/* Social Preview Representation */}
-              <div style={{ border: '1px solid #b9d3d4', borderRadius: 8, overflow: 'hidden', marginTop: 10 }}>
+              <div style={{ border: '1px solid #8c8f94', borderRadius: 8, overflow: 'hidden', marginTop: 10 }}>
                 {featuredImageUrl && (
-                  <div style={{ height: 140, backgroundColor: '#e9f3f3' }}>
+                  <div style={{ height: 140, backgroundColor: '#f0f0f1' }}>
                     <img src={featuredImageUrl} alt="Social Card" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 )}
-                <div style={{ padding: 12, background: '#f2f8f8' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#3d5557', textTransform: 'uppercase' }}>migrationfactor.com</div>
-                  <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#042628', marginTop: 2 }}>
+                <div style={{ padding: 12, background: '#f6f7f7' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#50575e', textTransform: 'uppercase' }}>migrationfactor.com</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#1d2327', marginTop: 2 }}>
                     {(!useSeoValues && ogTitle) ? ogTitle : effectiveTitle}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#3d5557', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.75rem', color: '#50575e', marginTop: 2 }}>
                     {(!useSeoValues && ogDescription) ? ogDescription : effectiveDesc}
                   </div>
                 </div>
@@ -1152,16 +775,16 @@ export default function PostEditor({
 
           {/* TAB 4: SCHEMA */}
           {activeTab === 'schema' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
               {postId && <SchemaPanel postId={postId} refreshKey={saveStatus} />}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Article Schema Type
                 </label>
                 <select
                   value={articleType}
                   onChange={(e) => setArticleType(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem', background: '#ffffff' }}
                 >
                   <option value="BlogPosting">BlogPosting (Recommended)</option>
                   <option value="Article">Article</option>
@@ -1180,7 +803,7 @@ export default function PostEditor({
               </label>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Custom Schema JSON-LD (Advanced)
                 </label>
                 <textarea
@@ -1188,7 +811,7 @@ export default function PostEditor({
                   value={customJsonLd}
                   onChange={(e) => setCustomJsonLd(e.target.value)}
                   placeholder="{ '@type': 'SpecialItem', ... }"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontFamily: 'monospace', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontFamily: 'monospace', fontSize: '0.8rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -1196,14 +819,14 @@ export default function PostEditor({
 
           {/* TAB 5: GEO */}
           {activeTab === 'geo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <ReferencesPanel value={references} onChange={setReferences} trusted={['homeaffairs.gov.au', 'immi.homeaffairs.gov.au', 'legislation.gov.au', 'abs.gov.au']} />
-              <div style={{ background: '#e9f3f3', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#07484b' }}>
+              <div style={{ background: '#f0f0f1', border: '1px solid #ddd6fe', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#135e96' }}>
                 <strong>Generative Engine Optimization (GEO):</strong> Optimizes for AI overview engines (ChatGPT Search, Perplexity, Google SGE) by asserting structured entities and factual references.
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Primary Question Targeted
                 </label>
                 <input
@@ -1211,12 +834,12 @@ export default function PostEditor({
                   value={primaryQuestion}
                   onChange={(e) => setPrimaryQuestion(e.target.value)}
                   placeholder="e.g. What are the requirements for Skills in Demand visa?"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Concise Answer Summary (40–60 words)
                 </label>
                 <textarea
@@ -1224,12 +847,12 @@ export default function PostEditor({
                   value={answerSummary}
                   onChange={(e) => setAnswerSummary(e.target.value)}
                   placeholder="Direct, factual answer for AI summary snippets..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Primary Entity Name
                 </label>
                 <input
@@ -1237,12 +860,12 @@ export default function PostEditor({
                   value={primaryEntityName}
                   onChange={(e) => setPrimaryEntityName(e.target.value)}
                   placeholder="e.g. Skills in Demand visa"
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>
                   Official Entity Authority URL (sameAs)
                 </label>
                 <input
@@ -1250,7 +873,7 @@ export default function PostEditor({
                   value={primaryEntityUrl}
                   onChange={(e) => setPrimaryEntityUrl(e.target.value)}
                   placeholder="https://immi.homeaffairs.gov.au/..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -1258,19 +881,19 @@ export default function PostEditor({
 
           {/* TAB 6: AEO */}
           {activeTab === 'aeo' && (
-            <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#e9f3f3', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#07484b' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: '#f0f0f1', border: '1px solid #a7f3d0', borderRadius: 8, padding: 12, fontSize: '0.8rem', color: '#135e96' }}>
                 <strong>Answer Engine Optimization (AEO):</strong> Evaluates answer structure, question-based H2/H3 headings, and direct answer speed.
               </div>
 
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#042628', marginBottom: 8 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d2327', marginBottom: 8 }}>
                   Question Outline Inspector ({headings.filter(h => h.text.includes('?') || /^(what|how|who|can|is|why)/i.test(h.text)).length} question headings)
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {headings.map((h, i) => (
-                    <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f2f8f8', borderRadius: 4 }}>
-                      <span style={{ fontWeight: 700, color: '#0b666a' }}>H{h.level}:</span> {h.text}
+                    <div key={i} style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f6f7f7', borderRadius: 4 }}>
+                      <span style={{ fontWeight: 700, color: '#2271b1' }}>H{h.level}:</span> {h.text}
                     </div>
                   ))}
                 </div>
@@ -1278,11 +901,164 @@ export default function PostEditor({
             </div>
           )}
 
-          {activeTab === 'links' && (postId ? <LinksPanel postId={postId} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
-          {activeTab === 'history' && (postId ? <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Save to keep it.'); setActiveTab('post'); }} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
+          {activeTab === 'indexing' && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#50575e' }}>Save the post first.</div>)}
 
-          {/* TAB 7: INDEXING */}
-          {activeTab === 'indexing' && (postId ? <IndexingPanel postId={postId} published={status === 'published'} /> : <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Save the post first.</div>)}
+            </div>
+          </MetaBox>
+
+          {postId && (
+            <MetaBox title="Revisions" id="mf-revisions">
+              <RevisionsPanel postId={postId} onRestore={(p) => { applyPayload(p); setStatusMessage('Revision loaded into the editor. Click Update to keep it.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+            </MetaBox>
+          )}
+        </div>
+
+        {/* ---------------- Sidebar ---------------- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          <MetaBox title="Publish" flush>
+            <div style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              {status !== 'published' ? (
+                <button type="button" onClick={() => handleSaveDraft()} disabled={saving} style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, fontWeight: 400, cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save Draft'}</button>
+              ) : <span />}
+              {postId ? (
+                <Link href={`/preview/${postId}`} target="_blank" style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, textDecoration: 'none' }}>{status === 'published' ? 'Preview Changes' : 'Preview'}</Link>
+              ) : (
+                <button type="button" onClick={() => handleSaveDraft()} style={{ padding: '0 10px', lineHeight: '28px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, cursor: 'pointer' }}>Preview</button>
+              )}
+            </div>
+            <div style={{ padding: '0 12px 8px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>📌 Status: <strong style={{ textTransform: 'capitalize' }}>{status === 'pending_review' ? 'Pending Review' : status}</strong>{postId && <> <button type="button" onClick={() => setStatusOpen((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Edit</button></>}</div>
+              {statusOpen && postId && (
+                <WorkflowActions
+                  postId={postId}
+                  status={status}
+                  canPublish={roles.some((r) => ['super_admin', 'admin', 'seo_manager', 'editor'].includes(r))}
+                  canDelete={false}
+                  onMessage={setStatusMessage}
+                  onStatus={setStatus}
+                  ensureSaved={async () => (dirty ? handleSaveDraft() : true)}
+                  wp
+                />
+              )}
+              {postId && <div>🕘 Revisions: <strong>{revCount ?? '…'}</strong> <a href="#mf-revisions" style={{ color: '#2271b1' }}>Browse</a></div>}
+              <div>📅 {status === 'published' && initialPost?.published_at ? <>Published on: <strong>{fmtDate(initialPost.published_at)}</strong></> : status === 'scheduled' && initialPost?.scheduled_at ? <>Scheduled for: <strong>{fmtDate(initialPost.scheduled_at)}</strong></> : <>Publish <strong>immediately</strong> {postId && <button type="button" onClick={() => setStatusOpen((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Edit</button>}</>}</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <span role="switch" aria-checked={minorUpdate} style={{ position: 'relative', width: 40, height: 20, borderRadius: 10, border: '2px solid #1d2327', background: minorUpdate ? '#2271b1' : '#fff', flex: 'none', display: 'inline-block' }}>
+                  <span style={{ position: 'absolute', top: 2, left: minorUpdate ? 22 : 2, width: 12, height: 12, borderRadius: '50%', background: minorUpdate ? '#fff' : '#1d2327', transition: 'left .15s' }} />
+                </span>
+                <input type="checkbox" checked={minorUpdate} onChange={(e) => setMinorUpdate(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+                Lock Modified Date
+              </label>
+            </div>
+            {!isNew && <div style={{ background: scoreBg, borderTop: '1px solid #dcdcde', padding: '10px 12px', fontSize: 13, color: scoreColor, fontWeight: 600 }}>SEO: {seoScore} / 100</div>}
+            <div style={{ padding: '10px 12px', borderTop: '1px solid #dcdcde', background: '#f6f7f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 40 }}>
+              {postId ? <MoveToTrash postId={postId} onMessage={setStatusMessage} /> : <span />}
+              <button
+                type="button"
+                onClick={status === 'published' || status === 'scheduled' ? () => handleSaveDraft() : onPublishClick}
+                disabled={saving || publishing}
+                style={{ padding: '0 14px', lineHeight: '30px', border: '1px solid #2271b1', borderRadius: 3, background: '#2271b1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {publishLabel}
+              </button>
+            </div>
+          </MetaBox>
+
+          <MetaBox title="Categories" flush>
+            <div style={{ padding: '8px 12px 12px' }}>
+              <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #dcdcde', marginBottom: 8 }}>
+                {([['all', 'All Categories'], ['used', 'Most Used']] as const).map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => setCatTab(id)} style={{ padding: '4px 8px', border: 'none', borderBottom: catTab === id ? '2px solid #1d2327' : '2px solid transparent', background: 'none', color: catTab === id ? '#1d2327' : '#2271b1', fontSize: 13, cursor: 'pointer' }}>{label}</button>
+                ))}
+              </div>
+              <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #dcdcde', padding: '8px 10px' }}>
+                {catsShown.map((c: any) => (
+                  <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
+                    <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => toggleCategory(c.id)} />
+                    <span style={{ flex: 1 }}>{c.name}</span>
+                    {categoryIds.includes(c.id) && (
+                      <input type="radio" name="primary-category" aria-label={`Make ${c.name} the primary category`} title="Primary category" checked={primaryCategoryId === c.id} onChange={() => setPrimaryCategoryId(c.id)} />
+                    )}
+                  </label>
+                ))}
+              </div>
+              {addingCat ? (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }} placeholder="New Category Name" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '3px 6px', fontSize: 13 }} />
+                  <button type="button" onClick={addCategory} style={{ padding: '0 8px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, cursor: 'pointer' }}>Add</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setAddingCat(true)} style={{ marginTop: 10, border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>+ Add Category</button>
+              )}
+            </div>
+          </MetaBox>
+
+          <MetaBox title="Tags" flush>
+            <div style={{ padding: '10px 12px 12px' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTags(); } }} aria-label="Add New Tag" style={{ flex: 1, minWidth: 0, border: '1px solid #8c8f94', padding: '4px 6px', fontSize: 14 }} />
+                <button type="button" onClick={addTags} style={{ padding: '0 14px', border: '1px solid #2271b1', borderRadius: 3, background: '#f6f7f7', color: '#2271b1', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+              </div>
+              <p style={{ fontSize: 12, fontStyle: 'italic', color: '#646970', margin: '6px 0' }}>Separate tags with commas</p>
+              {tagIds.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, margin: '6px 0' }}>
+                  {tagIds.map((id) => {
+                    const t = tagList.find((x: any) => x.id === id);
+                    return t ? (
+                      <div key={id} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button type="button" aria-label={`Remove term: ${t.name}`} onClick={() => setTagIds(tagIds.filter((x) => x !== id))} style={{ width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'none', color: '#d63638', cursor: 'pointer', padding: 0 }}>⊗</button>{t.name}
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
+              <button type="button" onClick={() => setShowPopularTags((v) => !v)} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0, marginTop: 8 }}>Choose from the most used tags</button>
+              {showPopularTags && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {[...tagList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 20).map((t: any) => (
+                    <button key={t.id} type="button" onClick={() => !tagIds.includes(t.id) && setTagIds([...tagIds, t.id])} style={{ border: 'none', background: 'none', color: '#2271b1', cursor: 'pointer', fontSize: 13, padding: 0 }}>{t.name}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </MetaBox>
+
+          <MetaBox title="Author" flush>
+            <div style={{ padding: '10px 12px 12px' }}>
+              <select
+                multiple
+                value={selectedAuthorIds}
+                onChange={(e) => setSelectedAuthorIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
+                aria-label="Author"
+                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', fontSize: 13, minHeight: 70 }}
+              >
+                {authors.map((a) => <option key={a.id} value={a.id}>{a.display_name}</option>)}
+              </select>
+            </div>
+          </MetaBox>
+
+          <MetaBox title="Link Suggestions" flush>
+            <div style={{ padding: '4px 4px 8px' }}>
+              {postId ? <LinksPanel postId={postId} /> : <p style={{ fontSize: 13, fontStyle: 'italic', color: '#646970', margin: 8 }}>We can’t show any link suggestions for this post. Try selecting categories and tags for this post, and mark other posts as Pillar Content to make them show up here.</p>}
+            </div>
+          </MetaBox>
+
+          <MetaBox title="Featured image" flush>
+            <div style={{ padding: '12px' }}>
+              {featuredImageUrl ? (
+                <>
+                  <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'block', width: '100%' }} aria-label="Click the image to edit or update">
+                    <img src={featuredImageUrl} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  </button>
+                  <p style={{ fontSize: 13, color: '#646970', margin: '8px 0' }}>Click the image to edit or update</p>
+                  <input value={featuredAlt} onChange={(e) => setFeaturedAlt(e.target.value)} placeholder="Alternative Text" aria-label="Alternative Text" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #8c8f94', padding: '4px 6px', fontSize: 13, marginBottom: 8 }} />
+                  <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ border: 'none', background: 'none', color: '#b32d2e', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Remove featured image</button>
+                </>
+              ) : (
+                <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', color: '#2271b1', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, padding: 0 }}>Set featured image</button>
+              )}
+            </div>
+          </MetaBox>
         </div>
       </div>
 
@@ -1310,17 +1086,17 @@ export default function PostEditor({
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             }}
           >
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#042628', margin: '0 0 12px' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1d2327', margin: '0 0 12px' }}>
               Pre-Publish Verification Checks
             </h2>
 
             {/* Blocking Errors */}
             {prepublishResult.blocking?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#a01b2b', fontSize: '0.875rem', marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, color: '#d63638', fontSize: '0.875rem', marginBottom: 6 }}>
                   ❌ Blocking Errors (Must fix before publishing):
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#7a1f2b' }}>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#8a2424' }}>
                   {prepublishResult.blocking.map((b: any, i: number) => (
                     <li key={i}>{b.message}</li>
                   ))}
@@ -1331,10 +1107,10 @@ export default function PostEditor({
             {/* Warnings */}
             {prepublishResult.warnings?.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, color: '#8a5a00', fontSize: '0.875rem', marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, color: '#996800', fontSize: '0.875rem', marginBottom: 6 }}>
                   ⚠️ Warnings (Recommended to review):
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#6b4500' }}>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: '#614200' }}>
                   {prepublishResult.warnings.map((w: any, i: number) => (
                     <li key={i}>{w.message}</li>
                   ))}
@@ -1342,14 +1118,14 @@ export default function PostEditor({
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, borderTop: '1px solid #cfe3e3', paddingTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, borderTop: '1px solid #c3c4c7', paddingTop: 16 }}>
               <button
                 type="button"
                 onClick={() => setPublishModalOpen(false)}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 6,
-                  border: '1px solid #b9d3d4',
+                  border: '1px solid #8c8f94',
                   background: '#ffffff',
                   fontWeight: 600,
                   fontSize: '0.875rem',
@@ -1366,7 +1142,7 @@ export default function PostEditor({
                   style={{
                     padding: '8px 18px',
                     borderRadius: 6,
-                    background: '#0b666a',
+                    background: '#2271b1',
                     color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '0.875rem',
@@ -1387,6 +1163,20 @@ export default function PostEditor({
           onClose={() => { mediaPicker(null); setMediaPicker(null); }}
         />
       )}
+    </div>
+  );
+}
+
+/** WordPress-style postbox: bordered white box with a heading row and a collapse arrow. */
+function MetaBox({ title, children, flush, id }: { title: string; children: React.ReactNode; flush?: boolean; id?: string }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div id={id} style={{ background: '#fff', border: '1px solid #c3c4c7', boxShadow: '0 1px 1px rgba(0,0,0,.04)' }}>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', border: 'none', borderBottom: open ? '1px solid #c3c4c7' : 'none', background: '#fff', cursor: 'pointer', textAlign: 'left' }}>
+        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, lineHeight: 1.4, color: '#1d2327' }}>{title}</h2>
+        <span aria-hidden style={{ color: '#787c82', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && <div style={flush ? undefined : { padding: '6px 12px 12px' }}>{children}</div>}
     </div>
   );
 }

@@ -3,13 +3,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/seo-admin/DataTable';
 
-const card: React.CSSProperties = { background: '#ffffff', padding: 22, borderRadius: 12, border: '1px solid #cfe3e3', marginBottom: 18 };
+const card: React.CSSProperties = { background: '#ffffff', padding: 22, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 18 };
 const btn = (primary = true, danger = false): React.CSSProperties => ({
   padding: '8px 14px',
   borderRadius: 8,
-  border: primary ? 'none' : '1px solid #b9d3d4',
-  background: danger ? '#a01b2b' : primary ? '#0b666a' : '#ffffff',
-  color: primary || danger ? '#ffffff' : '#042628',
+  border: primary ? 'none' : '1px solid #8c8f94',
+  background: danger ? '#d63638' : primary ? '#2271b1' : '#ffffff',
+  color: primary || danger ? '#ffffff' : '#1d2327',
   fontWeight: 700,
   fontSize: '0.8125rem',
   cursor: 'pointer',
@@ -110,14 +110,14 @@ export default function RobotsTxtAdminPage() {
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
       <PageHeader title="Robots.txt, AI crawlers & llms.txt" subtitle="Controls what crawlers may fetch. Wrong rules can remove your site from Google, so every change is validated, reviewed and versioned. robots.txt is not an indexing control: use noindex for that." />
       {message && (
-        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#f1e4e4' : '#e9f3f3', border: '1px solid ' + (message.startsWith('Error') ? '#e3c3c7' : '#d4efec'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#fcf0f1' : '#f0f0f1', border: '1px solid ' + (message.startsWith('Error') ? '#f1adad' : '#f0f6fc'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
           {message}
         </div>
       )}
 
       <div style={card}>
-        <div style={{ fontWeight: 700, color: '#042628', marginBottom: 8 }}>robots.txt</div>
-        <div style={{ display: 'flex', border: '1px solid #b9d3d4', borderRadius: 8, overflow: 'hidden', background: '#f2f8f8' }}>
+        <div style={{ fontWeight: 700, color: '#1d2327', marginBottom: 8 }}>robots.txt</div>
+        <div style={{ display: 'flex', border: '1px solid #8c8f94', borderRadius: 8, overflow: 'hidden', background: '#f6f7f7' }}>
           <pre aria-hidden style={{ margin: 0, padding: '14px 8px', textAlign: 'right', color: '#6b8486', fontSize: '0.85rem', lineHeight: 1.5, userSelect: 'none', borderRight: '1px solid #d4e5e5' }}>
             {Array.from({ length: Math.max(lines, 12) }, (_, i) => i + 1).join('\n')}
           </pre>
@@ -133,7 +133,7 @@ export default function RobotsTxtAdminPage() {
           />
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Change note (optional)" style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid #b9d3d4' }} />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Change note (optional)" style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid #8c8f94' }} />
           <button style={btn()} disabled={busy || !dirty} onClick={review}>
             Review changes
           </button>
@@ -148,13 +148,13 @@ export default function RobotsTxtAdminPage() {
         {preview && (
           <div style={{ marginTop: 16 }}>
             {preview.validation.errors.map((e) => (
-              <div key={e} style={{ color: '#a01b2b', fontSize: '0.85rem' }}>✖ {e}</div>
+              <div key={e} style={{ color: '#d63638', fontSize: '0.85rem' }}>✖ {e}</div>
             ))}
             {preview.validation.dangers.map((d) => (
-              <div key={d} style={{ color: '#a01b2b', fontWeight: 700, fontSize: '0.85rem' }}>⚠ DANGER: {d}</div>
+              <div key={d} style={{ color: '#d63638', fontWeight: 700, fontSize: '0.85rem' }}>⚠ DANGER: {d}</div>
             ))}
             {preview.validation.warnings.map((w) => (
-              <div key={w} style={{ color: '#8a5a00', fontSize: '0.85rem' }}>• {w}</div>
+              <div key={w} style={{ color: '#996800', fontSize: '0.85rem' }}>• {w}</div>
             ))}
             <pre style={{ marginTop: 10, padding: 12, background: '#f8fbfb', border: '1px solid #d4e5e5', borderRadius: 8, fontSize: '0.8rem', overflowX: 'auto' }}>
               {preview.diff.map((l, i) => (
@@ -165,7 +165,7 @@ export default function RobotsTxtAdminPage() {
               ))}
             </pre>
             {mustConfirm && (
-              <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="Type CONFIRM to accept the danger" style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, border: '2px solid #a01b2b', width: 280 }} />
+              <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="Type CONFIRM to accept the danger" style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, border: '2px solid #d63638', width: 280 }} />
             )}
             <div style={{ marginTop: 12 }}>
               <button style={btn(true, mustConfirm)} disabled={busy || preview.validation.errors.length > 0 || (mustConfirm && confirmText !== 'CONFIRM')} onClick={save}>
@@ -177,16 +177,16 @@ export default function RobotsTxtAdminPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 700, color: '#042628', marginBottom: 8 }}>Tester</div>
+        <div style={{ fontWeight: 700, color: '#1d2327', marginBottom: 8 }}>Tester</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input value={testPath} onChange={(e) => setTestPath(e.target.value)} placeholder="/blog/my-post" style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid #b9d3d4' }} />
-          <select value={testAgent} onChange={(e) => setTestAgent(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #b9d3d4', background: '#fff' }}>
+          <input value={testPath} onChange={(e) => setTestPath(e.target.value)} placeholder="/blog/my-post" style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid #8c8f94' }} />
+          <select value={testAgent} onChange={(e) => setTestAgent(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #8c8f94', background: '#fff' }}>
             {['Googlebot', 'Bingbot', ...AI_BOTS, '*'].map((a) => <option key={a}>{a}</option>)}
           </select>
           <button style={btn()} onClick={runTest}>Test</button>
         </div>
         {testResult && (
-          <p style={{ marginTop: 10, fontWeight: 700, color: testResult.allowed ? '#0b666a' : '#a01b2b' }}>
+          <p style={{ marginTop: 10, fontWeight: 700, color: testResult.allowed ? '#2271b1' : '#d63638' }}>
             {testResult.allowed ? 'Allowed' : 'Blocked'}
             {testResult.matchedRule ? ` — matching rule: ${testResult.matchedRule}` : ' — no rule matches'}
           </p>
@@ -194,8 +194,8 @@ export default function RobotsTxtAdminPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 700, color: '#042628', marginBottom: 4 }}>AI crawlers</div>
-        <p style={{ fontSize: '0.8125rem', color: '#3d5557', margin: '0 0 12px' }}>
+        <div style={{ fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>AI crawlers</div>
+        <p style={{ fontSize: '0.8125rem', color: '#50575e', margin: '0 0 12px' }}>
           Ticking a bot adds a Disallow rule to the editor above (review and save to apply). <strong>Google-Extended</strong> controls use of your content for some Google AI models; it does not affect Google Search or AI Overviews. Blocking Googlebot is never offered here because it would remove the site from Google.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -209,18 +209,18 @@ export default function RobotsTxtAdminPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 700, color: '#042628', marginBottom: 4 }}>llms.txt (optional)</div>
-        <p style={{ fontSize: '0.8125rem', color: '#3d5557', margin: '0 0 10px' }}>
+        <div style={{ fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>llms.txt (optional)</div>
+        <p style={{ fontSize: '0.8125rem', color: '#50575e', margin: '0 0 10px' }}>
           Some AI services read /llms.txt. Google Search does not use it and it has no effect on Google rankings. Off by default.
         </p>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.875rem', marginBottom: 8 }}>
           <input type="checkbox" checked={llms.enabled} onChange={(e) => setLlms({ ...llms, enabled: e.target.checked })} /> Serve /llms.txt
         </label>
-        <textarea rows={6} value={llms.content} onChange={(e) => setLlms({ ...llms, content: e.target.value })} placeholder={'# Migration Factor\n> Australian migration guides\n\n- [Blog](https://migrationfactor.com/blog)'} style={{ width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 8, border: '1px solid #b9d3d4', fontFamily: 'monospace', fontSize: '0.85rem' }} />
+        <textarea rows={6} value={llms.content} onChange={(e) => setLlms({ ...llms, content: e.target.value })} placeholder={'# Migration Factor\n> Australian migration guides\n\n- [Blog](https://migrationfactor.com/blog)'} style={{ width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 8, border: '1px solid #8c8f94', fontFamily: 'monospace', fontSize: '0.85rem' }} />
         <div style={{ marginTop: 12, fontSize: '0.8125rem' }}>
           <label>
             "Search generative AI" setting in Search Console (changed there, not here) — recorded value:{' '}
-            <select value={llms.searchGenerativeAi} onChange={(e) => setLlms({ ...llms, searchGenerativeAi: e.target.value })} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #b9d3d4' }}>
+            <select value={llms.searchGenerativeAi} onChange={(e) => setLlms({ ...llms, searchGenerativeAi: e.target.value })} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #8c8f94' }}>
               <option value="">Not recorded</option>
               <option value="include">Include</option>
               <option value="exclude">Exclude</option>
@@ -234,13 +234,13 @@ export default function RobotsTxtAdminPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 700, color: '#042628', marginBottom: 8 }}>Version history</div>
+        <div style={{ fontWeight: 700, color: '#1d2327', marginBottom: 8 }}>Version history</div>
         {versions.length === 0 && <p style={{ color: '#6b8486', fontSize: '0.85rem' }}>No saved versions yet (the built-in default is used).</p>}
         {versions.map((v) => (
-          <div key={v.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #e3eeee', fontSize: '0.8125rem' }}>
+          <div key={v.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #dcdcde', fontSize: '0.8125rem' }}>
             <span style={{ flex: 1 }}>
               {new Date(v.created_at).toLocaleString()} · {v.created_by || 'system'} · {v.note}
-              {v.active && <strong style={{ color: '#0b666a' }}> (active)</strong>}
+              {v.active && <strong style={{ color: '#2271b1' }}> (active)</strong>}
             </span>
             {!v.active && <button style={btn(false)} onClick={() => rollback(v.id)}>Restore</button>}
           </div>

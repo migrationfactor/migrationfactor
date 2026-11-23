@@ -276,7 +276,7 @@ export default function ClassicEditor({
         .wp-visual-surface h4,.wp-visual-surface h5,.wp-visual-surface h6{margin:1em 0 .5em}
         .wp-visual-surface p{margin:0 0 1.1em}
         .wp-visual-surface img{max-width:100%;height:auto}
-        .wp-visual-surface blockquote{border-left:4px solid #0b666a;margin:1em 0;padding:.2em 1em;color:#444}
+        .wp-visual-surface blockquote{border-left:4px solid #2271b1;margin:1em 0;padding:.2em 1em;color:#444}
         .wp-visual-surface pre{background:#f6f7f7;padding:12px;overflow:auto;font-family:monospace}
         .wp-visual-surface table{border-collapse:collapse}
         .wp-visual-surface td,.wp-visual-surface th{border:1px solid #c3c4c7;padding:6px 10px}

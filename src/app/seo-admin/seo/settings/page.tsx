@@ -5,15 +5,15 @@ import { PageHeader } from '@/components/seo-admin/DataTable';
 import { TITLE_SEPARATORS, applyTitleTemplate } from '@/lib/seo-system/settings-defaults';
 import type { SeoSettings } from '@/lib/seo-system/settings-defaults';
 
-const card: React.CSSProperties = { background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3', marginBottom: 20 };
-const input: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #b9d3d4', fontSize: '0.875rem', boxSizing: 'border-box', background: '#fff' };
+const card: React.CSSProperties = { background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 20 };
+const input: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #8c8f94', fontSize: '0.875rem', boxSizing: 'border-box', background: '#fff' };
 
 function Field({ label, help, children }: { label: string; help?: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'block', marginBottom: 14 }}>
-      <span style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#042628', marginBottom: 4 }}>{label}</span>
+      <span style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 700, color: '#1d2327', marginBottom: 4 }}>{label}</span>
       {children}
-      {help && <span style={{ display: 'block', fontSize: '0.75rem', color: '#3d5557', marginTop: 4 }}>{help}</span>}
+      {help && <span style={{ display: 'block', fontSize: '0.75rem', color: '#50575e', marginTop: 4 }}>{help}</span>}
     </label>
   );
 }
@@ -71,13 +71,13 @@ export default function SeoSettingsPage() {
     <div style={{ maxWidth: 820 }}>
       <PageHeader title="SEO Settings" subtitle="Site-wide values used for titles, social cards, organization schema and content rules. Manual values on a post always win." />
       {message && (
-        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#f1e4e4' : '#e9f3f3', border: '1px solid ' + (message.startsWith('Error') ? '#e3c3c7' : '#d4efec'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#fcf0f1' : '#f0f0f1', border: '1px solid ' + (message.startsWith('Error') ? '#f1adad' : '#f0f6fc'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
           {message}
         </div>
       )}
 
       <div style={card}>
-        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#042628' }}>Titles & descriptions</h2>
+        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#1d2327' }}>Titles & descriptions</h2>
         <Field label="Site name" help="Used in titles, Open Graph and WebSite schema.">
           <input style={input} value={s.siteName} onChange={(e) => set({ siteName: e.target.value })} />
         </Field>
@@ -102,7 +102,7 @@ export default function SeoSettingsPage() {
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#042628' }}>Organization (schema)</h2>
+        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#1d2327' }}>Organization (schema)</h2>
         <Field label="Organization name">
           <input style={input} value={s.organization.name} onChange={(e) => setOrg({ name: e.target.value })} />
         </Field>
@@ -118,7 +118,7 @@ export default function SeoSettingsPage() {
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#042628' }}>Social & content defaults</h2>
+        <h2 style={{ margin: '0 0 14px', fontSize: '1.05rem', color: '#1d2327' }}>Social & content defaults</h2>
         <Field label="Default social image" help="Used when a post has no featured image. 1200 × 630 recommended.">
           <input style={input} value={s.defaultSocialImage} onChange={(e) => set({ defaultSocialImage: e.target.value })} />
         </Field>
@@ -157,25 +157,25 @@ export default function SeoSettingsPage() {
             </ul>
           )}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button disabled={busy} onClick={() => save(true)} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: '#0b666a', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+            <button disabled={busy} onClick={() => save(true)} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
               Confirm and save
             </button>
-            <button onClick={() => setImpact(null)} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #b9d3d4', background: '#fff', cursor: 'pointer' }}>
+            <button onClick={() => setImpact(null)} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #8c8f94', background: '#fff', cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      <button disabled={busy} onClick={() => save(false)} style={{ padding: '11px 22px', borderRadius: 8, border: 'none', background: '#0b666a', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+      <button disabled={busy} onClick={() => save(false)} style={{ padding: '11px 22px', borderRadius: 8, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
         {busy ? 'Saving…' : 'Save settings'}
       </button>
 
       {history.length > 0 && (
         <div style={{ ...card, marginTop: 24 }}>
-          <h2 style={{ margin: '0 0 10px', fontSize: '1.05rem', color: '#042628' }}>Change history</h2>
+          <h2 style={{ margin: '0 0 10px', fontSize: '1.05rem', color: '#1d2327' }}>Change history</h2>
           {history.map((h) => (
-            <div key={h.id} style={{ fontSize: '0.8125rem', color: '#3d5557', padding: '4px 0' }}>
+            <div key={h.id} style={{ fontSize: '0.8125rem', color: '#50575e', padding: '4px 0' }}>
               {new Date(h.changed_at).toLocaleString()} · {h.changed_by || 'unknown'}
             </div>
           ))}

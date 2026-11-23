@@ -25,7 +25,7 @@ export default function AuditLogPage() {
   return (
     <div style={{ maxWidth: 1100 }}>
       <PageHeader title="Audit Log" subtitle="Append-only record of content, SEO, redirect, robots and login changes (SEC-09)." />
-      {error && <div style={{ padding: 12, background: '#f1e4e4', color: '#a01b2b', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: 12, background: '#fcf0f1', color: '#d63638', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -37,9 +37,9 @@ export default function AuditLogPage() {
           value={action}
           onChange={(e) => setAction(e.target.value)}
           placeholder="Filter by action, e.g. post.publish"
-          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem' }}
+          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.875rem' }}
         />
-        <button type="submit" style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#0b666a', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+        <button type="submit" style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#2271b1', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
           Filter
         </button>
       </form>

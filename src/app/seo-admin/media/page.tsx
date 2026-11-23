@@ -93,29 +93,29 @@ export default function MediaLibraryAdminPage() {
     <div style={{ maxWidth: 1200 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042628', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1d2327', margin: '0 0 4px' }}>
             Media Library & Image SEO
           </h1>
-          <p style={{ color: '#3d5557', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: '#50575e', fontSize: '0.875rem', margin: 0 }}>
             Manage media assets, enforce alt text, and track usage across articles.
           </p>
         </div>
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', background: '#e9f3f3', border: '1px solid #d4efec', borderRadius: 8, color: '#07484b', marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: '#f0f0f1', border: '1px solid #f0f6fc', borderRadius: 8, color: '#135e96', marginBottom: 20, fontSize: '0.875rem' }}>
           {statusMessage}
         </div>
       )}
 
       {/* Upload Box */}
-      <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', marginBottom: 28 }}>
-        <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#042628', margin: '0 0 12px' }}>
+      <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 28 }}>
+        <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1d2327', margin: '0 0 12px' }}>
           Upload New Image
         </h2>
         <form onSubmit={handleUpload} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, alignItems: 'end' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#1d2327', marginBottom: 4 }}>
               Select File (JPEG, PNG, WebP, AVIF)
             </label>
             <input
@@ -128,7 +128,7 @@ export default function MediaLibraryAdminPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#1d2327', marginBottom: 4 }}>
               Alt Text * (Required for SEO)
             </label>
             <input
@@ -137,12 +137,12 @@ export default function MediaLibraryAdminPage() {
               value={altText}
               onChange={(e) => setAltText(e.target.value)}
               placeholder="Descriptive text for accessibility"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem' }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#042628', marginBottom: 4 }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#1d2327', marginBottom: 4 }}>
               Title / Caption (Optional)
             </label>
             <input
@@ -150,7 +150,7 @@ export default function MediaLibraryAdminPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Image title"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.85rem' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #8c8f94', fontSize: '0.85rem' }}
             />
           </div>
 
@@ -159,7 +159,7 @@ export default function MediaLibraryAdminPage() {
             disabled={uploading || !selectedFile}
             style={{
               padding: '9px 16px',
-              backgroundColor: '#0b666a',
+              backgroundColor: '#2271b1',
               color: '#ffffff',
               border: 'none',
               borderRadius: 6,
@@ -184,8 +184,8 @@ export default function MediaLibraryAdminPage() {
             fontSize: '0.85rem',
             fontWeight: 600,
             cursor: 'pointer',
-            backgroundColor: !missingAlt ? '#042628' : '#cfe3e3',
-            color: !missingAlt ? '#ffffff' : '#3d5557',
+            backgroundColor: !missingAlt ? '#1d2327' : '#c3c4c7',
+            color: !missingAlt ? '#ffffff' : '#50575e',
           }}
         >
           All Images
@@ -199,8 +199,8 @@ export default function MediaLibraryAdminPage() {
             fontSize: '0.85rem',
             fontWeight: 600,
             cursor: 'pointer',
-            backgroundColor: missingAlt ? '#a01b2b' : '#f1e4e4',
-            color: missingAlt ? '#ffffff' : '#7a1f2b',
+            backgroundColor: missingAlt ? '#d63638' : '#fcf0f1',
+            color: missingAlt ? '#ffffff' : '#8a2424',
           }}
         >
           ⚠️ Missing Alt Text
@@ -209,9 +209,9 @@ export default function MediaLibraryAdminPage() {
 
       {/* Images Grid */}
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#3d5557' }}>Loading media assets...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: '#50575e' }}>Loading media assets...</div>
       ) : mediaList.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', background: '#ffffff', borderRadius: 12, color: '#6b8183' }}>
+        <div style={{ padding: 40, textAlign: 'center', background: '#ffffff', borderRadius: 12, color: '#787c82' }}>
           No images found.
         </div>
       ) : (
@@ -223,12 +223,12 @@ export default function MediaLibraryAdminPage() {
                 background: '#ffffff',
                 borderRadius: 10,
                 overflow: 'hidden',
-                border: '1px solid #cfe3e3',
+                border: '1px solid #c3c4c7',
                 display: 'flex',
                 flexDirection: 'column',
               }}
             >
-              <div style={{ width: '100%', height: 160, backgroundColor: '#e9f3f3', position: 'relative' }}>
+              <div style={{ width: '100%', height: 160, backgroundColor: '#f0f0f1', position: 'relative' }}>
                 <img
                   src={m.url}
                   alt={m.alt_text || 'Media preview'}
@@ -240,7 +240,7 @@ export default function MediaLibraryAdminPage() {
                       position: 'absolute',
                       top: 8,
                       right: 8,
-                      background: '#a01b2b',
+                      background: '#d63638',
                       color: '#ffffff',
                       fontSize: '0.7rem',
                       fontWeight: 700,
@@ -253,19 +253,19 @@ export default function MediaLibraryAdminPage() {
                 )}
               </div>
               <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#042628', marginBottom: 4, wordBreak: 'break-all' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1d2327', marginBottom: 4, wordBreak: 'break-all' }}>
                   {m.title || m.filename}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#3d5557', marginBottom: 8 }}>
+                <div style={{ fontSize: '0.75rem', color: '#50575e', marginBottom: 8 }}>
                   {m.width} x {m.height} px · {Math.round(m.file_size / 1024)} KB
                 </div>
                 {m.alt_text && (
-                  <div style={{ fontSize: '0.75rem', color: '#0b666a', fontStyle: 'italic', marginBottom: 8 }}>
+                  <div style={{ fontSize: '0.75rem', color: '#2271b1', fontStyle: 'italic', marginBottom: 8 }}>
                     Alt: "{m.alt_text}"
                   </div>
                 )}
-                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e9f3f3', paddingTop: 10 }}>
-                  <span style={{ fontSize: '0.75rem', color: '#6b8183' }}>
+                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f1', paddingTop: 10 }}>
+                  <span style={{ fontSize: '0.75rem', color: '#787c82' }}>
                     Used in: {m.usage_count || 0} post(s)
                   </span>
                   <button
@@ -273,7 +273,7 @@ export default function MediaLibraryAdminPage() {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#b4424f',
+                      color: '#d63638',
                       fontSize: '0.75rem',
                       fontWeight: 600,
                       cursor: 'pointer',

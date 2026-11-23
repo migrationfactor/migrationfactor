@@ -45,7 +45,7 @@ export default function UsersPage() {
         subtitle="Everyone signs in with the main admin login. A person appears here after opening the SEO panel for the first time; set what they may do inside it."
       />
       {message && (
-        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#f1e4e4' : '#e9f3f3', border: '1px solid ' + (message.startsWith('Error') ? '#e3c3c7' : '#d4efec'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#fcf0f1' : '#f0f0f1', border: '1px solid ' + (message.startsWith('Error') ? '#f1adad' : '#f0f6fc'), borderRadius: 8, marginBottom: 16, fontSize: '0.875rem' }}>
           {message}
         </div>
       )}
@@ -62,7 +62,7 @@ export default function UsersPage() {
                 value={u.roles[0] || ''}
                 onChange={(e) => update(u.id, { role: e.target.value })}
                 title={ROLE_HELP[u.roles[0]] || ''}
-                style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #b9d3d4', background: '#fff' }}
+                style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #8c8f94', background: '#fff' }}
               >
                 {roles.map((r) => (
                   <option key={r} value={r}>
@@ -81,7 +81,7 @@ export default function UsersPage() {
               <button
                 type="button"
                 onClick={() => update(u.id, { status: u.status === 'active' ? 'disabled' : 'active' })}
-                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #b9d3d4', background: u.status === 'active' ? '#ffffff' : '#f1e4e4', color: u.status === 'active' ? '#042628' : '#a01b2b', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #8c8f94', background: u.status === 'active' ? '#ffffff' : '#fcf0f1', color: u.status === 'active' ? '#1d2327' : '#d63638', fontWeight: 600, cursor: 'pointer' }}
               >
                 {u.status === 'active' ? 'Active – disable' : 'Disabled – enable'}
               </button>

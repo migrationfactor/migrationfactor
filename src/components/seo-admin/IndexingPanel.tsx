@@ -16,11 +16,11 @@ const LABELS: Record<string, string> = {
 const button = (primary: boolean): React.CSSProperties => ({
   padding: '8px 14px',
   borderRadius: 6,
-  backgroundColor: primary ? '#042628' : '#ffffff',
-  color: primary ? '#ffffff' : '#042628',
+  backgroundColor: primary ? '#1d2327' : '#ffffff',
+  color: primary ? '#ffffff' : '#1d2327',
   fontWeight: 700,
   fontSize: '0.8125rem',
-  border: primary ? 'none' : '1px solid #b9d3d4',
+  border: primary ? 'none' : '1px solid #8c8f94',
   cursor: 'pointer',
 });
 
@@ -60,21 +60,21 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
 
   const insp = data?.latestInspection;
   return (
-    <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#042628' }}>Indexing status</div>
-      <div style={{ padding: 12, background: '#f2f8f8', borderRadius: 8, border: '1px solid #cfe3e3', fontSize: '0.85rem' }}>
+    <div style={{ background: '#ffffff', padding: 20, borderRadius: 12, border: '1px solid #c3c4c7', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1d2327' }}>Indexing status</div>
+      <div style={{ padding: 12, background: '#f6f7f7', borderRadius: 8, border: '1px solid #c3c4c7', fontSize: '0.85rem' }}>
         <div>
-          Google index status: <strong style={{ color: '#0b666a' }}>{published ? LABELS[data?.status] || '…' : 'Not published'}</strong>
+          Google index status: <strong style={{ color: '#2271b1' }}>{published ? LABELS[data?.status] || '…' : 'Not published'}</strong>
         </div>
         {insp && (
-          <div style={{ fontSize: '0.75rem', color: '#3d5557', marginTop: 6, lineHeight: 1.6 }}>
+          <div style={{ fontSize: '0.75rem', color: '#50575e', marginTop: 6, lineHeight: 1.6 }}>
             Coverage: {insp.coverageState || '—'} · Last crawl: {insp.lastCrawlTime ? new Date(insp.lastCrawlTime).toLocaleString() : '—'}
             {insp.googleCanonical && insp.userCanonical && insp.googleCanonical !== insp.userCanonical && (
-              <div style={{ color: '#8a5a00' }}>Google chose a different canonical: {insp.googleCanonical}</div>
+              <div style={{ color: '#996800' }}>Google chose a different canonical: {insp.googleCanonical}</div>
             )}
           </div>
         )}
-        <div style={{ fontSize: '0.75rem', color: '#3d5557', marginTop: 6 }}>
+        <div style={{ fontSize: '0.75rem', color: '#50575e', marginTop: 6 }}>
           A submission is only a hint. &quot;Indexed&quot; is shown only when Google&apos;s URL Inspection says so. No guarantee of crawling, indexing or rankings.
         </div>
       </div>
@@ -89,10 +89,10 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
           </button>
         </div>
       ) : (
-        <div style={{ fontSize: '0.8125rem', color: '#3d5557' }}>Publish this post to request indexing.</div>
+        <div style={{ fontSize: '0.8125rem', color: '#50575e' }}>Publish this post to request indexing.</div>
       )}
 
-      {error && <div style={{ color: '#a01b2b', fontSize: '0.8125rem' }}>{error}</div>}
+      {error && <div style={{ color: '#d63638', fontSize: '0.8125rem' }}>{error}</div>}
       {result?.steps && (
         <div style={{ fontSize: '0.8125rem' }}>
           {result.steps.map((s: any) => (
@@ -112,7 +112,7 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
       )}
 
       {data?.channelSubmissions?.length > 0 && (
-        <div style={{ fontSize: '0.75rem', color: '#3d5557' }}>
+        <div style={{ fontSize: '0.75rem', color: '#50575e' }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>History</div>
           {data.channelSubmissions.map((s: any, i: number) => (
             <div key={i}>
@@ -122,7 +122,7 @@ export default function IndexingPanel({ postId, published }: { postId: string; p
           ))}
         </div>
       )}
-      <Link href="/seo-admin/seo/integrations" style={{ fontSize: '0.75rem', color: '#0b666a' }}>
+      <Link href="/seo-admin/seo/integrations" style={{ fontSize: '0.75rem', color: '#2271b1' }}>
         Manage integrations
       </Link>
     </div>

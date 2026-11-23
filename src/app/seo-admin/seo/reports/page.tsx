@@ -24,7 +24,7 @@ export default function SeoReportsPage() {
   }, []);
 
   const postLink = (row: any) => (
-    <Link href={`/seo-admin/blog/${row.source_post_id ?? row.id}`} style={{ color: '#0b666a', fontWeight: 600 }}>
+    <Link href={`/seo-admin/blog/${row.source_post_id ?? row.id}`} style={{ color: '#2271b1', fontWeight: 600 }}>
       {row.source_title ?? row.title}
     </Link>
   );
@@ -35,7 +35,7 @@ export default function SeoReportsPage() {
         title="SEO Reports"
         subtitle="Orphan posts, broken or redirected internal links and 404 hits (last 90 days). These checks guide editors; they do not guarantee rankings."
       />
-      {error && <div style={{ padding: 12, background: '#f1e4e4', color: '#a01b2b', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: 12, background: '#fcf0f1', color: '#d63638', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
       <Tabs
         active={tab}
         onChange={setTab}
@@ -92,7 +92,7 @@ export default function SeoReportsPage() {
               key: 'act',
               label: 'Action',
               render: (r) => (
-                <Link href="/seo-admin/seo/redirects" style={{ color: '#0b666a', fontWeight: 600 }}>
+                <Link href="/seo-admin/seo/redirects" style={{ color: '#2271b1', fontWeight: 600 }}>
                   Create redirect
                 </Link>
               ),

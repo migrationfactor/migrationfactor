@@ -18,6 +18,10 @@ export interface PostListFilters {
   robotsIndex?: boolean;
   sitemapInclude?: boolean;
   orphans?: boolean;
+  createdBy?: string;
+  pillar?: boolean;
+  month?: string;
+  currentUserId?: string;
   missing?: 'meta_description' | 'focus_keyword' | 'featured_image';
   search?: string;
   limit?: number;
@@ -164,6 +168,10 @@ export async function listPosts(filters: PostListFilters = {}) {
     robotsIndex,
     sitemapInclude,
     orphans,
+    createdBy,
+    pillar,
+    month,
+    currentUserId,
     missing,
     search,
     limit = 20,
@@ -189,6 +197,17 @@ export async function listPosts(filters: PostListFilters = {}) {
     params.push(categoryId);
   }
 
+  if (createdBy) {
+    whereClauses.push(`p.created_by = $${paramIdx++}`);
+    params.push(createdBy);
+  }
+  if (pillar) {
+    whereClauses.push(`s.is_cornerstone = true`);
+  }
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    whereClauses.push(`to_char(COALESCE(p.published_at, p.created_at), 'YYYY-MM') = $${paramIdx++}`);
+    params.push(month);
+  }
   if (orphans) {
     whereClauses.push(`p.status = 'published' AND NOT EXISTS (SELECT 1 FROM public.seo_links l WHERE l.target_post_id = p.id AND l.source_post_id <> p.id)`);
   }
@@ -277,7 +296,13 @@ export async function listPosts(filters: PostListFilters = {}) {
       s.robots_index, s.sitemap_include, s.canonical_url,
       a.overall as seo_score, a.basic as seo_basic, a.additional as seo_additional,
       a.readability as seo_readability, a.technical as seo_technical,
-      a.geo as geo_score, a.aeo as aeo_score
+      a.geo as geo_score, a.aeo as aeo_score,
+      (SELECT a2.display_name FROM public.seo_post_authors pa2 JOIN public.seo_authors a2 ON a2.id = pa2.author_id WHERE pa2.post_id = p.id ORDER BY pa2.position LIMIT 1) AS author_name,
+      (SELECT string_agg(c2.name, ', ' ORDER BY c2.name) FROM public.seo_post_categories pc2 JOIN public.seo_categories c2 ON c2.id = pc2.category_id WHERE pc2.post_id = p.id) AS category_names,
+      (SELECT sc.article_type FROM public.seo_post_schema sc WHERE sc.post_id = p.id) AS schema_type,
+      (SELECT count(*) FROM public.seo_links l WHERE l.source_post_id = p.id AND l.is_internal) AS links_internal,
+      (SELECT count(*) FROM public.seo_links l WHERE l.source_post_id = p.id AND NOT l.is_internal) AS links_external,
+      (SELECT count(*) FROM public.seo_links l WHERE l.target_post_id = p.id AND l.source_post_id <> p.id) AS links_incoming
     FROM public.seo_posts p
     LEFT JOIN public.seo_post_seo s ON s.post_id = p.id
     LEFT JOIN public.seo_analysis a ON a.post_id = p.id
@@ -314,9 +339,16 @@ export async function listPosts(filters: PostListFilters = {}) {
     }
   }
 
+  const mineRow = currentUserId ? await queryOne<{ n: string }>(`SELECT count(*) AS n FROM public.seo_posts WHERE created_by = $1 AND status <> 'trashed'`, [currentUserId]) : null;
+  const pillarRow = await queryOne<{ n: string }>(`SELECT count(*) AS n FROM public.seo_post_seo s JOIN public.seo_posts p ON p.id = s.post_id WHERE s.is_cornerstone = true AND p.status <> 'trashed'`);
+  const monthRows = await query<{ m: string }>(`SELECT DISTINCT to_char(COALESCE(published_at, created_at), 'YYYY-MM') AS m FROM public.seo_posts WHERE status <> 'trashed' ORDER BY m DESC`);
+
   return {
     posts,
     total,
+    mineCount: parseInt(mineRow?.n || '0', 10),
+    pillarCount: parseInt(pillarRow?.n || '0', 10),
+    months: monthRows.map((r) => r.m),
     statusCounts,
     limit,
     offset,

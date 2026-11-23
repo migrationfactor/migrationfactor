@@ -23,19 +23,19 @@ export default function IndexingPage() {
   return (
     <div style={{ maxWidth: 1100 }}>
       <PageHeader title="Sitemaps & Indexing" subtitle="Submission history per channel. A submission is a hint only: it never guarantees crawling, indexing, rich results or rankings." />
-      {error && <div style={{ padding: 12, background: '#f1e4e4', color: '#a01b2b', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {error && <div style={{ padding: 12, background: '#fcf0f1', color: '#d63638', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
       {sitemap && (
-        <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #cfe3e3', marginBottom: 24, fontSize: '0.875rem' }}>
+        <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 24, fontSize: '0.875rem' }}>
           <p style={{ margin: '0 0 6px' }}>
             Sitemap index:{' '}
-            <a href={sitemap.index} target="_blank" rel="noopener noreferrer" style={{ color: '#0b666a', fontWeight: 600 }}>
+            <a href={sitemap.index} target="_blank" rel="noopener noreferrer" style={{ color: '#2271b1', fontWeight: 600 }}>
               {sitemap.index}
             </a>
           </p>
           <p style={{ margin: '0 0 6px' }}>
             {sitemap.files[0]?.urls ?? 0} indexable posts listed · {sitemap.excludedPublishedPosts} published posts excluded (noindex or manually excluded)
           </p>
-          <p style={{ margin: 0, color: '#3d5557' }}>{sitemap.note}</p>
+          <p style={{ margin: 0, color: '#50575e' }}>{sitemap.note}</p>
         </div>
       )}
       <DataTable

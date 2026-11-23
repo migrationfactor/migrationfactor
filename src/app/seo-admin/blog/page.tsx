@@ -1,451 +1,245 @@
 import React from 'react';
 import Link from 'next/link';
 import { listPosts } from '@/lib/seo-system/posts-service';
-import { listCategories, listAuthors } from '@/lib/seo-system/taxonomies-service';
+import { listCategories } from '@/lib/seo-system/taxonomies-service';
+import { verifySeoSession } from '@/lib/seo-system/auth';
 import BulkToolbar from '@/components/seo-admin/BulkToolbar';
+import PostRowActions from '@/components/seo-admin/PostRowActions';
 
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  searchParams: Promise<{
-    status?: string;
-    category_id?: string;
-    author_id?: string;
-    score_band?: string;
-    missing?: string;
-    robots_index?: string;
-    orphans?: string;
-    q?: string;
-    page?: string;
-  }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }
+
+const blue = '#2271b1';
+const field: React.CSSProperties = { minHeight: 30, border: '1px solid #8c8f94', borderRadius: 3, padding: '0 8px', fontSize: 14, background: '#fff', color: '#2c3338' };
+const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHeight: 30, border: `1px solid ${blue}`, borderRadius: 3, background: '#f6f7f7', color: blue, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
+
+const SEO_FILTERS: Array<[string, string]> = [
+  ['', 'Rank Math'],
+  ['score:80-100', 'SEO Score: Good (80–100)'],
+  ['score:50-79', 'SEO Score: OK (50–79)'],
+  ['score:0-49', 'SEO Score: Bad (0–49)'],
+  ['score:not_analyzed', 'SEO Score: No Data'],
+  ['noindex', 'Noindex posts'],
+  ['missing:focus_keyword', 'Missing focus keyword'],
+  ['missing:meta_description', 'Missing meta description'],
+  ['missing:featured_image', 'Missing featured image'],
+  ['orphans', 'Orphan posts'],
+];
+
+const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 export default async function AllPostsPage(props: Props) {
   const params = await props.searchParams;
-  const currentStatus = params.status || 'all';
-  const categoryId = params.category_id;
-  const authorId = params.author_id;
-  const scoreBand = params.score_band as any;
-  const missing = params.missing as any;
-  const robotsIndex = params.robots_index !== undefined ? params.robots_index === 'true' : undefined;
-  const search = params.q;
+  const session = await verifySeoSession();
+  const userId = session?.user?.id;
+
+  const status = params.status || 'all';
+  const mine = params.mine === '1';
+  const pillar = params.pillar === '1';
+  const search = params.q || '';
   const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
   const limit = 20;
-  const offset = (page - 1) * limit;
+  const sortBy = params.orderby === 'title' ? 'title' : 'created_at';
+  const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
 
-  const { posts, total, statusCounts } = await listPosts({
-    status: currentStatus,
-    categoryId,
-    authorId,
+  // The single "Rank Math" select maps onto the individual filters (the dashboard links use the long form).
+  let scoreBand = params.score_band as any;
+  let missing = params.missing as any;
+  let robotsIndex = params.robots_index !== undefined ? params.robots_index === 'true' : undefined;
+  let orphans = params.orphans === 'true';
+  const seo = params.seo || '';
+  if (seo.startsWith('score:')) scoreBand = seo.slice(6);
+  else if (seo.startsWith('missing:')) missing = seo.slice(8);
+  else if (seo === 'noindex') robotsIndex = false;
+  else if (seo === 'orphans') orphans = true;
+
+  const { posts, total, statusCounts, mineCount, pillarCount, months } = await listPosts({
+    status: mine || pillar ? 'all' : status,
+    categoryId: params.category_id,
+    authorId: params.author_id,
     scoreBand,
     missing,
     robotsIndex,
-    orphans: params.orphans === 'true',
-    search,
+    orphans,
+    createdBy: mine ? userId : undefined,
+    pillar,
+    month: params.m,
+    currentUserId: userId,
+    search: search || undefined,
+    sortBy: sortBy as any,
+    sortOrder,
     limit,
-    offset,
+    offset: (page - 1) * limit,
   });
-
   const categories = await listCategories();
-  const authors = await listAuthors();
+  const lastPage = Math.max(1, Math.ceil(total / limit));
+
+  const qs = (over: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...params, ...over })) if (v) p.set(k, v);
+    const s = p.toString();
+    return `/seo-admin/blog${s ? `?${s}` : ''}`;
+  };
+
+  const views: Array<{ id: string; label: string; count: number; href: string; active: boolean; hide?: boolean }> = [
+    { id: 'all', label: 'All', count: statusCounts.all, href: '/seo-admin/blog', active: !mine && !pillar && status === 'all' },
+    { id: 'mine', label: 'Mine', count: mineCount, href: '/seo-admin/blog?mine=1', active: mine },
+    { id: 'published', label: 'Published', count: statusCounts.published, href: '/seo-admin/blog?status=published', active: !mine && !pillar && status === 'published' },
+    { id: 'draft', label: 'Drafts', count: statusCounts.draft, href: '/seo-admin/blog?status=draft', active: !mine && !pillar && status === 'draft' },
+    { id: 'pending_review', label: 'Pending', count: statusCounts.pending_review, href: '/seo-admin/blog?status=pending_review', active: status === 'pending_review', hide: statusCounts.pending_review === 0 },
+    { id: 'scheduled', label: 'Scheduled', count: statusCounts.scheduled, href: '/seo-admin/blog?status=scheduled', active: status === 'scheduled', hide: statusCounts.scheduled === 0 },
+    { id: 'unpublished', label: 'Unpublished', count: statusCounts.unpublished, href: '/seo-admin/blog?status=unpublished', active: status === 'unpublished', hide: statusCounts.unpublished === 0 },
+    { id: 'pillar', label: 'Pillar Content', count: pillarCount, href: '/seo-admin/blog?pillar=1', active: pillar },
+    { id: 'trashed', label: 'Trash', count: statusCounts.trashed, href: '/seo-admin/blog?status=trashed', active: status === 'trashed', hide: statusCounts.trashed === 0 },
+  ].filter((v) => !v.hide);
+
+  const badge = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return <span style={{ color: '#787c82' }}>—</span>;
+    const bg = score >= 80 ? '#4ab866' : score >= 50 ? '#f0b849' : '#e65054';
+    return <span style={{ display: 'inline-block', padding: '8px 12px', borderRadius: 3, background: bg, color: '#fff', fontWeight: 600, fontSize: 14, lineHeight: 1 }}>{score} / 100</span>;
+  };
+
+  const pager = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#50575e' }}>
+      <span style={{ marginRight: 6 }}>{total} {total === 1 ? 'item' : 'items'}</span>
+      {lastPage > 1 && (
+        <>
+          {page > 1 ? <Link href={qs({ page: '1' })} aria-label="First page" style={{ ...btn, color: blue }}>«</Link> : <span style={{ ...btn, color: '#a7aaad', borderColor: '#dcdcde', cursor: 'default' }}>«</span>}
+          {page > 1 ? <Link href={qs({ page: String(page - 1) })} aria-label="Previous page" style={btn}>‹</Link> : <span style={{ ...btn, color: '#a7aaad', borderColor: '#dcdcde', cursor: 'default' }}>‹</span>}
+          <form method="GET" action="/seo-admin/blog" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {Object.entries(params).filter(([k, v]) => v && k !== 'page').map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+            <input type="number" name="page" min={1} max={lastPage} defaultValue={page} aria-label="Current Page" style={{ ...field, width: 52, textAlign: 'center' }} />
+            <span>of {lastPage}</span>
+          </form>
+          {page < lastPage ? <Link href={qs({ page: String(page + 1) })} aria-label="Next page" style={btn}>›</Link> : <span style={{ ...btn, color: '#a7aaad', borderColor: '#dcdcde', cursor: 'default' }}>›</span>}
+          {page < lastPage ? <Link href={qs({ page: String(lastPage) })} aria-label="Last page" style={btn}>»</Link> : <span style={{ ...btn, color: '#a7aaad', borderColor: '#dcdcde', cursor: 'default' }}>»</span>}
+        </>
+      )}
+    </div>
+  );
+
+  const titleSortHref = qs({ orderby: 'title', order: sortBy === 'title' && sortOrder === 'asc' ? 'desc' : 'asc', page: undefined });
 
   return (
-    <div style={{ maxWidth: 1300 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#042628', margin: '0 0 4px' }}>
-            All Blog Posts
-          </h1>
-          <p style={{ color: '#3d5557', fontSize: '0.875rem', margin: 0 }}>
-            Manage articles, SEO snippet optimizations, schema and publication status.
-          </p>
-        </div>
-        <Link
-          href="/seo-admin/blog/new"
-          style={{
-            padding: '10px 18px',
-            backgroundColor: '#0b666a',
-            color: '#ffffff',
-            borderRadius: 8,
-            textDecoration: 'none',
-            fontWeight: 700,
-            fontSize: '0.875rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          ➕ Add New Post
-        </Link>
-      </div>
+    <div style={{ maxWidth: 1600, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1d2327' }}>
+      <style>{`.wp-rowactions{visibility:hidden;font-size:13px;padding-top:2px;color:#a7aaad}tr:hover .wp-rowactions,.wp-rowactions:focus-within{visibility:visible}`}</style>
+      <h1 style={{ fontSize: 23, fontWeight: 400, margin: '0 0 16px', padding: '9px 0 4px', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 12 }}>
+        Posts
+        <Link href="/seo-admin/blog/new" style={{ fontSize: 13, fontWeight: 600, padding: '4px 12px', border: `1px solid ${blue}`, borderRadius: 3, color: blue, textDecoration: 'none', background: '#f6f7f7', lineHeight: 1.6 }}>Add Post</Link>
+      </h1>
 
-      {/* Status Tabs (FR-BLG-013) */}
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #b9d3d4', marginBottom: 20, overflowX: 'auto' }}>
-        {[
-          { id: 'all', label: 'All', count: statusCounts.all },
-          { id: 'published', label: 'Published', count: statusCounts.published },
-          { id: 'draft', label: 'Drafts', count: statusCounts.draft },
-          { id: 'pending_review', label: 'Pending', count: statusCounts.pending_review },
-          { id: 'scheduled', label: 'Scheduled', count: statusCounts.scheduled },
-          { id: 'unpublished', label: 'Unpublished', count: statusCounts.unpublished },
-          { id: 'trashed', label: 'Trash', count: statusCounts.trashed },
-        ].map((tab) => {
-          const isActive = currentStatus === tab.id;
-          return (
-            <Link
-              key={tab.id}
-              href={`/seo-admin/blog?status=${tab.id}`}
-              style={{
-                padding: '8px 14px',
-                fontSize: '0.875rem',
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#0b666a' : '#3d5557',
-                borderBottom: isActive ? '3px solid #0b666a' : '3px solid transparent',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <span>{tab.label}</span>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '2px 6px',
-                  borderRadius: 10,
-                  backgroundColor: isActive ? '#d4efec' : '#e9f3f3',
-                  color: isActive ? '#07484b' : '#3d5557',
-                }}
-              >
-                {tab.count}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Filter Bar */}
-      <form
-        method="GET"
-        action="/seo-admin/blog"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          padding: 16,
-          background: '#ffffff',
-          borderRadius: 8,
-          border: '1px solid #cfe3e3',
-          marginBottom: 20,
-          alignItems: 'center',
-        }}
-      >
-        <input type="hidden" name="status" value={currentStatus} />
-
-        {/* Search Input */}
-        <input
-          type="text"
-          name="q"
-          placeholder="Search by title, keyword, slug..."
-          defaultValue={search || ''}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #b9d3d4',
-            fontSize: '0.875rem',
-            width: 240,
-          }}
-        />
-
-        {/* Category Filter */}
-        <select
-          name="category_id"
-          defaultValue={categoryId || ''}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #b9d3d4',
-            fontSize: '0.875rem',
-            background: '#ffffff',
-          }}
-        >
-          <option value="">All Categories</option>
-          {categories.map((c: any) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, margin: '18px 0 10px' }}>
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontSize: 13, display: 'flex', flexWrap: 'wrap', color: '#a7aaad' }}>
+          {views.map((v, i) => (
+            <li key={v.id}>
+              <Link href={v.href} aria-current={v.active ? 'page' : undefined} style={{ color: v.active ? '#000' : blue, fontWeight: v.active ? 600 : 400, textDecoration: 'none' }}>{v.label}</Link>{' '}
+              <span style={{ color: '#50575e' }}>({v.count})</span>
+              {i < views.length - 1 && <span style={{ margin: '0 6px' }}>|</span>}
+            </li>
           ))}
-        </select>
-
-        {/* Score Band Filter */}
-        <select
-          name="score_band"
-          defaultValue={scoreBand || ''}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #b9d3d4',
-            fontSize: '0.875rem',
-            background: '#ffffff',
-          }}
-        >
-          <option value="">All SEO Scores</option>
-          <option value="80-100">🟢 High (80–100)</option>
-          <option value="50-79">🟡 Fair (50–79)</option>
-          <option value="0-49">🔴 Poor (0–49)</option>
-          <option value="not_analyzed">⚪ Not Analyzed</option>
-        </select>
-
-        {/* Missing Issues Filter */}
-        <select
-          name="missing"
-          defaultValue={missing || ''}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 6,
-            border: '1px solid #b9d3d4',
-            fontSize: '0.875rem',
-            background: '#ffffff',
-          }}
-        >
-          <option value="">All Quality Status</option>
-          <option value="focus_keyword">Missing Focus Keyword</option>
-          <option value="meta_description">Missing Meta Description</option>
-          <option value="featured_image">Missing Featured Image</option>
-        </select>
-
-        <select name="author_id" defaultValue={authorId || ''} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
-          <option value="">All Authors</option>
-          {authors.map((a: any) => (
-            <option key={a.id} value={a.id}>{a.display_name}</option>
-          ))}
-        </select>
-
-        <select name="robots_index" defaultValue={params.robots_index || ''} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #b9d3d4', fontSize: '0.875rem', background: '#ffffff' }}>
-          <option value="">Index + noindex</option>
-          <option value="true">Indexable only</option>
-          <option value="false">Noindex only</option>
-        </select>
-
-        <button
-          type="submit"
-          style={{
-            padding: '8px 16px',
-            borderRadius: 6,
-            backgroundColor: '#042628',
-            color: '#ffffff',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          Apply Filters
-        </button>
-
-        {(search || categoryId || authorId || scoreBand || missing || params.robots_index) && (
-          <Link
-            href={`/seo-admin/blog?status=${currentStatus}`}
-            style={{ fontSize: '0.8125rem', color: '#a01b2b', textDecoration: 'none', marginLeft: 8 }}
-          >
-            Clear Filters
-          </Link>
-        )}
-      </form>
-
-      <div style={{ textAlign: 'right', marginBottom: 8 }}>
-        <a href={'/api/v1/posts/export?' + new URLSearchParams(Object.entries(params).filter(([k, v]) => v && k !== 'page') as [string, string][]).toString()} style={{ fontSize: '0.8125rem', color: '#0b666a', fontWeight: 600 }}>Export CSV ↓</a>
+        </ul>
+        <form method="GET" action="/seo-admin/blog" role="search" style={{ display: 'flex', gap: 6 }}>
+          {status !== 'all' && <input type="hidden" name="status" value={status} />}
+          {mine && <input type="hidden" name="mine" value="1" />}
+          {pillar && <input type="hidden" name="pillar" value="1" />}
+          <input type="search" name="q" defaultValue={search} aria-label="Search Posts" style={{ ...field, width: 220 }} />
+          <button type="submit" style={btn}>Search Posts</button>
+        </form>
       </div>
-      <BulkToolbar />
 
-      {/* Posts Table */}
-      <div style={{ background: '#ffffff', borderRadius: 8, border: '1px solid #cfe3e3', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-          <thead>
-            <tr style={{ background: '#f2f8f8', borderBottom: '2px solid #cfe3e3', color: '#3d5557' }}>
-              <th style={{ padding: '12px 10px', width: 28 }} aria-label="Select"></th>
-              <th style={{ padding: '12px 16px' }}>Title & Slug</th>
-              <th style={{ padding: '12px 14px' }}>Focus Keyword</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>SEO Score</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Readability</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>GEO / AEO</th>
-              <th style={{ padding: '12px 14px' }}>Status</th>
-              <th style={{ padding: '12px 14px' }}>Date</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b8183' }}>
-                  No posts match your filters.
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, margin: '8px 0' }}>
+        <form method="GET" action="/seo-admin/blog" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <BulkToolbar position="top" />
+          {status !== 'all' && <input type="hidden" name="status" value={status} />}
+          {mine && <input type="hidden" name="mine" value="1" />}
+          {pillar && <input type="hidden" name="pillar" value="1" />}
+          {search && <input type="hidden" name="q" value={search} />}
+          <select name="m" defaultValue={params.m || ''} aria-label="Filter by date" style={field}>
+            <option value="">All dates</option>
+            {months.map((m: string) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+          <select name="category_id" defaultValue={params.category_id || ''} aria-label="Filter by category" style={field}>
+            <option value="">All Categories</option>
+            {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select name="seo" defaultValue={seo} aria-label="Filter by SEO" style={field}>
+            {SEO_FILTERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <button type="submit" style={btn}>Filter</button>
+        </form>
+        {pager}
+      </div>
+
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #c3c4c7', boxShadow: '0 1px 1px rgba(0,0,0,.04)', fontSize: 13, tableLayout: 'fixed' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #c3c4c7' }}>
+            <td style={{ width: 36, padding: '12px 0 12px 12px' }}><input type="checkbox" data-select-all aria-label="Select All" /></td>
+            <th scope="col" style={{ textAlign: 'left', padding: '12px 10px', fontWeight: 400, fontSize: 14 }}>
+              <Link href={titleSortHref} style={{ color: blue, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                Title
+                <span aria-hidden style={{ display: 'inline-flex', flexDirection: 'column', fontSize: 8, lineHeight: '8px', color: '#a7aaad' }}>
+                  <span style={{ color: sortBy === 'title' && sortOrder === 'asc' ? '#1d2327' : undefined }}>▲</span>
+                  <span style={{ color: sortBy === 'title' && sortOrder === 'desc' ? '#1d2327' : undefined }}>▼</span>
+                </span>
+              </Link>
+            </th>
+            <th scope="col" style={{ width: '16%', textAlign: 'left', padding: '12px 10px', fontWeight: 400, fontSize: 14 }}>Author</th>
+            <th scope="col" style={{ width: '16%', textAlign: 'left', padding: '12px 10px', fontWeight: 400, fontSize: 14 }}>Categories</th>
+            <th scope="col" style={{ width: '26%', textAlign: 'left', padding: '12px 10px', fontWeight: 400, fontSize: 14, color: blue }}>SEO Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posts.length === 0 ? (
+            <tr><td colSpan={5} style={{ padding: 12 }}>No posts found.</td></tr>
+          ) : posts.map((post: any, i: number) => {
+            const viewHref = post.legacy_path || `/blog/${post.slug}/`;
+            const suffix = post.status === 'published' ? '' : post.status === 'pending_review' ? ' — Pending' : post.status === 'draft' ? ' — Draft' : post.status === 'scheduled' ? ' — Scheduled' : post.status === 'trashed' ? '' : ` — ${post.status}`;
+            return (
+              <tr key={post.id} style={{ background: i % 2 === 0 ? '#f6f7f7' : '#fff', verticalAlign: 'top' }}>
+                <th scope="row" style={{ padding: '12px 0 12px 12px', fontWeight: 400 }}><input type="checkbox" name="sel" value={post.id} aria-label={`Select ${post.title}`} /></th>
+                <td style={{ padding: '10px' }}>
+                  <Link href={`/seo-admin/blog/${post.id}`} style={{ fontWeight: 600, fontSize: 14, color: blue, textDecoration: 'none' }}>{post.title}</Link>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: '#50575e' }}>{suffix}</span>
+                  <PostRowActions id={post.id} title={post.title} status={post.status} viewHref={viewHref} />
+                </td>
+                <td style={{ padding: '10px', wordBreak: 'break-all', color: blue }}>{post.author_name || '—'}</td>
+                <td style={{ padding: '10px', color: blue }}>{post.category_names || '—'}</td>
+                <td style={{ padding: '10px' }}>
+                  {badge(post.seo_score)}
+                  <div style={{ marginTop: 14 }}><strong>Keyword:</strong> {post.focus_keyword || <span style={{ color: '#787c82' }}>Not set</span>}</div>
+                  <div style={{ marginTop: 10 }}><strong>Schema:</strong> Article ({post.schema_type || 'BlogPosting'})</div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <strong>Links:</strong>
+                    <span title="Internal links">🔗 {post.links_internal || 0}</span>|
+                    <span title="External links">↗ {post.links_external || 0}</span>|
+                    <span title="Incoming internal links" style={{ color: '#787c82' }}>↩ {post.links_incoming || 0}</span>
+                  </div>
                 </td>
               </tr>
-            ) : (
-              posts.map((post: any) => {
-                const seoScore = post.seo_score;
-                let badgeBg = '#e9f3f3';
-                let badgeColor = '#3d5557';
-                if (seoScore !== null && seoScore !== undefined) {
-                  if (seoScore >= 80) {
-                    badgeBg = '#d4efec';
-                    badgeColor = '#07484b';
-                  } else if (seoScore >= 50) {
-                    badgeBg = '#f4ecd2';
-                    badgeColor = '#8a5a00';
-                  } else {
-                    badgeBg = '#f1e4e4';
-                    badgeColor = '#a01b2b';
-                  }
-                }
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: '1px solid #c3c4c7' }}>
+            <td style={{ padding: '12px 0 12px 12px' }}><input type="checkbox" data-select-all aria-label="Select All" /></td>
+            <td style={{ padding: '12px 10px', fontSize: 14, color: blue }}>Title</td>
+            <td style={{ padding: '12px 10px', fontSize: 14 }}>Author</td>
+            <td style={{ padding: '12px 10px', fontSize: 14 }}>Categories</td>
+            <td style={{ padding: '12px 10px', fontSize: 14, color: blue }}>SEO Details</td>
+          </tr>
+        </tfoot>
+      </table>
 
-                return (
-                  <tr key={post.id} style={{ borderBottom: '1px solid #e9f3f3', verticalAlign: 'middle' }}>
-                    <td style={{ padding: '14px 10px' }}>
-                      <input type="checkbox" name="sel" value={post.id} aria-label={`Select ${post.title}`} />
-                    </td>
-                    {/* Title & Slug */}
-                    <td style={{ padding: '14px 16px', maxWidth: 320 }}>
-                      <Link
-                        href={`/seo-admin/blog/${post.id}`}
-                        style={{ fontWeight: 700, color: '#042628', textDecoration: 'none', fontSize: '0.925rem' }}
-                      >
-                        {post.title}
-                      </Link>
-                      <div style={{ fontSize: '0.75rem', color: '#6b8183', marginTop: 2, fontFamily: 'monospace' }}>
-                        {post.legacy_path || `/blog/${post.slug}/`}
-                      </div>
-                    </td>
-
-                    {/* Focus Keyword */}
-                    <td style={{ padding: '14px 14px' }}>
-                      {post.focus_keyword ? (
-                        <span style={{ fontWeight: 600, color: '#0b666a', background: '#e9f3f3', padding: '2px 8px', borderRadius: 4, border: '1px solid #d4efec' }}>
-                          {post.focus_keyword}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#b4424f', fontSize: '0.8rem', fontStyle: 'italic' }}>None</span>
-                      )}
-                    </td>
-
-                    {/* SEO Score */}
-                    <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                      {seoScore !== null && seoScore !== undefined ? (
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: 12,
-                            fontWeight: 800,
-                            fontSize: '0.85rem',
-                            backgroundColor: badgeBg,
-                            color: badgeColor,
-                          }}
-                        >
-                          {seoScore}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#b9d3d4' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Readability */}
-                    <td style={{ padding: '14px 14px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 600, color: '#042628' }}>
-                        {post.seo_readability || '—'}
-                      </span>
-                    </td>
-
-                    {/* GEO / AEO */}
-                    <td style={{ padding: '14px 14px', textAlign: 'center', fontSize: '0.8125rem' }}>
-                      <span style={{ color: '#07484b', fontWeight: 600 }}>G: {post.geo_score || '—'}</span>
-                      {' · '}
-                      <span style={{ color: '#0b666a', fontWeight: 600 }}>A: {post.aeo_score || '—'}</span>
-                    </td>
-
-                    {/* Status */}
-                    <td style={{ padding: '14px 14px' }}>
-                      <span
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          backgroundColor:
-                            post.status === 'published' ? '#d4efec' :
-                            post.status === 'scheduled' ? '#dbeafe' :
-                            post.status === 'pending_review' ? '#ffedd5' :
-                            post.status === 'trashed' ? '#f1e4e4' : '#e9f3f3',
-                          color:
-                            post.status === 'published' ? '#0b666a' :
-                            post.status === 'scheduled' ? '#0b666a' :
-                            post.status === 'pending_review' ? '#b4424f' :
-                            post.status === 'trashed' ? '#a01b2b' : '#3d5557',
-                        }}
-                      >
-                        {post.status}
-                      </span>
-                    </td>
-
-                    {/* Date */}
-                    <td style={{ padding: '14px 14px', color: '#3d5557', fontSize: '0.8125rem' }}>
-                      {post.published_at ? new Date(post.published_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : 'Unpublished'}
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                        <Link
-                          href={`/seo-admin/blog/${post.id}`}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: 4,
-                            background: '#0b666a',
-                            color: '#ffffff',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            fontSize: '0.8125rem',
-                          }}
-                        >
-                          Edit
-                        </Link>
-                        {post.status === 'published' ? (
-                          <Link
-                            href={post.legacy_path || `/blog/${post.slug}/`}
-                            target="_blank"
-                            style={{ color: '#3d5557', textDecoration: 'none', fontSize: '0.8125rem' }}
-                          >
-                            View ↗
-                          </Link>
-                        ) : (
-                          <Link
-                            href={`/preview/${post.id}`}
-                            target="_blank"
-                            style={{ color: '#0b666a', textDecoration: 'none', fontSize: '0.8125rem' }}
-                          >
-                            Preview ↗
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, margin: '8px 0 24px' }}>
+        <BulkToolbar position="bottom" />
+        {pager}
       </div>
-      {total > limit && (() => {
-        const last = Math.ceil(total / limit);
-        const qs = new URLSearchParams(Object.entries(params).filter(([k, v]) => v && k !== 'page') as [string, string][]);
-        const href = (n: number) => `/seo-admin/blog?${qs.toString()}${qs.toString() ? '&' : ''}page=${n}`;
-        return (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', marginTop: 16, fontSize: '0.85rem' }}>
-            {page > 1 ? <Link href={href(page - 1)}>← Previous</Link> : <span style={{ color: '#9db8b9' }}>← Previous</span>}
-            <span>Page {page} of {last} · {total} posts</span>
-            {page < last ? <Link href={href(page + 1)}>Next →</Link> : <span style={{ color: '#9db8b9' }}>Next →</span>}
-          </div>
-        );
-      })()}
+      <div style={{ textAlign: 'left', margin: '0 0 24px' }}>
+        <a href={`/api/v1/posts/export?${new URLSearchParams(Object.entries(params).filter(([k, v]) => v && k !== 'page') as [string, string][]).toString()}`} style={{ fontSize: 13, color: blue }}>Export CSV</a>
+      </div>
     </div>
   );
 }

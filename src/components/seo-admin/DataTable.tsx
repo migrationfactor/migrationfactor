@@ -17,19 +17,20 @@ export function DataTable<T extends Record<string, any>>({
   rows: T[];
   empty: string;
 }) {
-  if (rows.length === 0) return <p className="admin-empty">{empty}</p>;
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c.key}>{c.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
+    <table className="wp-list-table widefat striped">
+      <thead>
+        <tr>
+          {columns.map((c) => (
+            <th key={c.key} scope="col">{c.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 ? (
+          <tr className="no-items"><td colSpan={columns.length}>{empty}</td></tr>
+        ) : (
+          rows.map((row, i) => (
             <tr key={row.id ?? i}>
               {columns.map((c) => (
                 <td key={c.key} data-label={c.label}>
@@ -37,38 +38,40 @@ export function DataTable<T extends Record<string, any>>({
                 </td>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          ))
+        )}
+      </tbody>
+    </table>
   );
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <header className="admin-header">
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
-    </header>
+    <>
+      <h1 className="wp-heading-inline">{title}</h1>
+      <hr className="wp-header-end" />
+      <p className="sa-subtitle">{subtitle}</p>
+    </>
   );
 }
 
 export function Tabs({ tabs, active, onChange }: { tabs: Array<{ id: string; label: string; count?: number }>; active: string; onChange: (id: string) => void }) {
   return (
-    <div className="admin-tabs" role="tablist">
+    <ul className="subsubsub" role="tablist">
       {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          role="tab"
-          aria-selected={active === t.id}
-          className={`seo-tab${active === t.id ? ' is-active' : ''}`}
-          onClick={() => onChange(t.id)}
-        >
-          {t.label}
-          {t.count !== undefined ? ` (${t.count})` : ''}
-        </button>
+        <li key={t.id}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={active === t.id}
+            className={active === t.id ? 'current' : undefined}
+            onClick={() => onChange(t.id)}
+          >
+            {t.label}
+            {t.count !== undefined ? <span className="count"> ({t.count})</span> : null}
+          </button>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

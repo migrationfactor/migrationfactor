@@ -3,13 +3,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '@/components/seo-admin/DataTable';
 
-const card: React.CSSProperties = { background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #cfe3e3', marginBottom: 20 };
+const card: React.CSSProperties = { background: '#ffffff', padding: 24, borderRadius: 12, border: '1px solid #c3c4c7', marginBottom: 20 };
 const btn = (primary = true): React.CSSProperties => ({
   padding: '9px 16px',
   borderRadius: 8,
-  border: primary ? 'none' : '1px solid #b9d3d4',
-  background: primary ? '#0b666a' : '#ffffff',
-  color: primary ? '#ffffff' : '#042628',
+  border: primary ? 'none' : '1px solid #8c8f94',
+  background: primary ? '#2271b1' : '#ffffff',
+  color: primary ? '#ffffff' : '#1d2327',
   fontWeight: 700,
   fontSize: '0.8125rem',
   cursor: 'pointer',
@@ -65,21 +65,21 @@ export default function IntegrationsPage() {
         subtitle="Google Search Console and IndexNow. These send hints and read reports; they never guarantee crawling, indexing, rich results or rankings."
       />
       {message && (
-        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#f1e4e4' : '#e9f3f3', border: '1px solid ' + (message.startsWith('Error') ? '#e3c3c7' : '#d4efec'), borderRadius: 8, marginBottom: 20, fontSize: '0.875rem' }}>
+        <div style={{ padding: '10px 16px', background: message.startsWith('Error') ? '#fcf0f1' : '#f0f0f1', border: '1px solid ' + (message.startsWith('Error') ? '#f1adad' : '#f0f6fc'), borderRadius: 8, marginBottom: 20, fontSize: '0.875rem' }}>
           {message}
         </div>
       )}
 
       <div style={card}>
-        <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#042628' }}>Google Search Console</h2>
+        <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#1d2327' }}>Google Search Console</h2>
         {!conn.configured && (
-          <div style={{ fontSize: '0.85rem', color: '#6b4500', background: '#f9f4e3', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+          <div style={{ fontSize: '0.85rem', color: '#614200', background: '#fcf9e8', padding: 12, borderRadius: 8, marginBottom: 12 }}>
             <strong>Setup needed:</strong> create an OAuth client (type: Web application) in Google Cloud, enable the <em>Google Search Console API</em>, add this redirect URI:
             <code style={{ display: 'block', margin: '6px 0', wordBreak: 'break-all' }}>{conn.redirectUri}</code>
             then set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> in the server environment and redeploy.
           </div>
         )}
-        <p style={{ fontSize: '0.875rem', margin: '0 0 12px', color: '#3d5557' }}>
+        <p style={{ fontSize: '0.875rem', margin: '0 0 12px', color: '#50575e' }}>
           Status: <strong>{conn.connected ? 'Connected' : conn.status === 'expired' ? 'Access expired — reconnect' : 'Not connected'}</strong>
           {conn.email ? ` as ${conn.email}` : ''}
           {conn.connected ? ` · ${conn.canSubmitSitemaps ? 'full access (can submit sitemaps)' : 'read-only (inspection and analytics only)'}` : ''}
@@ -105,7 +105,7 @@ export default function IntegrationsPage() {
                   'Property saved.'
                 )
               }
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #b9d3d4', background: '#fff' }}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #8c8f94', background: '#fff' }}
             >
               <option value="">Select a property…</option>
               {props.map((p) => (
@@ -116,7 +116,7 @@ export default function IntegrationsPage() {
             </select>
 
             {conn.property && (
-              <div style={{ marginTop: 16, fontSize: '0.85rem', color: '#3d5557' }}>
+              <div style={{ marginTop: 16, fontSize: '0.85rem', color: '#50575e' }}>
                 <div>
                   Sitemap: {conn.sitemap
                     ? `last downloaded by Google ${conn.sitemap.lastDownloaded ? new Date(conn.sitemap.lastDownloaded).toLocaleString() : 'not yet'} · ${conn.sitemap.errors} errors · ${conn.sitemap.warnings} warnings${conn.sitemap.isPending ? ' · pending' : ''}`
@@ -135,7 +135,7 @@ export default function IntegrationsPage() {
             <div style={{ marginTop: 18 }}>
               <button
                 disabled={busy}
-                style={{ ...btn(false), color: '#a01b2b', borderColor: '#e3c3c7' }}
+                style={{ ...btn(false), color: '#d63638', borderColor: '#f1adad' }}
                 onClick={() => confirm('Disconnect Search Console and delete the stored Google credentials?') && act(() => fetch('/api/v1/integrations/gsc', { method: 'DELETE' }), 'Disconnected.')}
               >
                 Disconnect
@@ -146,8 +146,8 @@ export default function IntegrationsPage() {
       </div>
 
       <div style={card}>
-        <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#042628' }}>IndexNow</h2>
-        <p style={{ fontSize: '0.85rem', color: '#3d5557', margin: '0 0 12px' }}>
+        <h2 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#1d2327' }}>IndexNow</h2>
+        <p style={{ fontSize: '0.85rem', color: '#50575e', margin: '0 0 12px' }}>
           IndexNow notifies Bing and other participating engines. <strong>It is not used by Google.</strong>
           {indexNow && <> Key file: <code>{indexNow.keyUrl}</code></>}
         </p>
