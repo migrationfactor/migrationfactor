@@ -140,10 +140,6 @@ export default function SeoSettingsPage() {
         <Field label="Brand name variants" help="One per line. Spellings that should always be written the same way (for example Migration Factor, MigrationFactor).">
           <textarea style={{ ...input, minHeight: 70 }} value={(s.brandAliases || []).join(String.fromCharCode(10))} onChange={(e) => set({ brandAliases: e.target.value.split(String.fromCharCode(10)) })} />
         </Field>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.875rem' }}>
-          <input type="checkbox" checked={s.requireFeaturedImage} onChange={(e) => set({ requireFeaturedImage: e.target.checked })} />
-          Require a featured image before publishing
-        </label>
       </div>
 
       {impact && (

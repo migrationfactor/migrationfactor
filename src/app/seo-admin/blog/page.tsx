@@ -20,8 +20,8 @@ const btn: React.CSSProperties = { padding: '0 10px', lineHeight: '28px', minHei
 const SEO_FILTERS: Array<[string, string]> = [
   ['', 'Rank Math'],
   ['score:80-100', 'SEO Score: Good (80–100)'],
-  ['score:50-79', 'SEO Score: OK (50–79)'],
-  ['score:0-49', 'SEO Score: Bad (0–49)'],
+  ['score:60-79', 'SEO Score: Good / Needs Improvement (60–79)'],
+  ['score:0-59', 'SEO Score: Poor (below 60)'],
   ['score:not_analyzed', 'SEO Score: No Data'],
   ['noindex', 'Noindex posts'],
   ['missing:focus_keyword', 'Missing focus keyword'],
@@ -104,7 +104,7 @@ export default async function AllPostsPage(props: Props) {
 
   const badge = (score: number | null | undefined) => {
     if (score === null || score === undefined) return <span style={{ color: '#787c82' }}>—</span>;
-    const bg = score >= 80 ? '#4ab866' : score >= 50 ? '#f0b849' : '#e65054';
+    const bg = score >= 80 ? '#4ab866' : score >= 60 ? '#f0b849' : '#e65054';
     return <span style={{ display: 'inline-block', padding: '8px 12px', borderRadius: 3, background: bg, color: '#fff', fontWeight: 600, fontSize: 14, lineHeight: 1 }}>{score} / 100</span>;
   };
 

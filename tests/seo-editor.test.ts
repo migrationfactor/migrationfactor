@@ -52,3 +52,37 @@ test('custom JSON-LD must be valid JSON with @context and @type', () => {
   assert.equal(good.errors.length, 0);
   assert.ok(good.value);
 });
+
+import { buildChecklist } from '../src/lib/seo-system/rankmath-checks';
+
+test('checklist uses the familiar wording for failing and passing states', () => {
+  const body = '<p>Skills assessment explained. ' + 'word '.repeat(700) + '</p><h2>Skills assessment steps</h2><img src="a.webp" alt="Skills assessment" /><a href="https://www.homeaffairs.gov.au/x">Home Affairs</a><a href="/other">Other</a>';
+  const good = buildChecklist({ focusKeyword: 'Skills Assessment', seoTitle: 'Skills Assessment Australia: 5 Steps', metaDescription: 'Skills assessment explained', url: 'https://migrationfactor.com/skills-assessment-australia/', bodyHtml: body, keywordUsedBefore: 0 });
+  assert.equal(good.basic[0].message, "Hurray! You're using Focus Keyword in the SEO Title.");
+  assert.ok(good.basic.every((c) => c.status === 'passed'));
+  assert.equal(good.titleReadability[3].status, 'passed');
+  assert.equal(good.additional[7].message, "You haven't used this Focus Keyword before.");
+
+  const bad = buildChecklist({ focusKeyword: '', seoTitle: 'Visa guide', metaDescription: '', url: 'https://migrationfactor.com/' + 'x'.repeat(80), bodyHtml: '<p>short</p>', keywordUsedBefore: 0 });
+  assert.equal(bad.basic[0].message, 'Add Focus Keyword to the SEO title.');
+  assert.equal(bad.basic[1].message, 'Add Focus Keyword to your SEO Meta Description.');
+  assert.equal(bad.basic[2].message, 'Use Focus Keyword in the URL.');
+  assert.equal(bad.additional[7].message, 'Set a Focus Keyword for this content.');
+  assert.equal(bad.titleReadability[3].message, "Your SEO title doesn't contain a number.");
+  assert.equal(bad.contentReadability[2].message, 'You are not using rich media like images or videos.');
+});
+
+import { scoreSeo, gradeFor } from '../src/lib/seo-system/seo-score';
+
+test('the 100-mark sheet adds up to 100 and grades correctly', () => {
+  const para = '<p>' + 'skills assessment word '.repeat(10) + 'filler '.repeat(60) + '</p>';
+  const body = '<p>Skills assessment explained.</p>' + para.repeat(8) + '<h2>Skills assessment steps</h2><h2>Next</h2><ul><li>a</li></ul><div class="toc">Table of Contents</div><img src="a.webp" alt="Skills assessment" /><a href="https://www.homeaffairs.gov.au/x">Home Affairs</a><a href="/other">Other</a>';
+  const best = scoreSeo({ focusKeyword: 'Skills Assessment', seoTitle: 'Skills Assessment Australia: Complete Guide in 5 Steps', metaDescription: 'Skills assessment explained', url: 'https://migrationfactor.com/skills-assessment-australia/', bodyHtml: body, keywordUsedBefore: 0, robotsIndex: true, canonicalUrl: '', articleSchema: true, brokenLinks: 0 });
+  assert.deepEqual(best.categories.map((c) => c.max), [30, 30, 15, 15, 10]);
+  assert.equal(best.categories.reduce((a, c) => a + c.max, 0), 100);
+  assert.ok(best.total >= 90, 'a well optimised post scores 90+, got ' + best.total);
+  const empty = scoreSeo({ focusKeyword: '', seoTitle: '', metaDescription: '', url: 'https://migrationfactor.com/' + 'x'.repeat(90), bodyHtml: '', keywordUsedBefore: 0, robotsIndex: false });
+  assert.ok(empty.total < 60);
+  assert.equal(empty.grade, 'Poor');
+  assert.deepEqual([95, 85, 75, 65, 40].map(gradeFor), ['Excellent', 'Very Good', 'Good', 'Needs Improvement', 'Poor']);
+});

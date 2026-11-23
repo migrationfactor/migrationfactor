@@ -10,6 +10,8 @@ import BlockEditor, { type Block, type PickedMedia } from './BlockEditor';
 import MediaPicker from './MediaPicker';
 import ClassicEditor from './ClassicEditor';
 import { htmlToBlocks } from './paste-clean';
+import { buildChecklist } from '@/lib/seo-system/rankmath-checks';
+import { scoreSeo } from '@/lib/seo-system/seo-score';
 import { WorkflowActions, RevisionsPanel, LinksPanel, SchemaPanel, ReferencesPanel, MoveToTrash } from './PostWorkflow';
 
 interface PostEditorProps {
@@ -67,6 +69,8 @@ export default function PostEditor({
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt || '');
   const [featuredMediaId, setFeaturedMediaId] = useState(initialPost?.featured_media_id || '');
   const [featuredImageUrl, setFeaturedImageUrl] = useState(initialPost?.featured_media_url || '');
+  const [featuredWidth, setFeaturedWidth] = useState<number>(Number(initialPost?.featured_media_width) || 0);
+  const [requireFeatured, setRequireFeatured] = useState(true);
   const [featuredAlt, setFeaturedAlt] = useState(initialPost?.featured_alt_override || initialPost?.featured_media_alt || '');
   const [featuredCaption, setFeaturedCaption] = useState(initialPost?.featured_caption_override || '');
   const [primaryCategoryId, setPrimaryCategoryId] = useState(initialPost?.primary_category_id || categories[0]?.id || '');
@@ -145,6 +149,19 @@ export default function PostEditor({
   const [kwInput, setKwInput] = useState('');
   const [snippetEdit, setSnippetEdit] = useState(false);
   const [visOpen, setVisOpen] = useState(false);
+  useEffect(() => {
+    fetch('/api/v1/settings/seo').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.settings && d.settings.requireFeaturedImage === false) setRequireFeatured(false); }).catch(() => undefined);
+  }, []);
+  const [kwUsedBefore, setKwUsedBefore] = useState(0);
+  useEffect(() => {
+    const kw = focusKeyword.trim();
+    if (!kw) { setKwUsedBefore(0); return; }
+    const t = setTimeout(() => {
+      fetch('/api/v1/keyword-usage?keyword=' + encodeURIComponent(kw) + (postId ? '&exclude=' + postId : ''))
+        .then((r) => r.json()).then((d) => setKwUsedBefore(Number(d.count) || 0)).catch(() => undefined);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [focusKeyword, postId]);
   const [openSec, setOpenSec] = useState<Record<string, boolean>>({ 'Basic SEO': true });
   const DEFAULT_ORDER = { main: ['rankmath', 'revisions', 'excerpt', 'geo', 'indexing'], side: ['publish', 'format', 'categories', 'tags', 'author', 'links', 'featured'] };
   const [order, setOrder] = useState<{ main: string[]; side: string[] }>(DEFAULT_ORDER);
@@ -359,7 +376,7 @@ export default function PostEditor({
         if (res.ok) {
           savedKey.current = payloadKey;
           if (thenPublish) {
-            try { await fetch(`/api/v1/posts/${data.post.id}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acknowledge_warnings: false }) }); } catch { /* the editor shows Publish again */ }
+            try { await fetch(`/api/v1/posts/${data.post.id}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acknowledge_warnings: true }) }); } catch { /* the editor shows Publish again */ }
           }
           router.push(`/seo-admin/blog/${data.post.id}`);
         } else {
@@ -399,7 +416,7 @@ export default function PostEditor({
       const res = await fetch(`/api/v1/posts/${postId}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ acknowledge_warnings: false }),
+        body: JSON.stringify({ acknowledge_warnings: true }),
       });
 
       const data = await res.json();
@@ -451,34 +468,20 @@ export default function PostEditor({
   const helpDot = (tip: string) => (
     <span title={tip} style={{ width: 18, height: 18, borderRadius: '50%', background: '#b5bfc9', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none', cursor: 'help' }}>?</span>
   );
-  const kwLower = focusKeyword.trim().toLowerCase();
-  const titleText = effectiveTitle;
-  const POWER = ['complete', 'ultimate', 'proven', 'essential', 'guide', 'best', 'new', 'free', 'easy', 'secret', 'fast', 'guaranteed', 'official', 'updated', 'simple', 'top', 'step'];
-  const SENTIMENT = /\b(best|great|easy|ultimate|complete|essential|proven|simple|free|top|worst|avoid|mistakes?|risks?|fail(s|ed|ure)?|problems?|hard|costly|common|need)\b/i;
-  const powerCount = POWER.filter((w) => new RegExp('\\b' + w + '\\b', 'i').test(titleText)).length;
-  const titleChecks = [
-    !kwLower
-      ? { id: 'tr1', status: 'failed', message: 'Add a Focus Keyword to check the SEO title.' }
-      : titleText.toLowerCase().startsWith(kwLower)
-        ? { id: 'tr1', status: 'passed', message: 'Focus Keyword used at the beginning of SEO title.' }
-        : titleText.toLowerCase().includes(kwLower)
-          ? { id: 'tr1', status: 'needs_improvement', message: 'Use the Focus Keyword near the beginning of SEO title.' }
-          : { id: 'tr1', status: 'failed', message: 'Focus Keyword does not appear in the SEO title.' },
-    SENTIMENT.test(titleText)
-      ? { id: 'tr2', status: 'passed', message: 'Your title has a positive or a negative sentiment.' }
-      : { id: 'tr2', status: 'failed', message: "Your title doesn't have a positive or a negative sentiment." },
-    powerCount > 0
-      ? { id: 'tr3', status: 'passed', message: `Your title contains ${powerCount} power word(s). Booyah!` }
-      : { id: 'tr3', status: 'failed', message: "Your title doesn't contain a power word. Add at least one." },
-    /\d/.test(titleText)
-      ? { id: 'tr4', status: 'passed', message: 'Your SEO title contains a number.' }
-      : { id: 'tr4', status: 'failed', message: "Your SEO title doesn't contain a number." },
-  ];
+  const pubUrl = `https://migrationfactor.com${initialPost?.legacy_path || `/blog/${slug}/`}`;
+  const checklist = buildChecklist({
+    focusKeyword,
+    seoTitle: effectiveTitle,
+    metaDescription: effectiveDesc,
+    url: pubUrl,
+    bodyHtml: renderedHtml,
+    keywordUsedBefore: kwUsedBefore,
+  });
   const sections: Array<[string, any[]]> = [
-    ['Basic SEO', liveAnalysis.checks.basic],
-    ['Additional', [...liveAnalysis.checks.additional, ...liveAnalysis.checks.technical]],
-    ['Title Readability', titleChecks],
-    ['Content Readability', liveAnalysis.checks.readability],
+    ['Basic SEO', checklist.basic],
+    ['Additional', checklist.additional],
+    ['Title Readability', checklist.titleReadability],
+    ['Content Readability', checklist.contentReadability],
   ];
   const checkGroup = ([label, checks]: [string, any[]]) => {
     const real = checks.filter((c) => c.status !== 'not_applicable');
@@ -496,8 +499,8 @@ export default function PostEditor({
             {real.map((chk) => (
               <div key={chk.id} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#2c3338' }}>
                 {chkIcon(chk.status)}
-                <span style={{ flex: 1 }}>{chk.message}{chk.status !== 'passed' && chk.fixAdvice ? ` ${chk.fixAdvice}` : ''}</span>
-                {helpDot(chk.fixAdvice || chk.name || chk.message)}
+                <span style={{ flex: 1 }}>{chk.message}</span>
+                {helpDot(chk.tip || chk.message)}
               </div>
             ))}
           </div>
@@ -560,9 +563,42 @@ export default function PostEditor({
     handleInitiatePublish();
   };
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  const seoScore = liveAnalysis.overallScore;
-  const scoreColor = seoScore >= 80 ? '#2e9b4e' : seoScore >= 50 ? '#b7791f' : '#c53030';
-  const scoreBg = seoScore >= 80 ? '#e8f5ea' : seoScore >= 50 ? '#fcf3d8' : '#fcebea';
+  const sheetScore = scoreSeo({
+    focusKeyword,
+    seoTitle: effectiveTitle,
+    metaDescription: effectiveDesc,
+    url: pubUrl,
+    bodyHtml: renderedHtml,
+    keywordUsedBefore: kwUsedBefore,
+    robotsIndex,
+    canonicalUrl,
+    articleSchema: true,
+  });
+  const seoScore = sheetScore.total;
+  // Live pre-publish readiness: the same rules the server enforces on Publish, shown while you write.
+  const readiness = (() => {
+    const blocking: string[] = [];
+    const warn: string[] = [];
+    if (!title.trim() && !customH1.trim()) blocking.push('Post title (or custom H1) cannot be empty.');
+    if (canonicalUrl.trim() && !/^https:\/\/[^\s]+$/i.test(canonicalUrl.trim())) blocking.push('Canonical URL must be a full https:// address.');
+    if (!renderedHtml.replace(/<[^>]*>/g, '').trim() && !/<img\b/i.test(renderedHtml)) warn.push('The article has no content yet.');
+    if (!(featuredImageUrl || featuredMediaId)) warn.push('No featured image set. Social cards and search results look better with one.');
+    else {
+      if (featuredWidth && featuredWidth < 1200) warn.push('The featured image is ' + featuredWidth + ' px wide. Use an image at least 1200 px wide.');
+      if (!featuredAlt.trim()) warn.push('The featured image needs alt text.');
+    }
+    if (selectedAuthorIds.length === 0) warn.push('No author assigned.');
+    if (/<img\b(?![^>]*\balt\s*=\s*["'][^"']+["'])[^>]*>/i.test(renderedHtml)) warn.push('Some images have no alt text.');
+    if (!focusKeyword.trim()) warn.push('No focus keyword set.');
+    if (!metaDescription.trim()) warn.push('Meta description is empty (Google will generate a snippet).');
+    if (!robotsIndex) warn.push('This post is set to noindex and will not be indexed by search engines.');
+    if (!robotsFollow) warn.push('Links on this post will not be followed by search engines.');
+    if (sheetScore.total < 60) warn.push('SEO score is ' + sheetScore.total + ' (Poor). Review the checklist.');
+    return { blocking, warn };
+  })();
+  const scoreTip = sheetScore.grade + ': ' + sheetScore.categories.map((c) => c.name + ' ' + c.earned + '/' + c.max).join(', ');
+  const scoreColor = seoScore >= 80 ? '#2e9b4e' : seoScore >= 60 ? '#b7791f' : '#c53030';
+  const scoreBg = seoScore >= 80 ? '#e8f5ea' : seoScore >= 60 ? '#fcf3d8' : '#fcebea';
   const catsShown = catTab === 'used' ? [...catList].sort((a: any, b: any) => (b.post_count || 0) - (a.post_count || 0)).slice(0, 10) : catList;
   const kwList = [focusKeyword, ...additionalKeywords.split(',').map((k: string) => k.trim())].filter(Boolean);
   const hl = (text: string) => {
@@ -572,7 +608,6 @@ export default function PostEditor({
     return parts.map((p, i) => (p.toLowerCase() === kw.toLowerCase() ? <strong key={i}>{p}</strong> : <React.Fragment key={i}>{p}</React.Fragment>));
   };
   const publishLabel = status === 'published' || status === 'scheduled' ? 'Update' : 'Publish';
-  const pubUrl = `https://migrationfactor.com${initialPost?.legacy_path || `/blog/${slug}/`}`;
   const snippetUrlParts = pubUrl.replace(/^https:\/\/migrationfactor\.com/, '');
   const mv = (col: 'main' | 'side', id: string, dir: -1 | 1) => setOrder((o) => {
     const list = [...o[col]];
@@ -633,11 +668,18 @@ export default function PostEditor({
           Lock Modified Date
         </label>
       </div>
-      {!isNew && (
-        <div style={{ background: scoreBg, borderTop: '1px solid #dcdcde', padding: '14px 16px', fontSize: 14, color: scoreColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+      {true && (
+        <div title={scoreTip} style={{ background: scoreBg, borderTop: '1px solid #dcdcde', padding: '14px 16px', fontSize: 14, color: scoreColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
           <IconBars /> SEO: {seoScore} / 100
         </div>
       )}
+      <div role="status" aria-live="polite" style={{ borderTop: '1px solid #dcdcde', padding: '12px 16px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {readiness.blocking.length === 0 && readiness.warn.length === 0 && <span style={{ color: '#2e9b4e', fontWeight: 600 }}>✓ Ready to publish</span>}
+        {readiness.blocking.length > 0 && <strong style={{ color: '#b32d2e' }}>✕ Fix before publishing:</strong>}
+        {readiness.blocking.map((m) => <div key={m} style={{ color: '#8a1f1f', paddingLeft: 14 }}>• {m}</div>)}
+        {readiness.warn.length > 0 && <strong style={{ color: '#996800', marginTop: readiness.blocking.length ? 6 : 0 }}>⚠ Worth a look:</strong>}
+        {readiness.warn.map((m) => <div key={m} style={{ color: '#6b5300', paddingLeft: 14 }}>• {m}</div>)}
+      </div>
       <div style={{ padding: '16px', borderTop: '1px solid #dcdcde', background: '#f6f7f7', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-end' }}>
         {postId && <MoveToTrash postId={postId} onMessage={setStatusMessage} />}
         <button
@@ -740,14 +782,14 @@ export default function PostEditor({
       <div style={{ padding: '12px' }}>
         {featuredImageUrl ? (
           <>
-            <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'block', width: '100%' }} aria-label="Click the image to edit or update">
+            <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); setFeaturedWidth(Number(m.width) || 0); if (m.alt) setFeaturedAlt(m.alt); } }} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'block', width: '100%' }} aria-label="Click the image to edit or update">
               <img src={featuredImageUrl} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </button>
             <p style={{ fontSize: 15, color: '#50575e', margin: '16px 0' }}>Click the image to edit or update</p>
-            <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); }} style={{ ...linkBtn, color: '#b32d2e', fontSize: 15 }}>Remove featured image</button>
+            <button type="button" onClick={() => { setFeaturedMediaId(''); setFeaturedImageUrl(''); setFeaturedWidth(0); }} style={{ ...linkBtn, color: '#b32d2e', fontSize: 15 }}>Remove featured image</button>
           </>
         ) : (
-          <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }} style={{ ...linkBtn, fontSize: 15 }}>Set featured image</button>
+          <button type="button" onClick={async () => { const m = await pickMedia(); if (m) { setFeaturedMediaId(m.id); setFeaturedImageUrl(m.url); setFeaturedWidth(Number(m.width) || 0); if (m.alt && !featuredAlt) setFeaturedAlt(m.alt); } }} style={{ ...linkBtn, fontSize: 15 }}>Set featured image</button>
         )}
       </div>
     ), { flush: true }),
@@ -810,7 +852,7 @@ export default function PostEditor({
                   style={{ flex: 1, minWidth: 160, border: 'none', outline: 'none', fontSize: 15, color: '#50575e' }}
                 />
               </div>
-              {!isNew && <div style={{ display: 'flex', alignItems: 'center', padding: '0 22px', background: scoreBg, color: scoreColor, fontWeight: 600, fontSize: 16 }}>{seoScore} / 100</div>}
+              {true && <div title={scoreTip} style={{ display: 'flex', alignItems: 'center', padding: '0 22px', background: scoreBg, color: scoreColor, fontWeight: 600, fontSize: 16 }}>{seoScore} / 100</div>}
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 22, fontSize: 15, fontWeight: 600, color: '#1e1e1e' }}>
               <input type="checkbox" checked={isCornerstone} onChange={(e) => setIsCornerstone(e.target.checked)} style={{ width: 20, height: 20, margin: 0 }} /> This post is Pillar Content {helpDot('Pillar content is your most important, in-depth article on a topic. Other posts get link suggestions that point to it.')}

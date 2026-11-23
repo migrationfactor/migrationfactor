@@ -2,6 +2,7 @@ import { query } from './db';
 import { runContentAnalysis } from './analysis';
 import { getPost } from './posts-service';
 import { reindexPostLinks } from './link-service';
+import { computeSheetScore, analysisColumns } from './sheet-score-service';
 
 /**
  * Computes and stores the SEO / readability / GEO / AEO scores for one post from its saved state.
@@ -33,13 +34,25 @@ export async function refreshAnalysis(postId: string): Promise<boolean> {
     answerSummary: geo.answer_summary || '',
     references: post.references || [],
   } as any);
+  const sheet = await computeSheetScore({
+    postId,
+    focusKeyword: seo.focus_keyword || '',
+    seoTitle: seo.seo_title_effective || seo.seo_title_raw || post.title,
+    metaDescription: seo.meta_description_effective || seo.meta_description_raw || post.excerpt || '',
+    url: 'https://migrationfactor.com' + (post.legacy_path || '/blog/' + post.slug + '/'),
+    bodyHtml: post.body_html || '',
+    robotsIndex: seo.robots_index !== false,
+    canonicalUrl: seo.canonical_url || '',
+    articleSchema: !post.schema?.disable_auto,
+  });
+  const cols = analysisColumns(sheet);
   await query(
     `INSERT INTO public.seo_analysis (post_id, config_version, overall, basic, additional, readability, technical, geo, aeo, checks, analyzed_at)
      VALUES ($1, 1, $2, $3, $4, $5, $6, $7, $8, $9, now())
      ON CONFLICT (post_id) DO UPDATE SET overall = EXCLUDED.overall, basic = EXCLUDED.basic, additional = EXCLUDED.additional,
        readability = EXCLUDED.readability, technical = EXCLUDED.technical, geo = EXCLUDED.geo, aeo = EXCLUDED.aeo,
        checks = EXCLUDED.checks, analyzed_at = now()`,
-    [postId, result.overallScore, result.basicScore, result.additionalScore, result.readabilityScore, result.technicalScore, result.geoScore, result.aeoScore, JSON.stringify(result.checks)]
+    [postId, cols.overall, cols.basic, cols.additional, cols.readability, cols.technical, result.geoScore, result.aeoScore, JSON.stringify({ ...result.checks, sheet })]
   );
   return true;
 }

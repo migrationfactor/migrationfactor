@@ -30,8 +30,8 @@ export async function getSeoDashboardData() {
       round(avg(geo)) as avg_geo,
       round(avg(aeo)) as avg_aeo,
       count(*) FILTER (WHERE overall >= 80) as band_high,
-      count(*) FILTER (WHERE overall >= 50 AND overall < 80) as band_med,
-      count(*) FILTER (WHERE overall < 50) as band_low
+      count(*) FILTER (WHERE overall >= 60 AND overall < 80) as band_med,
+      count(*) FILTER (WHERE overall < 60) as band_low
      FROM public.seo_analysis a
      JOIN public.seo_posts p ON p.id = a.post_id
      WHERE p.status = 'published'`
@@ -44,7 +44,7 @@ export async function getSeoDashboardData() {
       count(p.id) FILTER (WHERE s.focus_keyword IS NULL OR trim(s.focus_keyword) = '') as missing_focus_kw,
       count(p.id) FILTER (WHERE p.featured_media_id IS NULL) as missing_featured_img,
       count(p.id) FILTER (WHERE s.robots_index = false) as non_indexable,
-      count(p.id) FILTER (WHERE a.overall < 50) as low_seo_score
+      count(p.id) FILTER (WHERE a.overall < 60) as low_seo_score
      FROM public.seo_posts p
      LEFT JOIN public.seo_post_seo s ON s.post_id = p.id
      LEFT JOIN public.seo_analysis a ON a.post_id = p.id

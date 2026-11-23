@@ -30,7 +30,7 @@ export default async function SeoAdminDashboardPage() {
     { label: 'Missing featured image', count: issues.missingFeaturedImg, filter: 'missing=featured_image', danger: issues.missingFeaturedImg > 0 },
     { label: 'Non-indexable posts (noindex)', count: issues.nonIndexable, filter: 'robots_index=false', danger: false },
     { label: 'Orphan posts (0 inbound links)', count: issues.orphanPosts, filter: 'orphans=true', danger: issues.orphanPosts > 0 },
-    { label: 'Low SEO score (< 50)', count: issues.lowSeoScore, filter: 'score_band=0-49', danger: issues.lowSeoScore > 0 },
+    { label: 'Low SEO score (below 60)', count: issues.lowSeoScore, filter: 'score_band=0-59', danger: issues.lowSeoScore > 0 },
   ];
 
   return (
@@ -71,8 +71,8 @@ export default async function SeoAdminDashboardPage() {
           <div className="inside">
             <ul className="sa-bands">
               <li className="sa-band-high"><Link href="/seo-admin/blog?score_band=80-100"><span>High quality (80–100)</span><b>{scores.bandHigh}</b></Link></li>
-              <li className="sa-band-med"><Link href="/seo-admin/blog?score_band=50-79"><span>Needs improvement (50–79)</span><b>{scores.bandMed}</b></Link></li>
-              <li className="sa-band-low"><Link href="/seo-admin/blog?score_band=0-49"><span>Poor / high risk (0–49)</span><b>{scores.bandLow}</b></Link></li>
+              <li className="sa-band-med"><Link href="/seo-admin/blog?score_band=60-79"><span>Needs improvement (60–79)</span><b>{scores.bandMed}</b></Link></li>
+              <li className="sa-band-low"><Link href="/seo-admin/blog?score_band=0-59"><span>Poor (below 60)</span><b>{scores.bandLow}</b></Link></li>
             </ul>
           </div>
         </section>

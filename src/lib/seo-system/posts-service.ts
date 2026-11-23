@@ -7,6 +7,7 @@ import { getSeoSettings } from './settings-service';
 import { MIN_FEATURED_WIDTH } from './image-meta';
 import { reindexPostLinks } from './link-service';
 import { validateSchemaGraph, validateCustomJsonLd } from './schema-service';
+import { computeSheetScore, analysisColumns } from './sheet-score-service';
 import { renderSeoHead } from './head-service';
 
 export interface PostListFilters {
@@ -14,7 +15,7 @@ export interface PostListFilters {
   categoryId?: string;
   tagId?: string;
   authorId?: string;
-  scoreBand?: '0-49' | '50-79' | '80-100' | 'not_analyzed';
+  scoreBand?: '0-59' | '60-79' | '80-100' | 'not_analyzed';
   robotsIndex?: boolean;
   sitemapInclude?: boolean;
   orphans?: boolean;
@@ -241,10 +242,10 @@ export async function listPosts(filters: PostListFilters = {}) {
   }
 
   if (scoreBand) {
-    if (scoreBand === '0-49') {
-      whereClauses.push(`a.overall < 50`);
-    } else if (scoreBand === '50-79') {
-      whereClauses.push(`a.overall >= 50 AND a.overall < 80`);
+    if (scoreBand === '0-59') {
+      whereClauses.push(`a.overall < 60`);
+    } else if (scoreBand === '60-79') {
+      whereClauses.push(`a.overall >= 60 AND a.overall < 80`);
     } else if (scoreBand === '80-100') {
       whereClauses.push(`a.overall >= 80`);
     } else if (scoreBand === 'not_analyzed') {
@@ -973,6 +974,19 @@ async function updatePostCore(
     };
 
     const analysisResult = runContentAnalysis(analysisPayload);
+    // The headline SEO score follows the 100-mark scoring sheet; GEO and AEO keep their own engine.
+    const sheet = await computeSheetScore({
+      postId: id,
+      focusKeyword: String(analysisPayload.focusKeyword || ''),
+      seoTitle: effectiveTitle,
+      metaDescription: effectiveDesc,
+      url: 'https://migrationfactor.com' + (current.legacy_path || '/blog/' + newSlug + '/'),
+      bodyHtml: html,
+      robotsIndex: analysisPayload.robotsIndex !== false,
+      canonicalUrl: String(analysisPayload.canonicalUrl || ''),
+      articleSchema: !(input.disableAuto ?? current.schema?.disable_auto),
+    });
+    const cols = analysisColumns(sheet);
 
     await client.query(
       `INSERT INTO public.seo_analysis (
@@ -991,14 +1005,14 @@ async function updatePostCore(
         analyzed_at = now()`,
       [
         id,
-        analysisResult.overallScore,
-        analysisResult.basicScore,
-        analysisResult.additionalScore,
-        analysisResult.readabilityScore,
-        analysisResult.technicalScore,
+        cols.overall,
+        cols.basic,
+        cols.additional,
+        cols.readability,
+        cols.technical,
         analysisResult.geoScore,
         analysisResult.aeoScore,
-        JSON.stringify(analysisResult.checks),
+        JSON.stringify({ ...analysisResult.checks, sheet }),
       ]
     );
 
@@ -1097,7 +1111,7 @@ export async function runPrepublishChecks(post: any): Promise<{
   // 2. Body
   const blocks = post.body_json?.blocks || [];
   if (!blocks || blocks.length === 0) {
-    blocking.push({ code: 'body_empty', message: 'The article must contain at least one content block.' });
+    warnings.push({ code: 'body_empty', message: 'The article has no content yet.' });
   }
 
   // 3. Slug
@@ -1108,7 +1122,7 @@ export async function runPrepublishChecks(post: any): Promise<{
   // 4. Empty headings
   for (const block of blocks) {
     if (block.type === 'heading' && (!block.data?.text || block.data.text.trim().length === 0)) {
-      blocking.push({ code: 'empty_heading', message: 'Heading blocks cannot be empty.' });
+      warnings.push({ code: 'empty_heading', message: 'Some heading blocks are empty.' });
       break;
     }
   }
@@ -1116,27 +1130,26 @@ export async function runPrepublishChecks(post: any): Promise<{
   // 5. Featured image
   const settings = await getSeoSettings();
   if (!post.featured_media_id) {
-    if (settings.requireFeaturedImage) {
-      blocking.push({ code: 'featured_image_missing', message: 'Featured image is required before publishing.' });
-    }
+    // A featured image is recommended (social cards, Article schema) but never blocks publishing.
+    warnings.push({ code: 'featured_image_missing', message: 'No featured image set. Social cards and search results look better with one.' });
   } else {
     if ((post.featured_media_width || 0) < MIN_FEATURED_WIDTH) {
-      blocking.push({ code: 'featured_image_small', message: `The featured image is ${post.featured_media_width || 'unknown'} px wide. Use an image at least ${MIN_FEATURED_WIDTH} px wide.` });
+      warnings.push({ code: 'featured_image_small', message: `The featured image is ${post.featured_media_width || 'unknown'} px wide. Use an image at least ${MIN_FEATURED_WIDTH} px wide.` });
     }
     if (!((post.featured_alt_override || post.featured_media_alt || '') as string).trim()) {
-      blocking.push({ code: 'featured_image_alt_missing', message: 'The featured image needs alt text.' });
+      warnings.push({ code: 'featured_image_alt_missing', message: 'The featured image needs alt text.' });
     }
   }
 
   // 6. Authors
   if (!post.authors || post.authors.length === 0) {
-    blocking.push({ code: 'author_missing', message: 'At least one author must be assigned.' });
+    warnings.push({ code: 'author_missing', message: 'No author assigned.' });
   }
 
   // 7. Image alt text, FAQ and Steps blocks (Section 17.3)
   for (const block of blocks) {
     if (block.type === 'image' && !block.data?.isDecorative && !(block.data?.alt || '').trim()) {
-      blocking.push({ code: 'image_alt_missing', message: 'Every non-decorative image needs alt text (or mark it decorative).' });
+      warnings.push({ code: 'image_alt_missing', message: 'Some images have no alt text.' });
       break;
     }
   }
@@ -1232,16 +1245,17 @@ export async function runPrepublishChecks(post: any): Promise<{
     });
     if (rendered.schemaGraph) {
       const v = validateSchemaGraph(rendered.schemaGraph);
-      for (const m of v.errors) blocking.push({ code: 'schema_error', message: m });
+      // Generated structured data never blocks publishing; problems are shown as warnings.
+      for (const m of v.errors) warnings.push({ code: 'schema_warning', message: m });
       for (const m of v.warnings) warnings.push({ code: 'schema_warning', message: m });
     }
   } catch (e: any) {
-    blocking.push({ code: 'schema_error', message: 'Structured data could not be generated: ' + e.message });
+    warnings.push({ code: 'schema_warning', message: 'Structured data could not be generated: ' + e.message });
   }
 
   // Warnings
   const analysis = post.analysis || {};
-  if (analysis.overall !== undefined && analysis.overall < 50) {
+  if (analysis.overall !== undefined && analysis.overall < 60) {
     warnings.push({ code: 'seo_score_low', message: `SEO score is ${analysis.overall} (Poor). Review the checklist.` });
   }
 
